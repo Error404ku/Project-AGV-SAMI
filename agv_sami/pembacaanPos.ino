@@ -1,6 +1,7 @@
 
 extern int totalSensorAktif;  // counter sensor aktif
 extern int errorValue;        // nilai error PID
+String statusJalan;
 /***********************************************************
  *  GLOBAL STATE                                          *
  ***********************************************************/
@@ -8,7 +9,7 @@ int station = 0;
 bool sudahDeteksiStasiun = false;
 /* ---------- Konfigurasi rute stasiun ---------- */
 int targetStation[] = { 2, 3 };  // <-- DEFINISI nyata!
-int targetStationFromKomputer[] ={1,2,4,5};
+int targetStationFromKomputer[] = { 1, 2, 4, 5 };
 const int totalTarget = sizeof(targetStation) / sizeof(targetStation[0]);
 int indexTarget = 0;
 
@@ -43,6 +44,7 @@ inline void setModeTerminal() {
   modeTerminal = true;
   modeWarehouse = modeStation = false;
 }
+int currentMillis = 0;
 inline void setModeWarehouse() {
   modeWarehouse = true;
   modeTerminal = modeStation = false;
@@ -68,7 +70,9 @@ void outTerminal() {
 void inWarehouse() {
   if (modeMundur) {
     force = true;
-    setModeTerminal();  // balik arah, pulang ke terminal
+    if (!modeStation) {
+      setModeTerminal();  // balik arah, pulang ke terminal
+    }
   } else {
     clearMovement();
     modeBerhenti = true;
@@ -88,11 +92,12 @@ void outStation() {
   modeMaju = true;
   force = true;
 }
-
 void ujungStation() {  // ujung station → mundur ke warehouse
   modeMaju = false;
   modeMundur = true;
   force = true;
+  pidLinefollower(errorValue, "FORCEMUNDUR");
+  delay(1000);
   setModeWarehouse();
 }
 
@@ -145,8 +150,8 @@ void pembacaanWarehouse() {
     if ((kanan || kiri) && !modeBerhenti) {
       errorValue = 0;
     }
-      pidLinefollower(errorValue, "MUNDUR");
-      return;
+    pidLinefollower(errorValue, "MUNDUR");
+    return;
   }
   pidLinefollower(errorValue, "MAJU");
 }
@@ -234,6 +239,9 @@ void logicAgv() {
   if (force)
     modeBerhenti = false;
   // ― Prioritas gerakan global ―
+  if (statusJalan != "BERHENTI") {
+    modeBerhenti = false;
+  }
   if (modeBerhenti) {
     pidLinefollower(errorValue, "STOP");
     return;
@@ -245,7 +253,7 @@ void logicAgv() {
 }
 
 void displayLogicAgv() {
-  String statusJalan;
+
   if (modeMaju) {
     statusJalan = "MAJU";
   } else if (modeMundur) {
@@ -253,7 +261,8 @@ void displayLogicAgv() {
   } else if (modeBerhenti) {
     statusJalan = "BERHENTI";
   } else {
-    statusJalan = "UNKNOWN";
+    statusJalan = "BERHENTI";
+    modeBerhenti = true;
   }
 
   // Tentukan mode aktif

@@ -25,7 +25,7 @@ void setupTombol() {
   }
   // preferences.end();
   int currentMillis = millis();
-  while (millis() - currentMillis <= abs(5000)) {
+  while (millis() - currentMillis <= abs(3000)) {
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
@@ -152,7 +152,7 @@ void tampilkanKalibrasiTombol(int indexAktif) {
 
 bool tombolDitekan(int index) {
   nilai_tombol = analogRead(tombol);
-  return abs(nilai_tombol - nilaiTombol[index]) < 100;  // toleransi 100
+  return abs(nilai_tombol - nilaiTombol[index]) < 300;  // toleransi 100
 }
 
 bool UP() {

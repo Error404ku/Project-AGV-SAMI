@@ -65,14 +65,9 @@ void displayMenuFooter(const char* text) {
 void setupMenu() {
   preferences.begin("agv-settings", false);
 
-
-  // Load saved PID values
-  tempKp = preferences.getDouble("kpLinefollower", 70.0);
-  tempKi = preferences.getDouble("kiLinefollower", 0.0);
-  tempKd = preferences.getDouble("kdLinefollower", 0.0);
+  manualTargetCount = preferences.getInt("manualTargetCount", 2);
 
   // Load saved target count
-  manualTargetCount = preferences.getInt("manualTargetCount", 2);
 
   // Load saved target stations
   for (int i = 0; i < manualTargetCount; i++) {
@@ -81,6 +76,10 @@ void setupMenu() {
     targetStation[i] = preferences.getInt(key, i + 2);  // Default to 2,3,4,etc
   }
   // Load saved target source preference first
+  // Load saved PID values
+  tempKp = preferences.getDouble("kpLinefollower", 70.0);
+  tempKi = preferences.getDouble("kiLinefollower", 0.0);
+  tempKd = preferences.getDouble("kdLinefollower", 0.0);
   useAutoTarget = preferences.getBool("useAutoTarget", false);
   Serial.print("Loaded useAutoTarget: ");
   Serial.println(useAutoTarget);

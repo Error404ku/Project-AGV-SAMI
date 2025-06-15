@@ -32,6 +32,6 @@ void pidLinefollower(int errorPosisi, String mode){
     else {
         pwmMotor(0, 0);
     }
-    // Serial.println(mode);
+    Serial.println(mode);
     lastError = error;
 }
