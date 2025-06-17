@@ -3,10 +3,24 @@
 #include <Arduino.h>
 #include <math.h>
 #include <Adafruit_SSD1306.h>  // Memanggil Library OLED SSD1306
-#include <Preferences.h>
 #include <ModbusMaster.h>
+#include <WiFi.h>
+#include <WebServer.h>
+#include <ArduinoJson.h>
+#include <Preferences.h>
+#include <unordered_map>
+#include <vector>
+#include <SPIFFS.h>
+#include <algorithm>
 #include "menu.h"
-Preferences preferences;
+
+// --- Deklarasi Global ---
+WebServer server(80);
+Preferences preferences; // Untuk deviceMap
+Preferences stationsPreferences; // Objek Preferences untuk station yang ditemukan
+std::unordered_map<int, std::vector<String>> deviceMap;
+std::vector<int> stationsList; // Array di RAM untuk menyimpan station yang ditemukan
+
 // ### DEFINE ###
 
 // # TOMBOL
@@ -45,6 +59,17 @@ int jumlahMagnet[16];
 ModbusMaster node;
 
 // ## VARIABLE ##
+// # variable Web Server
+const char* ssid = "Sabila";
+const char* password = "11111111";
+IPAddress staticIP(192, 168, 106, 150);
+IPAddress gateway(192, 168, 106, 115);
+IPAddress subnet(255, 255, 255, 0);
+IPAddress dns(192, 168, 106, 115); // Gunakan gateway sebagai DNS
+
+const char* PREFERENCES_NAMESPACE = "device_data";
+const char* STATIONS_NAMESPACE = "stations"; // Namespace untuk menyimpan station yang ditemukan
+
 // # Variable Nilai Encoder
 
 int encKananAVal = 0;
@@ -125,6 +150,8 @@ void setup() {
 }
 
 void loop() {
+  server.handleClient();
+
   if (isAgvMode) {
     // AGV Mode - Run normal AGV operation
     pembacaanRpm();

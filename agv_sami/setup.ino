@@ -77,11 +77,46 @@ void setupSensorMagnet()
     Serial.println(F("Inisialisasi Sensor Magnet selesai."));
 }
 
+void setupWebServer() {
+  Serial.begin(115200);
+  // Muat kedua jenis data dari Preferences
+  loadMapFromPreferences();
+  loadStationsFromPreferences(); // Muat station yang ditemukan saat startup
+  
+  WiFi.begin(ssid, password);
+  if (!WiFi.config(staticIP, gateway, subnet, dns)) {
+    Serial.println("Gagal mengkonfigurasi IP Statis");
+  }
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nKoneksi Wi-Fi berhasil!");
+  Serial.print("Alamat IP: ");
+  Serial.println(WiFi.localIP());
+
+  server.on("/update", HTTP_POST, handleUpdateRequest);
+  server.on("/find", HTTP_POST, handleFindRequest);
+  server.on("/showmap", HTTP_GET, handleShowMapRequest);
+  server.on("/showstations", HTTP_GET, handleShowStationsRequest); // Endpoint untuk menampilkan daftar station
+  
+  server.on("/", HTTP_GET, []() {
+    server.send(200, "text/html", "berhasil terhubung");
+  });
+
+  server.onNotFound([]() {
+    server.send(404, "text/plain", "Endpoint tidak ditemukan.");
+  });
+  server.begin();
+  Serial.println("Server HTTP telah dimulai.");
+}
+
 void setupAll(){
     setupMotor();
     setupEncoder();
     setupDisplay();
     setupSensorMagnet();
+    setupWebServer();
     Serial.println("SETUP ALL SELESAI");
 }
 
