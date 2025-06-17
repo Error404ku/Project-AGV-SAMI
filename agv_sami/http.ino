@@ -230,3 +230,18 @@ void handleShowStationsRequest() {
   serializeJsonPretty(doc, output);
   server.send(200, "application/json", output);
 }
+
+void sortStationsList() {
+  // Mengurutkan daftar station secara ascending (dari kecil ke besar)
+  std::sort(stationsList.begin(), stationsList.end());
+  Serial.println("Daftar station telah diurutkan.");
+
+  // Simpan daftar yang sudah diurutkan ke Preferences
+  if (saveStationsToPreferences()) {
+    Serial.println("Daftar station berhasil diurutkan dan disimpan ke Preferences.");
+  } else {
+    Serial.println("Gagal menyimpan daftar station yang diurutkan ke Preferences.");
+    // Anda mungkin ingin menambahkan penanganan kesalahan di sini,
+    // misalnya mencoba menyimpan lagi atau mencetak pesan kesalahan yang lebih detail.
+  }
+}
