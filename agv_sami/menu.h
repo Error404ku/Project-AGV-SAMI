@@ -7,10 +7,12 @@
 
 // Menu states
 #define MENU_MAIN 0
-#define MENU_MOTOR_TEST 1
-#define MENU_PID_SETTINGS 2
-#define MENU_TARGET_SETTINGS 3
-#define MENU_AGV_MODE 4
+#define MENU_MOTOR_TEST 2
+#define MENU_PID_SETTINGS 3
+#define MENU_TARGET_SETTINGS 4
+#define MENU_AGV_MODE 1
+#define MENU_RESET 5
+#define MENU_RFID_SETTINGS 6
 
 // External variables from other files
 extern int targetStation[2];
@@ -23,10 +25,10 @@ extern double kp, ki, kd;
 extern int baseSpeed;
 extern bool tombolBoot;
 // Menu variables
-extern int currentMenu;
 extern int selectedItem;
 extern int maxItems;
 extern bool isAgvMode;
+int currentMenu = MENU_MAIN;
 
 // Function declarations
 void setupMenu();

@@ -1,7 +1,7 @@
 // --- FUNGSI PERSISTENSI & PEMUATAN UNTUK DEVICE MAP ---
 bool saveMapToPreferences() {
-  preferences.begin(PREFERENCES_NAMESPACE, false);
-  preferences.clear();
+  preferencesMap.begin(PREFERENCES_NAMESPACE, false);
+  preferencesMap.clear();
   Serial.println("Menyimpan map ke Preferences...");
   for (const auto& pair : deviceMap) {
     DynamicJsonDocument doc(256);
@@ -11,21 +11,21 @@ bool saveMapToPreferences() {
     }
     String outputString;
     serializeJson(doc, outputString);
-    preferences.putString(String(pair.first).c_str(), outputString);
+    preferencesMap.putString(String(pair.first).c_str(), outputString);
   }
-  preferences.end();
+  preferencesMap.end();
   Serial.println("Berhasil disimpan.");
   return true;
 }
 
 bool loadMapFromPreferences() {
-  preferences.begin(PREFERENCES_NAMESPACE, true);
+  preferencesMap.begin(PREFERENCES_NAMESPACE, true);
   deviceMap.clear();
   Serial.println("Memuat data dari Preferences ke map...");
   for (int i = 0; i <= 50; i++) { // Assuming keys up to 50
     String key = String(i);
-    if (preferences.isKey(key.c_str())) {
-      String storedVectorString = preferences.getString(key.c_str(), "[]");
+    if (preferencesMap.isKey(key.c_str())) {
+      String storedVectorString = preferencesMap.getString(key.c_str(), "[]");
       DynamicJsonDocument doc(256);
       deserializeJson(doc, storedVectorString);
       std::vector<String> values;
@@ -35,7 +35,7 @@ bool loadMapFromPreferences() {
       deviceMap[i] = values;
     }
   }
-  preferences.end();
+  preferencesMap.end();
   Serial.println("Selesai memuat data.");
   return true;
 }
@@ -244,4 +244,17 @@ void sortStationsList() {
     // Anda mungkin ingin menambahkan penanganan kesalahan di sini,
     // misalnya mencoba menyimpan lagi atau mencetak pesan kesalahan yang lebih detail.
   }
+}
+
+// --- FUNGSI UNTUK MENGOSONGKAN DAFTAR STATION ---
+void clearStationsData() {
+  // 1. Kosongkan std::vector di RAM
+  stationsList.clear();
+  Serial.println("Daftar station di RAM telah dikosongkan.");
+
+  // 2. Kosongkan data di Preferences
+  stationsPreferences.begin(STATIONS_NAMESPACE, false); // Buka untuk menulis
+  stationsPreferences.clear(); // Hapus semua data di namespace ini
+  stationsPreferences.end(); // Tutup sesi Preferences
+  Serial.println("Data station di Preferences telah dihapus.");
 }

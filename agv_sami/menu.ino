@@ -7,11 +7,10 @@
 #define MENU_TARGET_SETTINGS 4
 #define MENU_AGV_MODE 1
 #define MENU_RESET 5
+#define MENU_RFID_SETTINGS 6
 
-// Menu variables
-int currentMenu = MENU_MAIN;
 int selectedItem = 0;
-int maxItems = 5;
+int maxItems = 6;
 bool isAgvMode = false;
 
 // PID settings
@@ -39,6 +38,18 @@ float pidIncrement = 0.1f;
 const float MAX_INCREMENT = 10.0f;
 const unsigned long ACCELERATION_INTERVAL = 500;  // Time in ms to increase increment
 
+// RFID menu variables
+int selectedRfidItem = 0;
+int selectedStationId = 1;
+bool isWaitingForRfid = false;
+unsigned long rfidScanTimeout = 0;
+const unsigned long RFID_SCAN_TIMEOUT = 10000; // 10 seconds timeout
+
+// Target settings variables
+unsigned long xButtonHoldStart = 0;
+const unsigned long X_HOLD_DURATION = 3000; // 3 seconds hold
+bool isClearingStations = false;
+
 // Global display functions
 void displayIndicator(int current, int selected) {
   if (current == selected) {
@@ -64,41 +75,26 @@ void displayMenuFooter(const char* text) {
 
 void setupMenu() {
   preferences.begin("agv-settings", false);
-
-  manualTargetCount = preferences.getInt("manualTargetCount", 2);
-
-  // Load saved target count
-
-  // Load saved target stations
-  for (int i = 0; i < manualTargetCount; i++) {
-    char key[10];
-    sprintf(key, "target%d", i + 1);
-    targetStation[i] = preferences.getInt(key, i + 2);  // Default to 2,3,4,etc
-  }
-  // Load saved target source preference first
-  // Load saved PID values
+  
+  // Load PID settings
   tempKp = preferences.getDouble("kpLinefollower", 70.0);
   tempKi = preferences.getDouble("kiLinefollower", 0.0);
   tempKd = preferences.getDouble("kdLinefollower", 0.0);
-  useAutoTarget = preferences.getBool("useAutoTarget", false);
-  Serial.print("Loaded useAutoTarget: ");
-  Serial.println(useAutoTarget);
-
-
-  // If using computer targets, update targetStation with computer values
-  if (useAutoTarget) {
-    for (int i = 0; i < 4; i++) {
-      targetStation[i] = targetStationFromKomputer[i];
-    }
-  }
-
-  // Apply loaded values
+  
+  // Apply PID values
   kpLinefollower = tempKp;
   kiLinefollower = tempKi;
   kdLinefollower = tempKd;
-
-  // End preferences session
   preferences.end();
+  
+  // Load RFID stations
+  loadRfidStations();
+  
+  // Load stations list from HTTP preferences
+  loadStationsFromPreferences();
+  
+  Serial.print("Loaded stationsList size: ");
+  Serial.println(stationsList.size());
 }
 
 void saveSettings() {
@@ -108,26 +104,6 @@ void saveSettings() {
   preferences.putDouble("kpLinefollower", tempKp);
   preferences.putDouble("kiLinefollower", tempKi);
   preferences.putDouble("kdLinefollower", tempKd);
-
-  // Save target count
-  preferences.putInt("manualTargetCount", manualTargetCount);
-  // Save target source preference first
-  preferences.putBool("useAutoTarget", useAutoTarget);
-  Serial.print("Saving useAutoTarget: ");
-  Serial.println(useAutoTarget);
-  // Save all manual targets
-  for (int i = 0; i < manualTargetCount; i++) {
-    char key[10];
-    sprintf(key, "target%d", i + 1);
-    preferences.putInt(key, targetStation[i]);
-  }
-
-  // Clear any remaining target slots
-  for (int i = manualTargetCount; i < MAX_MANUAL_TARGETS; i++) {
-    char key[10];
-    sprintf(key, "target%d", i + 1);
-    preferences.remove(key);
-  }
 
   // Apply PID values
   kpLinefollower = tempKp;
@@ -145,21 +121,25 @@ void displayMainMenu() {
   displayIndicator(0, selectedItem);
   display.println("1. AGV Mode");
 
-  display.setCursor(0, 20);
+  display.setCursor(0, 18);
   displayIndicator(1, selectedItem);
   display.println("2. Motor Test");
 
-  display.setCursor(0, 30);
+  display.setCursor(0, 26);
   displayIndicator(2, selectedItem);
   display.println("3. PID Settings");
 
-  display.setCursor(0, 40);
+  display.setCursor(0, 34);
   displayIndicator(3, selectedItem);
   display.println("4. Target Settings");
 
-  display.setCursor(0, 50);
+  display.setCursor(0, 42);
   displayIndicator(4, selectedItem);
-  display.println("5. Reset Settings");
+  display.println("5. RFID Settings");
+
+  display.setCursor(0, 50);
+  displayIndicator(5, selectedItem);
+  display.println("6. Reset Settings");
   display.display();
 }
 
@@ -196,49 +176,102 @@ void displayPidSettings() {
 void displayTargetSettings() {
   displayMenuHeader("Target Settings");
 
-  display.setCursor(0, 10);
-  displayIndicator(0, selectedTarget);
-  display.print("Source: ");
-  display.println(useAutoTarget ? "Computer" : "Manual");
-
-  if (!useAutoTarget) {
-    // Display manual targets
-    for (int i = 0; i < manualTargetCount; i++) {
-      display.setCursor(0, 20 + (i * 10));
-      displayIndicator(i + 1, selectedTarget);
-      display.print("Target ");
-      display.print(i + 1);
-      display.print(": ");
-      display.println(targetStation[i]);
-    }
-
-    // Display add/remove target options
-    display.setCursor(0, 20 + (manualTargetCount * 10));
-    displayIndicator(manualTargetCount + 1, selectedTarget);
-    if (manualTargetCount < MAX_MANUAL_TARGETS) {
-      display.println("+ Add Target");
-    } else {
-      display.println("Max Targets");
-    }
-
-    // Display delete target option if there are targets
-    if (manualTargetCount > 1) {
-      display.setCursor(0, 20 + ((manualTargetCount + 1) * 10));
-      displayIndicator(manualTargetCount + 2, selectedTarget);
-      display.println("- Delete Target");
-    }
-  } else {
-    // Display computer targets
+  if (isClearingStations) {
     display.setCursor(0, 20);
-    display.print("Computer Targets:");
+    display.println("Clearing stations...");
+    
+    // Show progress bar
+    unsigned long elapsed = millis() - xButtonHoldStart;
+    int progress = (elapsed * 100) / X_HOLD_DURATION;
+    progress = min(progress, 100);
+    
     display.setCursor(0, 30);
-    for (int i = 0; i < 4; i++) {  // Assuming computer always has 4 targets
-      display.print(targetStationFromKomputer[i]);
-      if (i < 3) display.print(",");
+    display.print("Progress: ");
+    display.print(progress);
+    display.println("%");
+    
+    display.setCursor(0, 40);
+    display.println("Release X to cancel");
+    display.display();
+    return;
+  }
+
+  display.setCursor(0, 10);
+  display.println("Stations from HTTP:");
+  
+  if (stationsList.empty()) {
+    display.setCursor(0, 20);
+    display.println("No stations loaded");
+    display.setCursor(0, 30);
+    display.println("Use HTTP API to");
+    display.setCursor(0, 38);
+    display.println("add stations");
+  } else {
+    display.setCursor(0, 20);
+    display.print("Total: ");
+    display.println(stationsList.size());
+    
+    display.setCursor(0, 30);
+    display.print("Stations: ");
+    for (size_t i = 0; i < stationsList.size() && i < 5; i++) {
+      display.print(stationsList[i]);
+      if (i < stationsList.size() - 1 && i < 4) display.print(",");
+    }
+    if (stationsList.size() > 5) {
+      display.print("...");
     }
   }
 
-  displayMenuFooter("B: Save | X: Cancel");
+  displayMenuFooter("B: Back | X: Clear");
+}
+
+void displayRfidSettings() {
+  displayMenuHeader("RFID Settings");
+
+  if (isWaitingForRfid) {
+    display.setCursor(0, 10);
+    display.print("Scanning Station ");
+    display.print(selectedStationId);
+    display.println("...");
+    
+    display.setCursor(0, 20);
+    display.println("Tap RFID card");
+    
+    display.setCursor(0, 30);
+    int remainingTime = (RFID_SCAN_TIMEOUT - (millis() - rfidScanTimeout)) / 1000;
+    display.print("Timeout: ");
+    display.print(remainingTime);
+    display.println("s");
+    
+    display.setCursor(0, 40);
+    display.println("B: Cancel");
+    
+    display.display();
+    return;
+  }
+
+  display.setCursor(0, 10);
+  displayIndicator(0, selectedRfidItem);
+  display.print("Station: ");
+  display.println(selectedStationId);
+
+  display.setCursor(0, 18);
+  displayIndicator(1, selectedRfidItem);
+  display.println("Scan RFID");
+
+  display.setCursor(0, 26);
+  displayIndicator(2, selectedRfidItem);
+  display.println("View All");
+
+  display.setCursor(0, 34);
+  displayIndicator(3, selectedRfidItem);
+  display.println("Delete Station");
+
+  display.setCursor(0, 42);
+  displayIndicator(4, selectedRfidItem);
+  display.println("Clear All");
+
+  displayMenuFooter("B: Back");
 }
 
 void displayResetMenu() {
@@ -249,6 +282,7 @@ void displayResetMenu() {
   display.println("This will reset:");
   display.println("- PID Settings");
   display.println("- Target Settings");
+  display.println("- RFID Settings");
   display.println("- Button Calibration");
   display.display();
 }
@@ -333,87 +367,205 @@ void handlePidSettings() {
 }
 
 void handleTargetSettings() {
+  unsigned long currentMillis = millis();
+  
+  if (X()) {
+    if (!isClearingStations) {
+      // Start X button hold detection
+      xButtonHoldStart = currentMillis;
+      isClearingStations = true;
+    } else {
+      // Check if held for 3 seconds
+      if (currentMillis - xButtonHoldStart >= X_HOLD_DURATION) {
+        // Call clearStationsData after 3 seconds
+        display.clearDisplay();
+        display.setCursor(0, 20);
+        display.println("Clearing stations...");
+        display.display();
+        
+        clearStationsData();
+        
+        display.clearDisplay();
+        display.setCursor(0, 20);
+        display.println("Stations cleared!");
+        display.display();
+        delay(1500);
+        
+        // Reset state
+        isClearingStations = false;
+        xButtonHoldStart = 0;
+      }
+    }
+  } else {
+    // X button released, cancel clearing
+    if (isClearingStations) {
+      isClearingStations = false;
+      xButtonHoldStart = 0;
+    }
+  }
+  
+  if (B()) {
+    // Load latest stations from preferences
+    loadStationsFromPreferences();
+    isClearingStations = false;
+    xButtonHoldStart = 0;
+    currentMenu = MENU_MAIN;
+  }
+}
+
+void handleRfidSettings() {
+  unsigned long currentMillis = millis();
+
+  if (isWaitingForRfid) {
+    // Check if new RFID was scanned
+    if (newRfidScanned) {
+      // RFID card detected, save it
+      if (addRfidStation(selectedStationId, lastScannedRfid)) {
+        display.clearDisplay();
+        display.setCursor(0, 10);
+        display.print("Station ");
+        display.print(selectedStationId);
+        display.println(" saved!");
+        display.setCursor(0, 20);
+        display.println("RFID: " + lastScannedRfid.substring(0, 8) + "...");
+        display.display();
+        delay(2000);
+      } else {
+        display.clearDisplay();
+        display.setCursor(0, 10);
+        display.println("Error saving!");
+        display.display();
+        delay(2000);
+      }
+      
+      // Reset scanning state
+      isWaitingForRfid = false;
+      newRfidScanned = false;
+      selectedRfidItem = 1; // Stay on scan option for next scan
+    }
+    
+    // Check for timeout or cancel
+    if ((currentMillis - rfidScanTimeout > RFID_SCAN_TIMEOUT) || B()) {
+      isWaitingForRfid = false;
+      newRfidScanned = false;
+    }
+    
+    return;
+  }
+
   if (UP()) {
-    int maxSelection = useAutoTarget ? 1 : (manualTargetCount > 1 ? manualTargetCount + 3 : manualTargetCount + 2);
-    selectedTarget = (selectedTarget - 1 + maxSelection) % maxSelection;
+    selectedRfidItem = (selectedRfidItem - 1 + 5) % 5;
   } else if (DOWN()) {
-    int maxSelection = useAutoTarget ? 1 : (manualTargetCount > 1 ? manualTargetCount + 3 : manualTargetCount + 2);
-    selectedTarget = (selectedTarget + 1) % maxSelection;
+    selectedRfidItem = (selectedRfidItem + 1) % 5;
   } else if (RIGHT()) {
-    if (selectedTarget == 0) {
-      // Toggle between computer and manual
-      useAutoTarget = !useAutoTarget;
-      Serial.print("Toggled useAutoTarget to: ");
-      Serial.println(useAutoTarget);
-      selectedTarget = 0;  // Reset selection when switching modes
-      if (useAutoTarget) {
-        // Update targetStation with computer values when switching to computer mode
-        for (int i = 0; i < 4; i++) {
-          targetStation[i] = targetStationFromKomputer[i];
-        }
-      }
-      // saveSettings();  // Save source preference immediately
-    } else if (!useAutoTarget) {
-      if (selectedTarget <= manualTargetCount) {
-        // Increment selected target
-        targetStation[selectedTarget - 1]++;
-        // saveSettings();  // Save immediately after changing a target value
-      } else if (selectedTarget == manualTargetCount + 1 && manualTargetCount < MAX_MANUAL_TARGETS) {
-        // Add new target
-        manualTargetCount++;
-        targetStation[manualTargetCount - 1] = 0;
-        selectedTarget = manualTargetCount;  // Select the newly added target
-        // saveSettings();                      // Save immediately after adding a new target
-      }
+    if (selectedRfidItem == 0) {
+      // Change station ID
+      selectedStationId = (selectedStationId % 10) + 1;
     }
   } else if (LEFT()) {
-    if (selectedTarget == 0) {
-      // Toggle between computer and manual
-      useAutoTarget = !useAutoTarget;
-      Serial.print("Toggled useAutoTarget to: ");
-      Serial.println(useAutoTarget);
-      selectedTarget = 0;  // Reset selection when switching modes
-      if (useAutoTarget) {
-        // Update targetStation with computer values when switching to computer mode
-        for (int i = 0; i < 4; i++) {
-          targetStation[i] = targetStationFromKomputer[i];
+    if (selectedRfidItem == 0) {
+      // Change station ID
+      selectedStationId = selectedStationId == 1 ? 10 : selectedStationId - 1;
+    }
+  } else if (A()) {
+    switch (selectedRfidItem) {
+      case 1: // Scan RFID
+        isWaitingForRfid = true;
+        rfidScanTimeout = currentMillis;
+        newRfidScanned = false; // Reset flag
+        break;
+        
+      case 2: // View All
+        {
+          display.clearDisplay();
+          display.setCursor(0, 0);
+          display.println("RFID Stations:");
+          
+          int displayLine = 10;
+          bool hasData = false;
+          for (int i = 0; i < rfidStationCount && displayLine < 55; i++) {
+            if (rfidStations[i].isActive) {
+              display.setCursor(0, displayLine);
+              display.print("S");
+              display.print(rfidStations[i].stationId);
+              display.print(": ");
+              String shortRfid = rfidStations[i].rfidId.substring(0, 8) + "...";
+              display.println(shortRfid);
+              displayLine += 8;
+              hasData = true;
+            }
+          }
+          
+          if (!hasData) {
+            display.setCursor(0, 20);
+            display.println("No stations set");
+          }
+          
+          display.setCursor(0, 55);
+          display.println("Press any key");
+          display.display();
+          
+          // Wait for any button press
+          while (true) {
+            if (B()) {
+              delay(200);
+              break;
+            }
+            delay(1);
+          }
         }
-      }
-      // saveSettings();  // Save source preference immediately
-    } else if (!useAutoTarget) {
-      if (selectedTarget <= manualTargetCount) {
-        // Decrement selected target
-        targetStation[selectedTarget - 1] = max(0, targetStation[selectedTarget - 1] - 1);
-        // saveSettings();  // Save immediately after changing a target value
-      } else if (selectedTarget == manualTargetCount + 2 && manualTargetCount > 1) {
-        // Delete the last target
-        manualTargetCount--;
-        selectedTarget = min(selectedTarget, manualTargetCount + 1);  // Adjust selection
-        // saveSettings();                                               // Save immediately after deleting a target
-      }
+        break;
+        
+      case 3: // Delete Station
+        {
+          if (deleteRfidStation(selectedStationId)) {
+            display.clearDisplay();
+            display.setCursor(0, 20);
+            display.print("Station ");
+            display.print(selectedStationId);
+            display.println(" deleted!");
+            display.display();
+            delay(1500);
+          } else {
+            display.clearDisplay();
+            display.setCursor(0, 20);
+            display.println("Station not found!");
+            display.display();
+            delay(1500);
+          }
+        }
+        break;
+        
+      case 4: // Clear All
+        {
+          display.clearDisplay();
+          display.setCursor(0, 10);
+          display.println("Clear all RFID?");
+          display.setCursor(0, 20);
+          display.println("A: Yes  B: No");
+          display.display();
+          
+          // Wait for confirmation
+          while (true) {
+            if (A()) {
+              clearAllRfidStations();
+              display.clearDisplay();
+              display.setCursor(0, 20);
+              display.println("All stations cleared!");
+              display.display();
+              delay(1500);
+              break;
+            } else if (B()) {
+              break;
+            }
+            delay(50);
+          }
+        }
+        break;
     }
   } else if (B()) {
-    if (useAutoTarget) {
-      // Copy all computer targets
-      for (int i = 0; i < 4; i++) {
-        targetStation[i] = targetStationFromKomputer[i];
-      }
-    }
-    saveSettings();
     currentMenu = MENU_MAIN;
-  } else if (X()) {
-    // Batal simpan, kembalikan nilai manualTargetCount dan targetStation
-    preferences.begin("agv-settings", false);
-    manualTargetCount = preferences.getInt("manualTargetCount", 2);
-    for (int i = 0; i < manualTargetCount; i++) {
-      char key[10];
-      sprintf(key, "target%d", i + 1);
-      targetStation[i] = preferences.getInt(key, i + 2);
-    }
-    useAutoTarget = preferences.getBool("useAutoTarget", false);
-    preferences.end();
-
-    currentMenu = MENU_MAIN;
+    selectedRfidItem = 0;
   }
 }
 
@@ -430,14 +582,19 @@ void handleResetMenu() {
     tempKi = 0.0;
     tempKd = 0.0;
 
-    // Reset target stations to defaults
-    manualTargetCount = 2;
-    for (int i = 0; i < manualTargetCount; i++) {
-      targetStation[i] = i + 2;
-    }
-
     // Save default values
     saveSettings();
+
+    // Clear RFID stations too
+    clearAllRfidStations();
+    
+    // Clear stations list from HTTP preferences
+    stationsPreferences.begin(STATIONS_NAMESPACE, false);
+    stationsPreferences.clear();
+    stationsPreferences.end();
+    
+    // Clear stationsList in memory
+    stationsList.clear();
 
     // End preferences session
     preferences.end();
@@ -476,6 +633,10 @@ void handleMenu() {
         } else if (A()) {
           if (selectedItem == 0) {  // AGV Mode
             isAgvMode = true;
+          } else if (selectedItem == 4) {  // RFID Settings (item 5)
+            currentMenu = MENU_RFID_SETTINGS;
+          } else if (selectedItem == 5) {  // Reset Settings (item 6)
+            currentMenu = MENU_RESET;
           } else {
             currentMenu = selectedItem + 1;
           }
@@ -504,6 +665,16 @@ void handleMenu() {
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handleTargetSettings();
         if (LEFT() || RIGHT() || UP() || DOWN() || B()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_RFID_SETTINGS:
+      displayRfidSettings();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleRfidSettings();
+        if (LEFT() || RIGHT() || UP() || DOWN() || A() || B()) {
           lastButtonPress = currentMillis;
         }
       }

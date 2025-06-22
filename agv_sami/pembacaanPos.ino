@@ -1,4 +1,3 @@
-
 extern int totalSensorAktif;  // counter sensor aktif
 extern int errorValue;        // nilai error PID
 String statusJalan;
@@ -14,7 +13,7 @@ const int totalTarget = sizeof(targetStation) / sizeof(targetStation[0]);
 int indexTarget = 0;
 
 // ― Modes (hanya SATU TRUE sekaligus) ―
-bool modeTerminal = true;  // mulai di terminal & diam
+bool modeTerminal = false;  // mulai di terminal & diam
 bool modeWarehouse = false;
 bool modeStation = false;
 
@@ -67,19 +66,26 @@ void outTerminal() {
   force = true;
 }
 
+// void inWarehouse() {
+//   if (modeMundur) {
+//     force = true;
+//     if (!modeStation) {
+//       setModeTerminal();  // balik arah, pulang ke terminal
+//     }
+//   } else {
+//     clearMovement();
+//     modeBerhenti = true;
+//   }
+// }
 void inWarehouse() {
-  if (modeMundur) {
-    force = true;
-    if (!modeStation) {
-      setModeTerminal();  // balik arah, pulang ke terminal
-    }
-  } else {
-    clearMovement();
-    modeBerhenti = true;
-  }
+  clearMovement();
+  clearStationsData();
+  modeBerhenti = true;
 }
 void outWarehouse() {
   setModeStation();
+  sortStationsList();
+  modeMundur = false;
   modeMaju = true;
   force = true;
 }
@@ -89,15 +95,21 @@ void inStation() {
   modeBerhenti = true;
 }
 void outStation() {
-  modeMaju = true;
-  force = true;
+  // Check if this is the last station in the list
+  if (indexTarget >= stationsList.size()) {
+    Serial.println("Last station reached via outStation - calling ujungStation!");
+    ujungStation();
+  } else {
+    modeMaju = true;
+    force = true;
+  }
 }
-void ujungStation() {  // ujung station → mundur ke warehouse
+void ujungStation() {  // ujung station → mundur ke warehouse
   modeMaju = false;
   modeMundur = true;
   force = true;
   pidLinefollower(errorValue, "FORCEMUNDUR");
-  delay(1000);
+  // delay(1000);
   setModeWarehouse();
 }
 
@@ -142,7 +154,7 @@ void pembacaanWarehouse() {
     // pidLinefollower(errorValue, "FORCEMUNDUR");
     return;
   }
-  // ― Deteksi marker tengah ―
+  // ― Deteksi marker tengah ―
   if (tengahAktif && !force && modeMundur) {
     bool kanan = (kananHilang && station % 2 == 0);
     bool kiri = (kiriHilang && station % 2 == 1);
@@ -157,37 +169,100 @@ void pembacaanWarehouse() {
 }
 
 void pembacaanStation() {
-  // ― Ujung station: pindah ke warehouse (mundur) ―
-  if (sensorkebacasemua && modeMaju && !force) {
-    ujungStation();
-    return;
-  }
-  // ― Keluar station dengan tombol (FORCEMAJU) ―
-  if ((kananHilang || kiriHilang) && force) {
-    return pidLinefollower(errorValue, "FORCEMAJU");
-  }
+  // ― RFID Detection (Priority) - Independent of sensor conditions ―
+  if (!sudahDeteksiStasiun) {
+    int detectedStationId = getStationFromLastRfid();
+    if (detectedStationId > 0) {
+      // Use RFID station ID directly
+      station = detectedStationId;
+      Serial.print("RFID detected - Station ID: ");
+      Serial.println(detectedStationId);
 
-  // ― Deteksi marker tengah ―
-  if (tengahAktif && !force && !sudahDeteksiStasiun) {
-    bool kanan = (kananHilang && station % 2 == 0);
-    bool kiri = (kiriHilang && station % 2 == 1);
-
-    if ((kanan || kiri) && !modeBerhenti) {
-      station++;
       errorValue = 0;
       sudahDeteksiStasiun = true;
 
-      if (station == targetStation[indexTarget]) {
-        inStation();
-        if (indexTarget < totalTarget - 1)
-          indexTarget++;
+      // Check if current station is in stationsList (from preferences)
+      bool isTargetStation = false;
+      for (size_t i = 0; i < stationsList.size(); i++) {
+        if (stationsList[i] == station) {
+          Serial.println("Target station reached via RFID!");
+
+          // Check if this is the last station
+          if (indexTarget >= stationsList.size() - 1) {
+            Serial.println("Last station reached - calling ujungStation!");
+            ujungStation();
+          } else {
+            inStation();
+            indexTarget++;
+          }
+
+          isTargetStation = true;
+          break;
+        }
       }
-      pidLinefollower(errorValue, "MAJU");
+
+      if (!isTargetStation) {
+        Serial.println("Non-target station detected via RFID - continue");
+        pidLinefollower(errorValue, "MAJU");
+      }
       return;
     }
   }
 
-  // ― Reset bila keluar garis ―
+  // ― Ujung station: pindah ke warehouse (mundur) ―
+  if (sensorkebacasemua && modeMaju && !force) {
+    ujungStation();
+    return;
+  }
+  // ― Keluar station dengan tombol (FORCEMAJU) ―
+  if ((kananHilang || kiriHilang) && force) {
+    return pidLinefollower(errorValue, "FORCEMAJU");
+  }
+
+  // ― Deteksi marker tengah (Fallback) ―
+  // if (tengahAktif && !force && !sudahDeteksiStasiun) {
+  //   bool kanan = (kananHilang && station % 2 == 0);
+  //   bool kiri = (kiriHilang && station % 2 == 1);
+
+  //   if ((kanan || kiri) && !modeBerhenti) {
+  //     // Fallback: increment station if no RFID detected
+  //     station++;
+  //     Serial.print("Fallback sensor detection - Station: ");
+  //     Serial.println(station);
+
+  //     errorValue = 0;
+  //     sudahDeteksiStasiun = true;
+
+  //     // Check if current station is in stationsList (from preferences)
+  //     bool isTargetStation = false;
+  //     for (size_t i = 0; i < stationsList.size(); i++) {
+  //       if (stationsList[i] == station) {
+  //         Serial.println("Target station reached via sensor!");
+
+  //         // Check if this is the last station
+  //         if (indexTarget >= stationsList.size() - 1) {
+  //           Serial.println("Last station reached - calling ujungStation!");
+  //           ujungStation();
+  //         } else {
+  //           inStation();
+  //           indexTarget++;
+  //         }
+
+  //         isTargetStation = true;
+  //         break;
+  //       }
+  //     }
+
+  //     if (!isTargetStation) {
+  //       Serial.println("Non-target station passed via sensor");
+  //     }
+
+  //     pidLinefollower(errorValue, "MAJU");
+  //     return;
+  //   }
+  // }
+
+  // ― Reset bila keluar garis ―
   if (!sensorkebacasemua) {
     force = false;
     sudahDeteksiStasiun = false;
@@ -204,23 +279,23 @@ void tombolAgv() {
 
   if (X() && (ms - lastXPress >= xDelay) && !modeStation) {
     lastXPress = ms;
-    if (buttonStep == 0) {
-      outTerminal();
-      buttonStep = 1;
-    } else {
+    // if (buttonStep == 0) {
+    //   outTerminal();
+    //   buttonStep = 1;
+    // } else {
+    //   buttonStep = 0;
+    // }
       outWarehouse();
-      buttonStep = 0;
-    }
-  } else if (Y()) {
+  } else if (X() && (ms - lastXPress >= xDelay) && modeStation) {
     outStation();
-  }
+  } 
 }
 
 /***********************************************************
  *  MAIN LOGIC – PANGGIL DI loop()                        *
  ***********************************************************/
 void logicAgv() {
-  // ― Update processed sensor flags ―
+  // ― Update processed sensor flags ―
   tengahAktif = jumlahMagnet[7] && jumlahMagnet[8];
   kananHilang = jumlahMagnet[14] || jumlahMagnet[15];
   kiriHilang = jumlahMagnet[0] || jumlahMagnet[2];
@@ -238,7 +313,7 @@ void logicAgv() {
 
   if (force)
     modeBerhenti = false;
-  // ― Prioritas gerakan global ―
+  // ― Prioritas gerakan global ―
   if (statusJalan != "BERHENTI") {
     modeBerhenti = false;
   }
@@ -274,7 +349,8 @@ void displayLogicAgv() {
   } else if (modeStation) {
     currentMode = "STATION";
   } else {
-    modeTerminal = true;
+    // modeTerminal = true;
+    modeWarehouse = true;
   }
   display.print("Mode : ");
   display.println(currentMode);
@@ -285,6 +361,10 @@ void displayLogicAgv() {
     display.print("Station : ");
     display.println(station);
     display.print("Target : ");
-    display.println(targetStation[indexTarget]);
+    if (indexTarget < stationsList.size()) {
+      display.println(stationsList[indexTarget]);
+    } else {
+      display.println("COMPLETE");
+    }
   }
 }
