@@ -289,13 +289,13 @@ void displayResetMenu() {
 
 void handleMotorTest() {
   if (UP()) {
-    pwmMotor(baseSpeed, baseSpeed);
-  } else if (DOWN()) {
-    pwmMotor(-baseSpeed, -baseSpeed);
-  } else if (LEFT()) {
-    pwmMotor(-baseSpeed, baseSpeed);
-  } else if (RIGHT()) {
     pwmMotor(baseSpeed, -baseSpeed);
+  } else if (DOWN()) {
+    pwmMotor(-baseSpeed, baseSpeed);
+  } else if (LEFT()) {
+    pwmMotor(baseSpeed, baseSpeed);
+  } else if (RIGHT()) {
+    pwmMotor(-baseSpeed, -baseSpeed);
   } else if (B()) {
     pwmMotor(0, 0);
     currentMenu = MENU_MAIN;
