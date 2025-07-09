@@ -4,7 +4,7 @@ void setup() {
   Serial.begin(115200);
   setupAll();
 
-  display.clearDisplay();
+  // lcd.clear();
   Serial.println("SETUP SELESAI");
 }
 
@@ -31,5 +31,5 @@ void loop() {
     inTerminal();
     handleMenu();
   }
-  display.display();
+  // LCD doesn't need display() call - content shows immediately
 }

@@ -33,19 +33,15 @@ void setupEncoder() {
 
 // setup display
 void initializeDisplay() {
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    for (;;)
-      ;
-  }
-  display.clearDisplay();
-  display.setTextSize(2);  // Ukuran tulisan  //Ukuran tulisan
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 0);  // Koordinat awal tulisan (x,y) dimulai dari atas-kiri
-  display.print("Mulai Program AGV");
+  lcd.begin(LCD_COLUMNS, LCD_ROWS);  // Inisialisasi LCD
+  lcd.backlight();                   // Nyalakan backlight
+  
+  lcd.setCursor(0, 0);
+  lcd.print("Mulai Program");
+  lcd.setCursor(0, 1);
+  lcd.print("AGV System");
   delay(1000);
-  display.setTextSize(1);
-  display.display();
+  lcd.clear();
 }
 
 void setupDisplay() {
@@ -75,33 +71,43 @@ void setupWebServer() {
   // Muat kedua jenis data dari Preferences
   loadMapFromPreferences();
   loadStationsFromPreferences();  // Muat station yang ditemukan saat startup
-
+  // lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("SETUP WIFI");
   WiFi.begin(ssid, password);
   if (!WiFi.config(staticIP, gateway, subnet, dns)) {
     Serial.println("Gagal mengkonfigurasi IP Statis");
   }
   while (WiFi.status() != WL_CONNECTED) {
+    // lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("MENCARI WIFI");
     delay(500);
-    Serial.print(".");
   }
   Serial.println("\nKoneksi Wi-Fi berhasil!");
   Serial.print("Alamat IP: ");
   Serial.println(WiFi.localIP());
-
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Wi-Fi Berhasil!");
+  lcd.setCursor(0, 1);
+  lcd.print("IP: ");
+  lcd.print(WiFi.localIP());
   server.on("/update", HTTP_POST, handleUpdateRequest);
   server.on("/find", HTTP_POST, handleFindRequest);
   server.on("/showmap", HTTP_GET, handleShowMapRequest);
   server.on("/showstations", HTTP_GET, handleShowStationsRequest);  // Endpoint untuk menampilkan daftar station
-
+  
   server.on("/", HTTP_GET, []() {
     server.send(200, "text/html", "berhasil terhubung");
   });
-
+  
   server.onNotFound([]() {
     server.send(404, "text/plain", "Endpoint tidak ditemukan.");
   });
   server.begin();
   Serial.println("Server HTTP telah dimulai.");
+  delay(1000);
 }
 
 // void setupUltrasonik() {
@@ -134,9 +140,9 @@ void setupAll() {
   setupEncoder();
   setupDisplay();
   setupMenu();  // Initialize menu system
-  setupTombol();
   setupSensorMagnet();
-  setupWebServer();
+  // setupWebServer();
+  setupTombol();
   setupRfid();
   Serial.println("SETUP ALL SELESAI");
 }

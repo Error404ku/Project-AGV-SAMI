@@ -32,6 +32,7 @@ bool sensorkebacasemua = false;
 // ― Debounce tombol X ―
 unsigned long lastXPress = 0;
 const unsigned long xDelay = 200;
+extern bool sudahStopPelanPelan;
 
 /***********************************************************
  *  MODE HELPERS                                          *
@@ -102,6 +103,7 @@ void outStation() {
   } else {
     modeMaju = true;
     force = true;
+    sudahStopPelanPelan = false;
   }
 }
 void ujungStation() {  // ujung station → mundur ke warehouse
@@ -285,10 +287,10 @@ void tombolAgv() {
     // } else {
     //   buttonStep = 0;
     // }
-      outWarehouse();
+    outWarehouse();
   } else if (X() && (ms - lastXPress >= xDelay) && modeStation) {
     outStation();
-  } 
+  }
 }
 
 /***********************************************************
@@ -318,7 +320,11 @@ void logicAgv() {
     modeBerhenti = false;
   }
   if (modeBerhenti) {
-    pidLinefollower(errorValue, "STOP");
+    if (modeStation) {
+      pidLinefollower(errorValue, "STOPPELANPELAN");
+    } else {
+      pidLinefollower(errorValue, "STOP");
+    }
     return;
   }
   if (modeMaju && !force)
@@ -352,19 +358,23 @@ void displayLogicAgv() {
     // modeTerminal = true;
     modeWarehouse = true;
   }
-  display.print("Mode : ");
-  display.println(currentMode);
-  display.print("Status : ");
-  display.println(statusJalan);
+
+  // Display on row 3 (last available row)
+  lcd.setCursor(0, 3);
+  lcd.print(currentMode.substring(0, 8));  // First 8 chars
+  lcd.print(" ");
+  lcd.print(statusJalan.substring(0, 7));  // Fit remaining space
 
   if (modeStation) {
-    display.print("Station : ");
-    display.println(station);
-    display.print("Target : ");
+    // Clear part of row 3 and show station info
+    lcd.setCursor(0, 3);
+    lcd.print("ST:");
+    lcd.print(station);
+    lcd.print(" TG:");
     if (indexTarget < stationsList.size()) {
-      display.println(stationsList[indexTarget]);
+      lcd.print(stationsList[indexTarget]);
     } else {
-      display.println("COMPLETE");
+      lcd.print("END");
     }
   }
 }

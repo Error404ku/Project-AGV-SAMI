@@ -6,17 +6,28 @@
 #define MENU_PID_SETTINGS 3
 #define MENU_TARGET_SETTINGS 4
 #define MENU_AGV_MODE 1
-#define MENU_RESET 5
-#define MENU_RFID_SETTINGS 6
+#define MENU_RFID_SETTINGS 5
+#define MENU_MOTOR_SETTINGS 6
+#define MENU_RESET 7
 
 int selectedItem = 0;
-int maxItems = 6;
+int maxItems = 7;
+int menuStartIndex = 0; // For scrolling menu
+const int maxMenuDisplay = 3; // Max items shown at once (row 1-3, row 0 for header)
 bool isAgvMode = false;
+
+// Menu refresh flags - to prevent flickering
+bool menuNeedsRefresh = true;
+int lastSelectedItem = -1;
+int lastMenuStartIndex = -1;
 
 // PID settings
 double tempKp = kpLinefollower;
 double tempKi = kiLinefollower;
 double tempKd = kdLinefollower;
+
+// Motor settings
+int tempBaseSpeed = baseSpeed;
 
 // Target station settings
 bool useAutoTarget = false;         // New variable to track target source
@@ -53,24 +64,21 @@ bool isClearingStations = false;
 // Global display functions
 void displayIndicator(int current, int selected) {
   if (current == selected) {
-    display.print("> ");
+    lcd.print("> ");
   } else {
-    display.print("  ");
+    lcd.print("  ");
   }
 }
 
 void displayMenuHeader(const char* title) {
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 0);
-  display.println(title);
+  // lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(title);
 }
 
 void displayMenuFooter(const char* text) {
-  display.setCursor(0, 50);
-  display.println(text);
-  display.display();
+  lcd.setCursor(0, 3);
+  lcd.print(text);
 }
 
 void setupMenu() {
@@ -81,10 +89,17 @@ void setupMenu() {
   tempKi = preferences.getDouble("kiLinefollower", 0.0);
   tempKd = preferences.getDouble("kdLinefollower", 0.0);
   
+  // Load Motor settings
+  tempBaseSpeed = preferences.getInt("baseSpeed", 1000);
+  
   // Apply PID values
   kpLinefollower = tempKp;
   kiLinefollower = tempKi;
   kdLinefollower = tempKd;
+  
+  // Apply Motor values
+  baseSpeed = tempBaseSpeed;
+  
   preferences.end();
   
   // Load RFID stations
@@ -104,187 +119,280 @@ void saveSettings() {
   preferences.putDouble("kpLinefollower", tempKp);
   preferences.putDouble("kiLinefollower", tempKi);
   preferences.putDouble("kdLinefollower", tempKd);
+  
+  // Save Motor values
+  preferences.putInt("baseSpeed", tempBaseSpeed);
 
   // Apply PID values
   kpLinefollower = tempKp;
   kiLinefollower = tempKi;
   kdLinefollower = tempKd;
+  
+  // Apply Motor values
+  baseSpeed = tempBaseSpeed;
 
   // End preferences session
   preferences.end();
 }
 
 void displayMainMenu() {
-  displayMenuHeader("AGV Menu:");
+  // Menu items array
+  String menuItems[7] = {
+    "AGV Mode",
+    "Motor Test", 
+    "PID Settings",
+    "Target Settings",
+    "RFID Settings",
+    "Motor Settings",
+    "Reset Settings"
+  };
 
-  display.setCursor(0, 10);
-  displayIndicator(0, selectedItem);
-  display.println("1. AGV Mode");
+  // Update scroll position if needed
+  if (selectedItem < menuStartIndex) {
+    menuStartIndex = selectedItem;
+    menuNeedsRefresh = true;
+  } else if (selectedItem >= menuStartIndex + maxMenuDisplay) {
+    menuStartIndex = selectedItem - maxMenuDisplay + 1;
+    menuNeedsRefresh = true;
+  }
 
-  display.setCursor(0, 18);
-  displayIndicator(1, selectedItem);
-  display.println("2. Motor Test");
+  // Check if we need to refresh the entire display
+  if (menuNeedsRefresh || selectedItem != lastSelectedItem || menuStartIndex != lastMenuStartIndex) {
+    lcd.clear(); // Only clear when really needed
+    displayMenuHeader("AGV Menu:");
+    
+    // Display menu items (3 items max)
+    for (int i = 0; i < maxMenuDisplay && (menuStartIndex + i) < maxItems; i++) {
+      int menuIndex = menuStartIndex + i;
+      lcd.setCursor(0, i + 1);
+      
+      // Show cursor for selected item
+      if (menuIndex == selectedItem) {
+        lcd.print("> ");
+      } else {
+        lcd.print("  ");
+      }
+      
+      // Print menu item (max 16 chars to fit cursor)
+      String item = menuItems[menuIndex];
+      if (item.length() > 16) {
+        item = item.substring(0, 16);
+      }
+      lcd.print(item);
+      
+      // Show item number
+      lcd.setCursor(18, i + 1);
+      lcd.print(menuIndex + 1);
+    }
 
-  display.setCursor(0, 26);
-  displayIndicator(2, selectedItem);
-  display.println("3. PID Settings");
-
-  display.setCursor(0, 34);
-  displayIndicator(3, selectedItem);
-  display.println("4. Target Settings");
-
-  display.setCursor(0, 42);
-  displayIndicator(4, selectedItem);
-  display.println("5. RFID Settings");
-
-  display.setCursor(0, 50);
-  displayIndicator(5, selectedItem);
-  display.println("6. Reset Settings");
-  display.display();
+    // Show scroll indicators
+    lcd.setCursor(19, 1);
+    if (menuStartIndex > 0) {
+      lcd.print("^"); // Up arrow if can scroll up
+    } else {
+      lcd.print(" ");
+    }
+    
+    lcd.setCursor(19, 3);
+    if (menuStartIndex + maxMenuDisplay < maxItems) {
+      lcd.print("v"); // Down arrow if can scroll down
+    } else {
+      lcd.print(" ");
+    }
+    
+    // Update last states
+    lastSelectedItem = selectedItem;
+    lastMenuStartIndex = menuStartIndex;
+    menuNeedsRefresh = false;
+  } else {
+    // Quick cursor update without full refresh
+    for (int i = 0; i < maxMenuDisplay && (menuStartIndex + i) < maxItems; i++) {
+      int menuIndex = menuStartIndex + i;
+      lcd.setCursor(0, i + 1);
+      
+      if (menuIndex == selectedItem) {
+        lcd.print(">");
+      } else {
+        lcd.print(" ");
+      }
+    }
+  }
 }
 
 void displayMotorTest() {
   displayMenuHeader("Motor Test");
-  display.println("UP: Forward");
-  display.println("DOWN: Backward");
-  display.println("LEFT: Left Turn");
-  display.println("RIGHT: Right Turn");
-  displayMenuFooter("B: Back to Menu");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("UP    : Forward");
+  lcd.setCursor(0, 2);
+  lcd.print("DOWN  : Backward");
+  lcd.setCursor(0, 3);
+  lcd.print("LF/RT : Turn   B:OK");
 }
 
 void displayPidSettings() {
   displayMenuHeader("PID Settings");
 
-  display.setCursor(0, 10);
-  displayIndicator(0, selectedParam);
-  display.print("Kp: ");
-  display.println(tempKp);
+  // Display Kp
+  lcd.setCursor(0, 1);
+  if (selectedParam == 0) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Kp: ");
+  lcd.print(tempKp);
 
-  display.setCursor(0, 20);
-  displayIndicator(1, selectedParam);
-  display.print("Ki: ");
-  display.println(tempKi);
-
-  display.setCursor(0, 30);
-  displayIndicator(2, selectedParam);
-  display.print("Kd: ");
-  display.println(tempKd);
-
-  displayMenuFooter("B: Save | X: Cancel");
+  // Display Ki  
+  lcd.setCursor(0, 2);
+  if (selectedParam == 1) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Ki: ");
+  lcd.print(tempKi);
+  
+  // Display Kd
+  lcd.setCursor(0, 3);
+  if (selectedParam == 2) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Kd: ");
+  lcd.print(tempKd);
+  
+  // Show controls
+  lcd.setCursor(12, 3);
+  lcd.print("B:OK");
 }
 
 void displayTargetSettings() {
   displayMenuHeader("Target Settings");
 
   if (isClearingStations) {
-    display.setCursor(0, 20);
-    display.println("Clearing stations...");
+    lcd.setCursor(0, 1);
+    lcd.print("Clearing...");
     
     // Show progress bar
     unsigned long elapsed = millis() - xButtonHoldStart;
     int progress = (elapsed * 100) / X_HOLD_DURATION;
     progress = min(progress, 100);
     
-    display.setCursor(0, 30);
-    display.print("Progress: ");
-    display.print(progress);
-    display.println("%");
+    lcd.setCursor(0, 2);
+    lcd.print("Progress: ");
+    lcd.print(progress);
+    lcd.print("%");
     
-    display.setCursor(0, 40);
-    display.println("Release X to cancel");
-    display.display();
+    lcd.setCursor(0, 3);
+    lcd.print("Release X=cancel");
     return;
   }
 
-  display.setCursor(0, 10);
-  display.println("Stations from HTTP:");
+  lcd.setCursor(0, 1);
+  lcd.print("HTTP Stations:");
   
   if (stationsList.empty()) {
-    display.setCursor(0, 20);
-    display.println("No stations loaded");
-    display.setCursor(0, 30);
-    display.println("Use HTTP API to");
-    display.setCursor(0, 38);
-    display.println("add stations");
+    lcd.setCursor(0, 2);
+    lcd.print("No stations");
+    lcd.setCursor(0, 3);
+    lcd.print("Use HTTP API");
   } else {
-    display.setCursor(0, 20);
-    display.print("Total: ");
-    display.println(stationsList.size());
+    lcd.setCursor(0, 2);
+    lcd.print("Total:");
+    lcd.print(stationsList.size());
     
-    display.setCursor(0, 30);
-    display.print("Stations: ");
-    for (size_t i = 0; i < stationsList.size() && i < 5; i++) {
-      display.print(stationsList[i]);
-      if (i < stationsList.size() - 1 && i < 4) display.print(",");
+    lcd.setCursor(0, 3);
+    for (size_t i = 0; i < stationsList.size() && i < 3; i++) {
+      lcd.print(stationsList[i]);
+      if (i < stationsList.size() - 1 && i < 2) lcd.print(",");
     }
-    if (stationsList.size() > 5) {
-      display.print("...");
+    if (stationsList.size() > 3) {
+      lcd.print("..");
     }
   }
 
-  displayMenuFooter("B: Back | X: Clear");
+  // Show controls
+  lcd.setCursor(8, 3);
+  lcd.print("X:Clear B:OK");
 }
 
 void displayRfidSettings() {
   displayMenuHeader("RFID Settings");
 
   if (isWaitingForRfid) {
-    display.setCursor(0, 10);
-    display.print("Scanning Station ");
-    display.print(selectedStationId);
-    display.println("...");
+    lcd.setCursor(0, 1);
+    lcd.print("Scan Station ");
+    lcd.print(selectedStationId);
     
-    display.setCursor(0, 20);
-    display.println("Tap RFID card");
+    lcd.setCursor(0, 2);
+    lcd.print("Tap RFID card");
     
-    display.setCursor(0, 30);
+    lcd.setCursor(0, 3);
     int remainingTime = (RFID_SCAN_TIMEOUT - (millis() - rfidScanTimeout)) / 1000;
-    display.print("Timeout: ");
-    display.print(remainingTime);
-    display.println("s");
+    lcd.print("Timeout:");
+    lcd.print(remainingTime);
+    lcd.print("s B:Cancel");
     
-    display.setCursor(0, 40);
-    display.println("B: Cancel");
-    
-    display.display();
     return;
   }
 
-  display.setCursor(0, 10);
-  displayIndicator(0, selectedRfidItem);
-  display.print("Station: ");
-  display.println(selectedStationId);
+  // RFID Menu items
+  String rfidMenuItems[5] = {
+    "Station: " + String(selectedStationId),
+    "Scan RFID",
+    "View All",
+    "Delete Station", 
+    "Clear All"
+  };
+  
+  // Simple display - show items with scrolling if needed
+  int startIdx = max(0, min(selectedRfidItem - 1, 5 - 3));
+  
+  for (int i = 0; i < 3 && (startIdx + i) < 5; i++) {
+    int itemIndex = startIdx + i;
+    lcd.setCursor(0, i + 1);
+    lcd.print("                "); // Clear line
+    lcd.setCursor(0, i + 1);
+    
+    if (itemIndex == selectedRfidItem) {
+      lcd.print("> ");
+    } else {
+      lcd.print("  ");
+    }
+    
+    String item = rfidMenuItems[itemIndex];
+    if (item.length() > 13) {
+      item = item.substring(0, 13);
+    }
+    lcd.print(item);
+  }
+  
+  // Show navigation hint
+  lcd.setCursor(12, 3);
+  lcd.print("A:OK");
+}
 
-  display.setCursor(0, 18);
-  displayIndicator(1, selectedRfidItem);
-  display.println("Scan RFID");
+void displayMotorSettings() {
+  displayMenuHeader("Motor Settings");
 
-  display.setCursor(0, 26);
-  displayIndicator(2, selectedRfidItem);
-  display.println("View All");
-
-  display.setCursor(0, 34);
-  displayIndicator(3, selectedRfidItem);
-  display.println("Delete Station");
-
-  display.setCursor(0, 42);
-  displayIndicator(4, selectedRfidItem);
-  display.println("Clear All");
-
-  displayMenuFooter("B: Back");
+  lcd.setCursor(0, 1);
+  lcd.print("Base Speed (PWM):");
+  
+  lcd.setCursor(0, 2);
+  lcd.print("> ");
+  lcd.print(tempBaseSpeed);
+  
+  // Show range indicator
+  lcd.setCursor(0, 3);
+  lcd.print("Range: 100-4000");
+  
+  // Show controls on last row corner
+  lcd.setCursor(12, 3);
+  lcd.print("B:OK");
 }
 
 void displayResetMenu() {
   displayMenuHeader("Reset Settings");
-  display.println("Press A to confirm");
-  display.println("Press B to cancel");
-  display.println("");
-  display.println("This will reset:");
-  display.println("- PID Settings");
-  display.println("- Target Settings");
-  display.println("- RFID Settings");
-  display.println("- Button Calibration");
-  display.display();
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Reset ALL settings:");
+  lcd.setCursor(0, 2);
+  lcd.print("PID, Motor, RFID,");
+  lcd.setCursor(0, 3);
+  lcd.print("Target, Button A:OK");
 }
 
 void handleMotorTest() {
@@ -299,6 +407,8 @@ void handleMotorTest() {
   } else if (B()) {
     pwmMotor(0, 0);
     currentMenu = MENU_MAIN;
+    menuStartIndex = 0; // Reset scroll position
+    menuNeedsRefresh = true;
   } else {
     pwmMotor(0, 0);
   }
@@ -357,12 +467,16 @@ void handlePidSettings() {
     kdLinefollower = tempKd;
     saveSettings();
     currentMenu = MENU_MAIN;
+    menuStartIndex = 0; // Reset scroll position
+    menuNeedsRefresh = true;
   } else if (X()) {
     // Batal menyimpan, kembali ke menu
     kpLinefollower = tempKp;
     kiLinefollower = tempKi;
     kdLinefollower = tempKd;
     currentMenu = MENU_MAIN;
+    menuStartIndex = 0; // Reset scroll position
+    menuNeedsRefresh = true;
   }
 }
 
@@ -378,17 +492,15 @@ void handleTargetSettings() {
       // Check if held for 3 seconds
       if (currentMillis - xButtonHoldStart >= X_HOLD_DURATION) {
         // Call clearStationsData after 3 seconds
-        display.clearDisplay();
-        display.setCursor(0, 20);
-        display.println("Clearing stations...");
-        display.display();
+        lcd.clear();
+        lcd.setCursor(0, 1);
+        lcd.print("Clearing stations...");
         
         clearStationsData();
         
-        display.clearDisplay();
-        display.setCursor(0, 20);
-        display.println("Stations cleared!");
-        display.display();
+        lcd.clear();
+        lcd.setCursor(0, 1);
+        lcd.print("Stations cleared!");
         delay(1500);
         
         // Reset state
@@ -410,6 +522,8 @@ void handleTargetSettings() {
     isClearingStations = false;
     xButtonHoldStart = 0;
     currentMenu = MENU_MAIN;
+    menuStartIndex = 0; // Reset scroll position
+    menuNeedsRefresh = true;
   }
 }
 
@@ -421,20 +535,20 @@ void handleRfidSettings() {
     if (newRfidScanned) {
       // RFID card detected, save it
       if (addRfidStation(selectedStationId, lastScannedRfid)) {
-        display.clearDisplay();
-        display.setCursor(0, 10);
-        display.print("Station ");
-        display.print(selectedStationId);
-        display.println(" saved!");
-        display.setCursor(0, 20);
-        display.println("RFID: " + lastScannedRfid.substring(0, 8) + "...");
-        display.display();
+        lcd.clear();
+        lcd.setCursor(0, 1);
+        lcd.print("Station ");
+        lcd.print(selectedStationId);
+        lcd.print(" saved!");
+        lcd.setCursor(0, 2);
+        lcd.print("RFID: ");
+        lcd.print(lastScannedRfid.substring(0, 8));
+        lcd.print("...");
         delay(2000);
       } else {
-        display.clearDisplay();
-        display.setCursor(0, 10);
-        display.println("Error saving!");
-        display.display();
+        lcd.clear();
+        lcd.setCursor(0, 1);
+        lcd.print("Error saving!");
         delay(2000);
       }
       
@@ -477,33 +591,34 @@ void handleRfidSettings() {
         
       case 2: // View All
         {
-          display.clearDisplay();
-          display.setCursor(0, 0);
-          display.println("RFID Stations:");
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("RFID Stations:");
           
-          int displayLine = 10;
+          int displayRow = 1;
           bool hasData = false;
-          for (int i = 0; i < rfidStationCount && displayLine < 55; i++) {
+          for (int i = 0; i < rfidStationCount && displayRow < 4; i++) {
             if (rfidStations[i].isActive) {
-              display.setCursor(0, displayLine);
-              display.print("S");
-              display.print(rfidStations[i].stationId);
-              display.print(": ");
-              String shortRfid = rfidStations[i].rfidId.substring(0, 8) + "...";
-              display.println(shortRfid);
-              displayLine += 8;
+              lcd.setCursor(0, displayRow);
+              lcd.print("S");
+              lcd.print(rfidStations[i].stationId);
+              lcd.print(":");
+              String shortRfid = rfidStations[i].rfidId.substring(0, 8);
+              lcd.print(shortRfid);
+              displayRow++;
               hasData = true;
             }
           }
           
           if (!hasData) {
-            display.setCursor(0, 20);
-            display.println("No stations set");
+            lcd.setCursor(0, 1);
+            lcd.print("No stations set");
           }
           
-          display.setCursor(0, 55);
-          display.println("Press any key");
-          display.display();
+          if (hasData && rfidStationCount > 3) {
+            lcd.setCursor(13, 3);
+            lcd.print("...");
+          }
           
           // Wait for any button press
           while (true) {
@@ -519,18 +634,16 @@ void handleRfidSettings() {
       case 3: // Delete Station
         {
           if (deleteRfidStation(selectedStationId)) {
-            display.clearDisplay();
-            display.setCursor(0, 20);
-            display.print("Station ");
-            display.print(selectedStationId);
-            display.println(" deleted!");
-            display.display();
+            lcd.clear();
+            lcd.setCursor(0, 1);
+            lcd.print("Station ");
+            lcd.print(selectedStationId);
+            lcd.print(" deleted!");
             delay(1500);
           } else {
-            display.clearDisplay();
-            display.setCursor(0, 20);
-            display.println("Station not found!");
-            display.display();
+            lcd.clear();
+            lcd.setCursor(0, 1);
+            lcd.print("Station not found!");
             delay(1500);
           }
         }
@@ -538,21 +651,21 @@ void handleRfidSettings() {
         
       case 4: // Clear All
         {
-          display.clearDisplay();
-          display.setCursor(0, 10);
-          display.println("Clear all RFID?");
-          display.setCursor(0, 20);
-          display.println("A: Yes  B: No");
-          display.display();
+          lcd.clear();
+          lcd.setCursor(0, 1);
+          lcd.print("Clear all RFID?");
+          lcd.setCursor(0, 2);
+          lcd.print("A: Yes  B: No");
           
           // Wait for confirmation
           while (true) {
             if (A()) {
               clearAllRfidStations();
-              display.clearDisplay();
-              display.setCursor(0, 20);
-              display.println("All stations cleared!");
-              display.display();
+              lcd.clear();
+              lcd.setCursor(0, 1);
+              lcd.print("All stations");
+              lcd.setCursor(0, 2);
+              lcd.print("cleared!");
               delay(1500);
               break;
             } else if (B()) {
@@ -566,6 +679,29 @@ void handleRfidSettings() {
   } else if (B()) {
     currentMenu = MENU_MAIN;
     selectedRfidItem = 0;
+    menuStartIndex = 0; // Reset scroll position
+    menuNeedsRefresh = true;
+  }
+}
+
+void handleMotorSettings() {
+  if (LEFT()) {
+    tempBaseSpeed = max(100, tempBaseSpeed - 50);  // Minimum 100, decrease by 50
+  } else if (RIGHT()) {
+    tempBaseSpeed = min(4000, tempBaseSpeed + 50); // Maximum 4000, increase by 50
+  } else if (B()) {
+    // Save motor settings
+    baseSpeed = tempBaseSpeed;
+    saveSettings();
+    currentMenu = MENU_MAIN;
+    menuStartIndex = 0; // Reset scroll position
+    menuNeedsRefresh = true;
+  } else if (X()) {
+    // Cancel changes
+    tempBaseSpeed = baseSpeed;
+    currentMenu = MENU_MAIN;
+    menuStartIndex = 0; // Reset scroll position
+    menuNeedsRefresh = true;
   }
 }
 
@@ -581,6 +717,9 @@ void handleResetMenu() {
     tempKp = 70.0;
     tempKi = 0.0;
     tempKd = 0.0;
+    
+    // Reset Motor values to defaults  
+    tempBaseSpeed = 1000;
 
     // Save default values
     saveSettings();
@@ -599,10 +738,14 @@ void handleResetMenu() {
     // End preferences session
     preferences.end();
     currentMenu = MENU_MAIN;
+    menuStartIndex = 0; // Reset scroll position
+    menuNeedsRefresh = true;
     tombolBoot = true;
     setup();  // Return to main menu
   } else if (B()) {
     currentMenu = MENU_MAIN;
+    menuStartIndex = 0; // Reset scroll position
+    menuNeedsRefresh = true;
   }
 }
 
@@ -616,6 +759,7 @@ void handleMenu() {
       currentMenu = MENU_MAIN;
       modeBerhenti = true;
       force = false;
+      menuNeedsRefresh = true;
     }
     return;
   }
@@ -633,12 +777,20 @@ void handleMenu() {
         } else if (A()) {
           if (selectedItem == 0) {  // AGV Mode
             isAgvMode = true;
+            menuStartIndex = 0; // Reset scroll position
+            menuNeedsRefresh = true;
           } else if (selectedItem == 4) {  // RFID Settings (item 5)
             currentMenu = MENU_RFID_SETTINGS;
-          } else if (selectedItem == 5) {  // Reset Settings (item 6)
+            menuNeedsRefresh = true;
+          } else if (selectedItem == 5) {  // Motor Settings (item 6)
+            currentMenu = MENU_MOTOR_SETTINGS;
+            menuNeedsRefresh = true;
+          } else if (selectedItem == 6) {  // Reset Settings (item 7)
             currentMenu = MENU_RESET;
+            menuNeedsRefresh = true;
           } else {
             currentMenu = selectedItem + 1;
+            menuNeedsRefresh = true;
           }
           lastButtonPress = currentMillis;
         }
@@ -675,6 +827,16 @@ void handleMenu() {
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handleRfidSettings();
         if (LEFT() || RIGHT() || UP() || DOWN() || A() || B()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_MOTOR_SETTINGS:
+      displayMotorSettings();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleMotorSettings();
+        if (LEFT() || RIGHT() || B() || X()) {
           lastButtonPress = currentMillis;
         }
       }

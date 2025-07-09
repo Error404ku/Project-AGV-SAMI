@@ -4,7 +4,8 @@
 #include <Wire.h>
 #include <Arduino.h>
 #include <math.h>
-#include <Adafruit_SSD1306.h>  // Memanggil Library OLED SSD1306
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>  // ESP32 LCD I2C Library
 #include <ModbusMaster.h>
 #include <WiFi.h>
 #include <WebServer.h>
@@ -29,11 +30,11 @@ std::vector<int> stationsList; // Array di RAM untuk menyimpan station yang dite
 // # TOMBOL
 #define tombol 6
 #define BOOT_PIN 0
-// #Oled I2C
-#define SCREEN_WIDTH 128  // Lebar Oled dalam Pixel
-#define SCREEN_HEIGHT 64  // Tinggi Oled dalam Pixel
-#define OLED_RESET -1
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+// LCD I2C
+#define LCD_COLUMNS 20    // Jumlah kolom LCD
+#define LCD_ROWS 4      // Jumlah baris LCD
+#define LCD_ADDRESS 0x27 // Alamat I2C LCD (biasanya 0x27 atau 0x3F)
+LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 
 // #Interrupt
 #define interruptPin 47

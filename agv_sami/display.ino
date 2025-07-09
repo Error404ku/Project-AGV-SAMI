@@ -1,52 +1,44 @@
 void displayPrint() {
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
+  // lcd.clear();
   displaySensorData();
   uji_tombol();
-  display.setCursor(0, 10); 
   displayLogicAgv();
-  display.display();
   // displayEncoderValue();
   // displayRpm();
 }
 
 
 void displaySensorData() {
-  // Draw line sensor boxes
-  int boxWidth = 6;
-  int boxHeight = 6;
-  int spacing = 1;
-  
-  // Calculate total width and starting position to center the boxes
-  int totalWidth = (boxWidth * 16) + (spacing * 15);
-  int startX = (SCREEN_WIDTH - totalWidth) / 2;
-  int startY = 0;
-  for (int i = 0; i < 16; i++) {
-    int x = startX + i * (boxWidth + spacing);
-    if (jumlahMagnet[i] == 1) {
-      display.fillRect(x, startY, boxWidth, boxHeight, SSD1306_WHITE);
-    } else {
-      display.drawRect(x, startY, boxWidth, boxHeight, SSD1306_WHITE);
-    }
+  // Display sensor data on LCD (16 sensors in 2 rows)
+  lcd.setCursor(0, 0);
+  lcd.print("Sensor:");
+  lcd.setCursor(0, 1);
+  for (int i = 0; i < 8; i++) {
+    lcd.print(jumlahMagnet[i] ? "1" : "0");
   }
-  // display.print("errorValue : ");
-  // display.println(errorValue);
-  display.display();
+  lcd.setCursor(8, 1);
+  for (int i = 8; i < 16; i++) {
+    lcd.print(jumlahMagnet[i] ? "1" : "0");
+  }
+  
+  // Show error value
+  lcd.setCursor(0, 2);
+  lcd.print("Error: ");
+  lcd.print(errorValue);
 }
 
 void displayRpm(){
-  display.print("Rpm: ");
-  display.print(rpmKanan);
-  display.print(" ");
-  display.println(rpmKiri);
-  display.display();
+  lcd.setCursor(0, 3);
+  lcd.print("RPM R:");
+  lcd.print(rpmKanan);
+  lcd.print(" L:");
+  lcd.print(rpmKiri);
 }
 
 void displayEncoderValue(){
-  display.print("Encoder ++ : ");
-  display.print(encKananAVal);
-  display.print(" ");
-  display.println(encKiriAVal);
-  display.display();
+  lcd.setCursor(0, 3);
+  lcd.print("Enc R:");
+  lcd.print(encKananAVal);
+  lcd.print(" L:");
+  lcd.print(encKiriAVal);
 }
