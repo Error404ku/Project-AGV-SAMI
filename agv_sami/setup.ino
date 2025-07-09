@@ -71,15 +71,15 @@ void setupSensorMagnet() {
 }
 
 void setupWebServer() {
-  // Serial.begin(115200);
-  // Muat kedua jenis data dari Preferences
-  loadMapFromPreferences();
-  loadStationsFromPreferences();  // Muat station yang ditemukan saat startup
-
+  // Muat daftar stasiun dari Preferences saat startup
+  loadStationsListFromPreferences();
+  
+  // Konfigurasi dan mulai koneksi Wi-Fi
   WiFi.begin(ssid, password);
   if (!WiFi.config(staticIP, gateway, subnet, dns)) {
-    Serial.println("Gagal mengkonfigurasi IP Statis");
+    Serial.println("Error: Gagal mengkonfigurasi IP Statis");
   }
+  
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -88,19 +88,21 @@ void setupWebServer() {
   Serial.print("Alamat IP: ");
   Serial.println(WiFi.localIP());
 
-  server.on("/update", HTTP_POST, handleUpdateRequest);
-  server.on("/find", HTTP_POST, handleFindRequest);
-  server.on("/showmap", HTTP_GET, handleShowMapRequest);
-  server.on("/showstations", HTTP_GET, handleShowStationsRequest);  // Endpoint untuk menampilkan daftar station
-
+  // Registrasi Endpoint HTTP yang diminta
+  server.on("/updatestations", HTTP_POST, handleUpdateStations); // Untuk menyimpan/menimpa daftar stasiun
+  server.on("/showstations", HTTP_GET, handleShowStations);       // Untuk menampilkan daftar stasiun
+  
+  // Halaman utama server
   server.on("/", HTTP_GET, []() {
-    server.send(200, "text/html", "berhasil terhubung");
+    server.send(200, "text/html", "Server ESP32 Aktif. <br> Coba: <br> /updatestations (POST)<br> /showstations (GET)");
   });
 
+  // Handler untuk endpoint tidak ditemukan
   server.onNotFound([]() {
     server.send(404, "text/plain", "Endpoint tidak ditemukan.");
   });
-  server.begin();
+  
+  server.begin(); // Memulai server HTTP
   Serial.println("Server HTTP telah dimulai.");
 }
 

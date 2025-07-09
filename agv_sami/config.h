@@ -20,9 +20,7 @@
 // --- Deklarasi Global ---
 WebServer server(80);
 Preferences preferences;
-Preferences preferencesMap; // Untuk deviceMap
 Preferences stationsPreferences; // Objek Preferences untuk station yang ditemukan
-std::unordered_map<int, std::vector<String>> deviceMap;
 std::vector<int> stationsList; // Array di RAM untuk menyimpan station yang ditemukan
 
 // ### DEFINE ###
