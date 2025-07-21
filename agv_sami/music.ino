@@ -1,0 +1,51 @@
+void music(String mode) {
+    Serial.print("Start Music : ");
+    Serial.println(mode);
+  
+    if (statusMusic) {
+      Serial.println("Music already on");
+      return;
+    }
+  
+    statusMusic = true;
+  
+    // Reset all relays (OFF)
+    digitalWrite(pinMusic1, HIGH);
+    digitalWrite(pinMusic2, HIGH);
+    digitalWrite(pinMusic3, HIGH);
+    digitalWrite(pinMusic4, HIGH);
+  
+    // Mapping
+    int targetPin = -1;
+    if (mode == "station")       targetPin = musicStationPin;
+    else if (mode == "error")    targetPin = musicErrorPin;
+    else if (mode == "detect")   targetPin = musicDetectPin;
+    else if (mode == "komputer") targetPin = musicKomputerPin;
+    // print target pin
+    Serial.print("Target Pin : ");
+    Serial.println(targetPin);
+  
+    // Set selected pin ON
+    if (targetPin >= 0 && targetPin <= 3) {
+      switch (targetPin) {
+        case 0: digitalWrite(pinMusic1, LOW); break;
+        case 1: digitalWrite(pinMusic2, LOW); break;
+        case 2: digitalWrite(pinMusic3, LOW); break;
+        case 3: digitalWrite(pinMusic4, LOW); break;
+      }
+    }
+  
+    // Atur timer hanya untuk station & komputer
+    if (mode != "error" && mode != "detect") {
+      previousMillis = millis(); // <- UPDATE timer di sini
+    }
+  }
+  
+
+void stopMusic() {
+  digitalWrite(pinMusic1, HIGH);
+  digitalWrite(pinMusic2, HIGH);
+  digitalWrite(pinMusic3, HIGH);
+  digitalWrite(pinMusic4, HIGH);
+  statusMusic = false;
+}

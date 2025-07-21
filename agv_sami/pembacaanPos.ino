@@ -63,7 +63,8 @@ void inTerminal() {
 }
 void outTerminal() {
   setModeWarehouse();
-  modeMaju = true;
+  // modeMaju = true;
+  changeStateMode("maju");
   force = true;
 }
 
@@ -79,6 +80,7 @@ void outTerminal() {
 //   }
 // }
 void inWarehouse() {
+  music("komputer");
   clearMovement();
   clearStationsData();
   modeBerhenti = true;
@@ -86,12 +88,15 @@ void inWarehouse() {
 void outWarehouse() {
   setModeStation();
   sortStationsList();
-  modeMundur = false;
-  modeMaju = true;
+  // modeMundur = false;
+  // modeMaju = true;
+  changeStateMode("maju");
   force = true;
+  statusMusic = false;
 }
 
 void inStation() {
+  music("station");
   clearMovement();
   modeBerhenti = true;
 }
@@ -101,14 +106,17 @@ void outStation() {
     Serial.println("Last station reached via outStation - calling ujungStation!");
     ujungStation();
   } else {
-    modeMaju = true;
+    // modeMaju = true;
+    changeStateMode("maju");
     force = true;
     sudahStopPelanPelan = false;
   }
+  statusMusic = false;
 }
 void ujungStation() {  // ujung station → mundur ke warehouse
-  modeMaju = false;
-  modeMundur = true;
+  // modeMaju = false;
+  // modeMundur = true;
+  changeStateMode("mundur");
   force = true;
   pidLinefollower(errorValue, "FORCEMUNDUR");
   // delay(1000);
@@ -139,6 +147,7 @@ void pembacaanTerminal() {
 }
 
 void pembacaanWarehouse() {
+
   if (sensorkebacasemua && force && modeMaju) {
     pidLinefollower(errorValue, "FORCEMAJU");
     return;
@@ -279,7 +288,7 @@ void pembacaanStation() {
 void tombolAgv() {
   unsigned long ms = millis();
 
-  if (X() && (ms - lastXPress >= xDelay) && !modeStation) {
+  if (START() && (ms - lastXPress >= xDelay) && !modeStation) {
     lastXPress = ms;
     // if (buttonStep == 0) {
     //   outTerminal();
@@ -288,7 +297,7 @@ void tombolAgv() {
     //   buttonStep = 0;
     // }
     outWarehouse();
-  } else if (X() && (ms - lastXPress >= xDelay) && modeStation) {
+  } else if (START() && (ms - lastXPress >= xDelay) && modeStation) {
     outStation();
   }
 }

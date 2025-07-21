@@ -1,16 +1,31 @@
+extern bool modeMaju;
+extern bool modeMundur;
 
-
-void preTransmission()
-{
-    digitalWrite(MAX485_RE, 1);
-    digitalWrite(MAX485_DE, 1);
+void changeStateMode(String mode){
+    if (mode == "maju" && !modeMundur){
+        setupSensorMagnet(1, RX_MAGNET_FRONT, TX_MAGNET_FRONT, BAUDRATE);
+        setupUltrasonikWithParams(RX_ULTRASONIK_FRONT, TX_ULTRASONIK_FRONT, BAUDRATE);
+        modeMaju = true;
+        modeMundur = false;
+    }else if (mode == "mundur" && !modeMaju){
+        setupSensorMagnet(1, RX_MAGNET_BACK, TX_MAGNET_BACK, BAUDRATE);
+        setupUltrasonikWithParams(RX_ULTRASONIK_BACK, TX_ULTRASONIK_BACK, BAUDRATE);
+        modeMaju = false;
+        modeMundur = true;
+    }
 }
 
-void postTransmission()
-{
-    digitalWrite(MAX485_RE, 0);
-    digitalWrite(MAX485_DE, 0);
-}
+// void preTransmission()
+// {
+//     digitalWrite(MAX485_RE, 1);
+//     digitalWrite(MAX485_DE, 1);
+// }
+
+// void postTransmission()
+// {
+//     digitalWrite(MAX485_RE, 0);
+//     digitalWrite(MAX485_DE, 0);
+// }
 
 
 void bacaSensorGaris()
@@ -28,37 +43,23 @@ void bacaSensorGaris()
 void bacaSensor()
 {
     // Serial.println(F("Mengirim permintaan pembacaan..."));
+    static int consecutiveFailures = 0; // Track consecutive communication failures
+    
     uint8_t result = node.readHoldingRegisters(0x0000, 2);
 
     if (result == node.ku8MBSuccess)
     {
+        // Reset consecutive failures counter on successful communication
+        consecutiveFailures = 0;
+        
         uint16_t medianValue = node.getResponseBuffer(0);
         uint16_t positionValue = node.getResponseBuffer(1);
 
-        // Serial.println(F("\n=== Data Sensor Diterima ==="));
-        // Serial.print(F("Median Value  : "));
-        // Serial.print(medianValue);
-        // Serial.print(F(" (0x"));
-        // Serial.print(medianValue, HEX);
-        // Serial.println(F(")"));
-
-        // Serial.print(F("Position Value: "));
-        // Serial.print(positionValue);
-        // Serial.print(F(" (0x"));
-        // Serial.print(positionValue, HEX);
-        // Serial.println(F(")"));
-
         printActiveSegmentsFromBitmask(positionValue);
-
-        // ⬇️ Tambahkan ini di sini:
         updateJumlahMagnet(positionValue);
-
-        // Serial.println(F("----------------------------"));
 
         if (positionValue == 0xFFFF)
         {
-            // Serial.println(F("Status: Di Luar Jalur"));
-            // pwmMotor(0,0);
             totalSensorAktif = 0; 
         }
         else
@@ -69,27 +70,28 @@ void bacaSensor()
                     if (jumlahMagnet[i]) totalSensorAktif++;
                 }
             errorValue = hitungErrorPosisi(positionValue);
-            
-            // Serial.print(F("Nilai Error Posisi: "));
-            // Serial.println(errorValue);
         }
-
-        // Serial.println(F("============================\n"));
     }
     else
     {
         Serial.print(F("Gagal membaca data sensor. Error Code: 0x"));
         Serial.println(result, HEX);
+        
+        // Count consecutive failures
+        consecutiveFailures++;
+        Serial.println(consecutiveFailures);
+        // If too many consecutive failures, trigger system error
+        // if (consecutiveFailures >= 30) {
+        //     error(ERROR_SENSOR_COMMUNICATION, "Sensor Modbus Gagal 30x berturut-turut");
+        // }
     }
 }
 
 // ==================== Fungsi untuk mencetak semua segmen aktif dari Bitmask (Active Low) ====================
 void printActiveSegmentsFromBitmask(uint16_t positionValue)
 {
-    // Serial.print(F("Segmen Aktif  : "));
     if (positionValue == 0xFFFF)
     {
-        // Serial.println(F("Tidak ada magnet / Diluar Jalur."));
         return;
     }
 
@@ -175,14 +177,5 @@ void updateJumlahMagnet(uint16_t bitmask)
     {
         jumlahMagnet[i] = !((bitmask >> i) & 0x01) ? 1 : 0;
     }
-
-    // Opsional: tampilkan ke Serial Monitor
-    // Serial.print(F("jumlahMagnet[] : "));
-    // for (int i = 0; i < 16; i++)
-    // {
-    //     Serial.print(jumlahMagnet[i]);
-    //     Serial.print(" ");
-    // }
-    // Serial.println();
 }
 

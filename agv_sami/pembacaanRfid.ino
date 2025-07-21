@@ -82,6 +82,16 @@ void receivedDataError(Wiegand::DataError error, uint8_t* rawData, uint8_t rawBi
     Serial.print(rawData[i] & 0xF, 16);
   }
   Serial.println();
+  
+  // Count RFID errors
+  static int rfidErrorCount = 0;
+  rfidErrorCount++;
+  
+  // If too many errors, log it
+  if (rfidErrorCount >= 10) {
+    logError(ERROR_RFID_COMMUNICATION, "RFID error 10x berturut");
+    rfidErrorCount = 0; // Reset counter
+  }
 }
 
 // RFID Station Management Functions

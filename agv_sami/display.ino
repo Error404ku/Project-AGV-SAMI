@@ -3,6 +3,7 @@ void displayPrint() {
   displaySensorData();
   uji_tombol();
   displayLogicAgv();
+  Serial.println("Display Print");
   // displayEncoderValue();
   // displayRpm();
 }
@@ -27,18 +28,18 @@ void displaySensorData() {
   lcd.print(errorValue);
 }
 
-void displayRpm(){
-  lcd.setCursor(0, 3);
-  lcd.print("RPM R:");
-  lcd.print(rpmKanan);
-  lcd.print(" L:");
-  lcd.print(rpmKiri);
-}
+// void displayRpm(){
+//   lcd.setCursor(0, 3);
+//   lcd.print("RPM R:");
+//   lcd.print(rpmKanan);
+//   lcd.print(" L:");
+//   lcd.print(rpmKiri);
+// }
 
-void displayEncoderValue(){
-  lcd.setCursor(0, 3);
-  lcd.print("Enc R:");
-  lcd.print(encKananAVal);
-  lcd.print(" L:");
-  lcd.print(encKiriAVal);
-}
+// void displayEncoderValue(){
+//   lcd.setCursor(0, 3);
+//   lcd.print("Enc R:");
+//   lcd.print(encKananAVal);
+//   lcd.print(" L:");
+//   lcd.print(encKiriAVal);
+// }

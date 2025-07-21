@@ -1,6 +1,6 @@
 
 
-float error = 0;
+float pidError = 0;
 float lastError = 0;
 float integral = 0;
 float derivative = 0;
@@ -8,11 +8,27 @@ float derivative = 0;
 // Kecepatan dasar
 bool sudahStopPelanPelan = false;
 void pidLinefollower(int errorPosisi, String mode) {
-  error = errorPosisi;
-  integral += error;
-  derivative = error - lastError;
+  // kalo sensor jarak mendeteksi ada benda di depan maka berhenti dulu
+  if (obstacleDetected && mode != "BERHENTI") {
+    // Emergency stop - obstacle detected
+    pwmMotor(0, 0);
+    Serial.println("MOTOR STOPPED - Obstacle detected!");
+    // buzzerError();
+    music("error");
+    return; // Exit function early
+  }
 
-  float koreksi = kpLinefollower * error + kiLinefollower * integral +
+  pidError = errorPosisi;
+  
+  // Apply X-axis inversion (kiri-kanan) if enabled
+  if (invertMotorX) {
+    pidError = -pidError;
+  }
+  
+  integral += pidError;
+  derivative = pidError - lastError;
+
+  float koreksi = kpLinefollower * pidError + kiLinefollower * integral +
                   kdLinefollower * derivative;
 
   int motorKiri = baseSpeed - koreksi;
@@ -41,5 +57,5 @@ void pidLinefollower(int errorPosisi, String mode) {
     pwmMotor(0, 0);
   }
   Serial.println(mode);
-  lastError = error;
+  lastError = pidError;
 }

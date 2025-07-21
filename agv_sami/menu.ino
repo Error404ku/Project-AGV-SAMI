@@ -8,10 +8,14 @@
 #define MENU_AGV_MODE 1
 #define MENU_RFID_SETTINGS 5
 #define MENU_MOTOR_SETTINGS 6
-#define MENU_RESET 7
+#define MENU_MOTOR_INVERT 7
+#define MENU_MUSIC_SETTINGS 8
+#define MENU_MUSIC_TEST 9
+#define MENU_HOOK_TEST 10
+#define MENU_RESET 11
 
 int selectedItem = 0;
-int maxItems = 7;
+int maxItems = 11;
 int menuStartIndex = 0; // For scrolling menu
 const int maxMenuDisplay = 3; // Max items shown at once (row 1-3, row 0 for header)
 bool isAgvMode = false;
@@ -61,6 +65,30 @@ unsigned long xButtonHoldStart = 0;
 const unsigned long X_HOLD_DURATION = 3000; // 3 seconds hold
 bool isClearingStations = false;
 
+// Motor invert settings
+bool tempInvertY = invertMotorY;
+bool tempInvertX = invertMotorX;
+bool tempInvertKanan = invertMotorKanan;
+bool tempInvertKiri = invertMotorKiri;
+bool tempInvertHook = invertHook;
+
+// Music mapping settings
+int tempMusicStationPin = musicStationPin;
+int tempMusicErrorPin = musicErrorPin;
+int tempMusicDetectPin = musicDetectPin;
+int tempMusicKomputerPin = musicKomputerPin;
+
+// Motor invert menu variables
+int selectedInvertItem = 0;  // 0=Y-axis, 1=X-axis, 2=Motor Kanan, 3=Motor Kiri, 4=Hook
+const int maxInvertItems = 5;
+
+// Music settings menu variables
+int selectedMusicItem = 0;  // 0=Station, 1=Error, 2=Detect, 3=Komputer
+const int maxMusicItems = 4;
+
+// Motor test variables
+int motorTestState = 0;  // 0=stop, 1=forward, 2=backward, 3=left, 4=right
+
 // Global display functions
 void displayIndicator(int current, int selected) {
   if (current == selected) {
@@ -92,6 +120,19 @@ void setupMenu() {
   // Load Motor settings
   tempBaseSpeed = preferences.getInt("baseSpeed", 1000);
   
+  // Load Motor invert settings
+  tempInvertY = preferences.getBool("invertY", false);
+  tempInvertX = preferences.getBool("invertX", false);
+  tempInvertKanan = preferences.getBool("invertKanan", false);
+  tempInvertKiri = preferences.getBool("invertKiri", false);
+  tempInvertHook = preferences.getBool("invertHook", false);
+  
+  // Load Music mapping settings
+  tempMusicStationPin = preferences.getInt("musicStation", 0);
+  tempMusicErrorPin = preferences.getInt("musicError", 1);
+  tempMusicDetectPin = preferences.getInt("musicDetect", 2);
+  tempMusicKomputerPin = preferences.getInt("musicKomputer", 3);
+  
   // Apply PID values
   kpLinefollower = tempKp;
   kiLinefollower = tempKi;
@@ -100,13 +141,26 @@ void setupMenu() {
   // Apply Motor values
   baseSpeed = tempBaseSpeed;
   
+  // Apply Motor invert values
+  invertMotorY = tempInvertY;
+  invertMotorX = tempInvertX;
+  invertMotorKanan = tempInvertKanan;
+  invertMotorKiri = tempInvertKiri;
+  invertHook = tempInvertHook;
+  
+  // Apply Music mapping values
+  musicStationPin = tempMusicStationPin;
+  musicErrorPin = tempMusicErrorPin;
+  musicDetectPin = tempMusicDetectPin;
+  musicKomputerPin = tempMusicKomputerPin;
+  
   preferences.end();
   
   // Load RFID stations
   loadRfidStations();
   
   // Load stations list from HTTP preferences
-  loadStationsFromPreferences();
+  loadStationsListFromPreferences();
   
   Serial.print("Loaded stationsList size: ");
   Serial.println(stationsList.size());
@@ -122,7 +176,20 @@ void saveSettings() {
   
   // Save Motor values
   preferences.putInt("baseSpeed", tempBaseSpeed);
-
+  
+  // Save Motor invert values
+  preferences.putBool("invertY", tempInvertY);
+  preferences.putBool("invertX", tempInvertX);
+  preferences.putBool("invertKanan", tempInvertKanan);
+  preferences.putBool("invertKiri", tempInvertKiri);
+  preferences.putBool("invertHook", tempInvertHook);
+  
+  // Save Music mapping values
+  preferences.putInt("musicStation", tempMusicStationPin);
+  preferences.putInt("musicError", tempMusicErrorPin);
+  preferences.putInt("musicDetect", tempMusicDetectPin);
+  preferences.putInt("musicKomputer", tempMusicKomputerPin);
+  
   // Apply PID values
   kpLinefollower = tempKp;
   kiLinefollower = tempKi;
@@ -130,20 +197,37 @@ void saveSettings() {
   
   // Apply Motor values
   baseSpeed = tempBaseSpeed;
-
+  
+  // Apply Motor invert values
+  invertMotorY = tempInvertY;
+  invertMotorX = tempInvertX;
+  invertMotorKanan = tempInvertKanan;
+  invertMotorKiri = tempInvertKiri;
+  invertHook = tempInvertHook;
+  
+  // Apply Music mapping values
+  musicStationPin = tempMusicStationPin;
+  musicErrorPin = tempMusicErrorPin;
+  musicDetectPin = tempMusicDetectPin;
+  musicKomputerPin = tempMusicKomputerPin;
+  
   // End preferences session
   preferences.end();
 }
 
 void displayMainMenu() {
   // Menu items array
-  String menuItems[7] = {
+  String menuItems[11] = {
     "AGV Mode",
     "Motor Test", 
     "PID Settings",
     "Target Settings",
     "RFID Settings",
     "Motor Settings",
+    "Motor Invert",
+    "Music Settings",
+    "Music Test",
+    "Hook Test",
     "Reset Settings"
   };
 
@@ -223,11 +307,22 @@ void displayMotorTest() {
   displayMenuHeader("Motor Test");
   
   lcd.setCursor(0, 1);
-  lcd.print("UP    : Forward");
+  lcd.print("UP:Maju DOWN:Mundur");
   lcd.setCursor(0, 2);
-  lcd.print("DOWN  : Backward");
+  lcd.print("LF:Kiri RT:Kanan");
   lcd.setCursor(0, 3);
-  lcd.print("LF/RT : Turn   B:OK");
+  
+  // Show current motor state
+  switch(motorTestState) {
+    case 0: lcd.print("Status: STOP    "); break;
+    case 1: lcd.print("Status: MAJU    "); break;
+    case 2: lcd.print("Status: MUNDUR  "); break;
+    case 3: lcd.print("Status: KIRI    "); break;
+    case 4: lcd.print("Status: KANAN   "); break;
+  }
+  
+  lcd.setCursor(15, 3);
+  lcd.print("B:OK");
 }
 
 void displayPidSettings() {
@@ -397,20 +492,39 @@ void displayResetMenu() {
 
 void handleMotorTest() {
   if (UP()) {
-    pwmMotor(baseSpeed, -baseSpeed);
+    motorTestState = 1;  // Set to forward
   } else if (DOWN()) {
-    pwmMotor(-baseSpeed, baseSpeed);
+    motorTestState = 2;  // Set to backward
   } else if (LEFT()) {
-    pwmMotor(baseSpeed, baseSpeed);
+    motorTestState = 3;  // Set to left
   } else if (RIGHT()) {
-    pwmMotor(-baseSpeed, -baseSpeed);
-  } else if (B()) {
+    motorTestState = 4;  // Set to right
+  } else if (STOP()) {
+    motorTestState = 0;  // Stop motor
     pwmMotor(0, 0);
     currentMenu = MENU_MAIN;
-    menuStartIndex = 0; // Reset scroll position
+    menuStartIndex = 0;
     menuNeedsRefresh = true;
-  } else {
-    pwmMotor(0, 0);
+    return;
+  }
+  
+  // Execute continuous motor movement based on state
+  switch(motorTestState) {
+    case 0: // STOP
+      pwmMotor(0, 0);
+      break;
+    case 1: // FORWARD
+      pwmMotor(baseSpeed, -baseSpeed);
+      break;
+    case 2: // BACKWARD
+      pwmMotor(-baseSpeed, baseSpeed);
+      break;
+    case 3: // LEFT
+      pwmMotor(-baseSpeed, -baseSpeed);
+      break;
+    case 4: // RIGHT
+      pwmMotor(baseSpeed, baseSpeed);
+      break;
   }
 }
 
@@ -461,7 +575,7 @@ void handlePidSettings() {
     pidIncrement = 0.1f;
   }
 
-  if (B()) {
+  if (STOP()) {
     kpLinefollower = tempKp;
     kiLinefollower = tempKi;
     kdLinefollower = tempKd;
@@ -469,21 +583,13 @@ void handlePidSettings() {
     currentMenu = MENU_MAIN;
     menuStartIndex = 0; // Reset scroll position
     menuNeedsRefresh = true;
-  } else if (X()) {
-    // Batal menyimpan, kembali ke menu
-    kpLinefollower = tempKp;
-    kiLinefollower = tempKi;
-    kdLinefollower = tempKd;
-    currentMenu = MENU_MAIN;
-    menuStartIndex = 0; // Reset scroll position
-    menuNeedsRefresh = true;
-  }
+  } 
 }
 
 void handleTargetSettings() {
   unsigned long currentMillis = millis();
   
-  if (X()) {
+  if (START()) {
     if (!isClearingStations) {
       // Start X button hold detection
       xButtonHoldStart = currentMillis;
@@ -509,16 +615,16 @@ void handleTargetSettings() {
       }
     }
   } else {
-    // X button released, cancel clearing
+    // A button released, cancel clearing
     if (isClearingStations) {
       isClearingStations = false;
       xButtonHoldStart = 0;
     }
   }
   
-  if (B()) {
+  if (STOP()) {
     // Load latest stations from preferences
-    loadStationsFromPreferences();
+    loadStationsListFromPreferences();
     isClearingStations = false;
     xButtonHoldStart = 0;
     currentMenu = MENU_MAIN;
@@ -559,7 +665,7 @@ void handleRfidSettings() {
     }
     
     // Check for timeout or cancel
-    if ((currentMillis - rfidScanTimeout > RFID_SCAN_TIMEOUT) || B()) {
+    if ((currentMillis - rfidScanTimeout > RFID_SCAN_TIMEOUT) || STOP()) {
       isWaitingForRfid = false;
       newRfidScanned = false;
     }
@@ -581,7 +687,7 @@ void handleRfidSettings() {
       // Change station ID
       selectedStationId = selectedStationId == 1 ? 10 : selectedStationId - 1;
     }
-  } else if (A()) {
+  } else if (START()) {
     switch (selectedRfidItem) {
       case 1: // Scan RFID
         isWaitingForRfid = true;
@@ -622,7 +728,7 @@ void handleRfidSettings() {
           
           // Wait for any button press
           while (true) {
-            if (B()) {
+            if (START()) {
               delay(200);
               break;
             }
@@ -659,7 +765,7 @@ void handleRfidSettings() {
           
           // Wait for confirmation
           while (true) {
-            if (A()) {
+            if (START()) {
               clearAllRfidStations();
               lcd.clear();
               lcd.setCursor(0, 1);
@@ -668,7 +774,7 @@ void handleRfidSettings() {
               lcd.print("cleared!");
               delay(1500);
               break;
-            } else if (B()) {
+            } else if (STOP()) {
               break;
             }
             delay(50);
@@ -676,7 +782,7 @@ void handleRfidSettings() {
         }
         break;
     }
-  } else if (B()) {
+  } else if (STOP()) {
     currentMenu = MENU_MAIN;
     selectedRfidItem = 0;
     menuStartIndex = 0; // Reset scroll position
@@ -689,24 +795,25 @@ void handleMotorSettings() {
     tempBaseSpeed = max(100, tempBaseSpeed - 50);  // Minimum 100, decrease by 50
   } else if (RIGHT()) {
     tempBaseSpeed = min(4000, tempBaseSpeed + 50); // Maximum 4000, increase by 50
-  } else if (B()) {
+  } else if (STOP()) {
     // Save motor settings
     baseSpeed = tempBaseSpeed;
     saveSettings();
     currentMenu = MENU_MAIN;
     menuStartIndex = 0; // Reset scroll position
     menuNeedsRefresh = true;
-  } else if (X()) {
-    // Cancel changes
-    tempBaseSpeed = baseSpeed;
-    currentMenu = MENU_MAIN;
-    menuStartIndex = 0; // Reset scroll position
-    menuNeedsRefresh = true;
-  }
+  } 
+  // else if (X()) {
+  //   // Cancel changes
+  //   tempBaseSpeed = baseSpeed;
+  //   currentMenu = MENU_MAIN;
+  //   menuStartIndex = 0; // Reset scroll position
+  //   menuNeedsRefresh = true;
+  // }
 }
 
 void handleResetMenu() {
-  if (A()) {
+  if (START()) {
     // Begin preferences session
     preferences.begin("agv-settings", false);
 
@@ -720,6 +827,19 @@ void handleResetMenu() {
     
     // Reset Motor values to defaults  
     tempBaseSpeed = 1000;
+    
+    // Reset Motor invert values to defaults
+    tempInvertY = false;
+    tempInvertX = false;
+    tempInvertKanan = false;
+    tempInvertKiri = false;
+    tempInvertHook = false;
+    
+    // Reset Music mapping values to defaults
+    tempMusicStationPin = 0;    // pinMusic1
+    tempMusicErrorPin = 1;      // pinMusic2
+    tempMusicDetectPin = 2;     // pinMusic3
+    tempMusicKomputerPin = 3;   // pinMusic4
 
     // Save default values
     saveSettings();
@@ -742,7 +862,7 @@ void handleResetMenu() {
     menuNeedsRefresh = true;
     tombolBoot = true;
     setup();  // Return to main menu
-  } else if (B()) {
+  } else if (STOP()) {
     currentMenu = MENU_MAIN;
     menuStartIndex = 0; // Reset scroll position
     menuNeedsRefresh = true;
@@ -754,7 +874,7 @@ void handleMenu() {
 
   // If in AGV mode, only check for B button to exit
   if (isAgvMode) {
-    if (B()) {
+    if (STOP()) {
       isAgvMode = false;
       currentMenu = MENU_MAIN;
       modeBerhenti = true;
@@ -774,7 +894,7 @@ void handleMenu() {
         } else if (DOWN()) {
           selectedItem = (selectedItem + 1) % maxItems;
           lastButtonPress = currentMillis;
-        } else if (A()) {
+        } else if (START()) {
           if (selectedItem == 0) {  // AGV Mode
             isAgvMode = true;
             menuStartIndex = 0; // Reset scroll position
@@ -785,7 +905,19 @@ void handleMenu() {
           } else if (selectedItem == 5) {  // Motor Settings (item 6)
             currentMenu = MENU_MOTOR_SETTINGS;
             menuNeedsRefresh = true;
-          } else if (selectedItem == 6) {  // Reset Settings (item 7)
+          } else if (selectedItem == 6) {  // Motor Invert (item 7)
+            currentMenu = MENU_MOTOR_INVERT;
+            menuNeedsRefresh = true;
+          } else if (selectedItem == 7) {  // Music Settings (item 8)
+            currentMenu = MENU_MUSIC_SETTINGS;
+            menuNeedsRefresh = true;
+          } else if (selectedItem == 8) {  // Music Test (item 9)
+            currentMenu = MENU_MUSIC_TEST;
+            menuNeedsRefresh = true;
+          } else if (selectedItem == 9) {  // Hook Test (item 10)
+            currentMenu = MENU_HOOK_TEST;
+            menuNeedsRefresh = true;
+          } else if (selectedItem == 10) {  // Reset Settings (item 11)
             currentMenu = MENU_RESET;
             menuNeedsRefresh = true;
           } else {
@@ -806,7 +938,7 @@ void handleMenu() {
       displayPidSettings();
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handlePidSettings();
-        if (LEFT() || RIGHT() || UP() || DOWN() || B()) {
+        if (LEFT() || RIGHT() || UP() || DOWN() || STOP()) {
           lastButtonPress = currentMillis;
         }
       }
@@ -816,7 +948,7 @@ void handleMenu() {
       displayTargetSettings();
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handleTargetSettings();
-        if (LEFT() || RIGHT() || UP() || DOWN() || B()) {
+        if (LEFT() || RIGHT() || UP() || DOWN()  || STOP()) {
           lastButtonPress = currentMillis;
         }
       }
@@ -826,7 +958,7 @@ void handleMenu() {
       displayRfidSettings();
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handleRfidSettings();
-        if (LEFT() || RIGHT() || UP() || DOWN() || A() || B()) {
+        if (LEFT() || RIGHT() || UP() || DOWN() || START() || STOP()) {
           lastButtonPress = currentMillis;
         }
       }
@@ -836,7 +968,222 @@ void handleMenu() {
       displayMotorSettings();
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handleMotorSettings();
-        if (LEFT() || RIGHT() || B() || X()) {
+        if (LEFT() || RIGHT() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_MOTOR_INVERT:
+    {
+      displayMenuHeader("Motor Invert");
+      
+      // Calculate what items to show (3 items max, with scrolling)
+      int startIdx = max(0, min(selectedInvertItem - 1, maxInvertItems - 3));
+      
+      String invertLabels[5] = {"Y-Axis", "X-Axis", "M-Kanan", "M-Kiri", "Hook"};
+      bool* invertValues[5] = {&tempInvertY, &tempInvertX, &tempInvertKanan, &tempInvertKiri, &tempInvertHook};
+      
+      for (int i = 0; i < 3 && (startIdx + i) < maxInvertItems; i++) {
+        int itemIndex = startIdx + i;
+        lcd.setCursor(0, i + 1);
+        
+        // Clear line first
+        lcd.print("                    ");
+        lcd.setCursor(0, i + 1);
+        
+        // Show cursor for selected item
+        if (itemIndex == selectedInvertItem) {
+          lcd.print("> ");
+        } else {
+          lcd.print("  ");
+        }
+        
+        // Show label and value
+        lcd.print(invertLabels[itemIndex]);
+        lcd.print(": ");
+        lcd.print(*invertValues[itemIndex] ? "Yes" : "No");
+        
+        // Show controls on the right
+        if (i == 0) {
+          lcd.setCursor(12, i + 1);
+          lcd.print("UP/DN:Nav");
+        } else if (i == 1) {
+          lcd.setCursor(12, i + 1);
+          lcd.print("LF/RT:Set");
+        } else if (i == 2) {
+          lcd.setCursor(12, i + 1);
+          lcd.print("A:OK B:Back");
+        }
+      }
+
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        if (UP()) {
+          selectedInvertItem = (selectedInvertItem - 1 + maxInvertItems) % maxInvertItems;
+          lastButtonPress = currentMillis;
+        } else if (DOWN()) {
+          selectedInvertItem = (selectedInvertItem + 1) % maxInvertItems;
+          lastButtonPress = currentMillis;
+        } else if (LEFT() || RIGHT()) {
+          // Toggle selected item
+          switch(selectedInvertItem) {
+            case 0: tempInvertY = !tempInvertY; break;
+            case 1: tempInvertX = !tempInvertX; break;
+            case 2: tempInvertKanan = !tempInvertKanan; break;
+            case 3: tempInvertKiri = !tempInvertKiri; break;
+            case 4: tempInvertHook = !tempInvertHook; break;
+          }
+          lastButtonPress = currentMillis;
+        } else if (START()) {
+          // Save all settings
+          invertMotorY = tempInvertY;
+          invertMotorX = tempInvertX;
+          invertMotorKanan = tempInvertKanan;
+          invertMotorKiri = tempInvertKiri;
+          invertHook = tempInvertHook;
+          saveSettings();
+          currentMenu = MENU_MAIN;
+          selectedInvertItem = 0;
+          menuStartIndex = 0;
+          menuNeedsRefresh = true;
+          lastButtonPress = currentMillis;
+        } else if (STOP()) {
+          // Cancel changes
+          tempInvertY = invertMotorY;
+          tempInvertX = invertMotorX;
+          tempInvertKanan = invertMotorKanan;
+          tempInvertKiri = invertMotorKiri;
+          tempInvertHook = invertHook;
+          currentMenu = MENU_MAIN;
+          selectedInvertItem = 0;
+          menuStartIndex = 0;
+          menuNeedsRefresh = true;
+          lastButtonPress = currentMillis;
+        }
+      }
+    }
+    break;
+
+    case MENU_MUSIC_SETTINGS:
+    {
+      displayMenuHeader("Music Settings");
+      
+      // Music mode labels and their assigned pins
+      String musicModes[4] = {"Station", "Error", "Detect", "Komputer"};
+      int* musicPins[4] = {&tempMusicStationPin, &tempMusicErrorPin, &tempMusicDetectPin, &tempMusicKomputerPin};
+      
+      for (int i = 0; i < 3 && i < maxMusicItems; i++) {
+        lcd.setCursor(0, i + 1);
+        
+        // Clear line first
+        lcd.print("                    ");
+        lcd.setCursor(0, i + 1);
+        
+        // Show cursor for selected item
+        if (i == selectedMusicItem) {
+          lcd.print("> ");
+        } else {
+          lcd.print("  ");
+        }
+        
+        // Show mode and pin assignment
+        lcd.print(musicModes[i]);
+        lcd.print(":");
+        lcd.print("Pin");
+        lcd.print(*musicPins[i] + 1); // +1 to show 1-4 instead of 0-3
+        
+        // Show controls on the right
+        if (i == 0) {
+          lcd.setCursor(12, i + 1);
+          lcd.print("UP/DN:Nav");
+        } else if (i == 1) {
+          lcd.setCursor(12, i + 1);
+          lcd.print("LF/RT:Set");
+        } else if (i == 2) {
+          lcd.setCursor(12, i + 1);
+          lcd.print("A:OK B:Back");
+        }
+      }
+      
+      // Show 4th item (Komputer) if selected
+      if (selectedMusicItem == 3) {
+        lcd.setCursor(0, 3);
+        lcd.print("                    ");
+        lcd.setCursor(0, 3);
+        lcd.print("> Komputer:Pin");
+        lcd.print(tempMusicKomputerPin + 1);
+        lcd.setCursor(12, 3);
+        lcd.print("A:OK B:Back");
+      }
+
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        if (UP()) {
+          selectedMusicItem = (selectedMusicItem - 1 + maxMusicItems) % maxMusicItems;
+          lastButtonPress = currentMillis;
+        } else if (DOWN()) {
+          selectedMusicItem = (selectedMusicItem + 1) % maxMusicItems;
+          lastButtonPress = currentMillis;
+        } else if (LEFT()) {
+          // Decrease pin assignment (cycle 0-3)
+          switch(selectedMusicItem) {
+            case 0: tempMusicStationPin = (tempMusicStationPin - 1 + 4) % 4; break;
+            case 1: tempMusicErrorPin = (tempMusicErrorPin - 1 + 4) % 4; break;
+            case 2: tempMusicDetectPin = (tempMusicDetectPin - 1 + 4) % 4; break;
+            case 3: tempMusicKomputerPin = (tempMusicKomputerPin - 1 + 4) % 4; break;
+          }
+          lastButtonPress = currentMillis;
+        } else if (RIGHT()) {
+          // Increase pin assignment (cycle 0-3)
+          switch(selectedMusicItem) {
+            case 0: tempMusicStationPin = (tempMusicStationPin + 1) % 4; break;
+            case 1: tempMusicErrorPin = (tempMusicErrorPin + 1) % 4; break;
+            case 2: tempMusicDetectPin = (tempMusicDetectPin + 1) % 4; break;
+            case 3: tempMusicKomputerPin = (tempMusicKomputerPin + 1) % 4; break;
+          }
+          lastButtonPress = currentMillis;
+        } else if (START()) {
+          // Save all music settings
+          musicStationPin = tempMusicStationPin;
+          musicErrorPin = tempMusicErrorPin;
+          musicDetectPin = tempMusicDetectPin;
+          musicKomputerPin = tempMusicKomputerPin;
+          saveSettings();
+          currentMenu = MENU_MAIN;
+          selectedMusicItem = 0;
+          menuStartIndex = 0;
+          menuNeedsRefresh = true;
+          lastButtonPress = currentMillis;
+        } else if (STOP()) {
+          // Cancel changes
+          tempMusicStationPin = musicStationPin;
+          tempMusicErrorPin = musicErrorPin;
+          tempMusicDetectPin = musicDetectPin;
+          tempMusicKomputerPin = musicKomputerPin;
+          currentMenu = MENU_MAIN;
+          selectedMusicItem = 0;
+          menuStartIndex = 0;
+          menuNeedsRefresh = true;
+          lastButtonPress = currentMillis;
+        }
+      }
+    }
+    break;
+
+    case MENU_MUSIC_TEST:
+      displayMusicTest();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleMusicTest();
+        if (UP() || DOWN() || LEFT() || RIGHT() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_HOOK_TEST:
+      displayHookTest();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleHookTest();
+        if (UP() || DOWN() || STOP()) {
           lastButtonPress = currentMillis;
         }
       }
@@ -846,10 +1193,80 @@ void handleMenu() {
       displayResetMenu();
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handleResetMenu();
-        if (A() || B()) {
+        if (START() || STOP()) {
           lastButtonPress = currentMillis;
         }
       }
       break;
+  }
+}
+
+void displayMusicTest() {
+  displayMenuHeader("Music Test");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("UP   : Station");
+  lcd.setCursor(0, 2);
+  lcd.print("DOWN : Error");
+  lcd.setCursor(0, 3);
+  lcd.print("LF:Detect RT:Komputer");
+}
+
+void handleMusicTest() {
+  if (UP()) {
+    statusMusic = false;
+    music("station");
+    lcd.setCursor(15, 1);
+    lcd.print("ON ");
+  } else if (DOWN()) {
+    statusMusic = false;
+    music("error");
+    lcd.setCursor(15, 2);
+    lcd.print("ON ");
+  } else if (LEFT()) {
+    statusMusic = false;
+    music("detect");
+    lcd.setCursor(15, 3);
+    lcd.print("ON ");
+  } else if (RIGHT()) {
+    statusMusic = false;
+    music("komputer");
+    lcd.setCursor(15, 3);
+    lcd.print("ON ");
+  } else if (STOP()) {
+    stopMusic();
+    currentMenu = MENU_MAIN;
+    menuStartIndex = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+void displayHookTest() {
+  displayMenuHeader("Hook Test");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("UP   : Hook Naik");
+  lcd.setCursor(0, 2);
+  lcd.print("DOWN : Hook Turun");
+  lcd.setCursor(0, 3);
+  lcd.print("STOP : Stop & Back");
+}
+
+void handleHookTest() {
+  if (UP()) {
+    hook("naik");
+    lcd.setCursor(15, 1);
+    lcd.print("ON ");
+  } else if (DOWN()) {
+    hook("turun");
+    lcd.setCursor(15, 2);
+    lcd.print("ON ");
+  } else if (STOP()) {
+    hook("stop");  // Stop hook movement
+    currentMenu = MENU_MAIN;
+    menuStartIndex = 0;
+    menuNeedsRefresh = true;
+  } else {
+    // No button pressed, keep current state
   }
 }

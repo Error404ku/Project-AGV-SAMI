@@ -5,23 +5,24 @@ void setup() {
   setupAll();
 
   // lcd.clear();
+  changeStateMode("maju");
   Serial.println("SETUP SELESAI");
 }
 
 void loop() {
   server.handleClient();
   loopRfid(); // Handle RFID scanning - now controlled internally by conditions
-  // sortStationsList();
+  loopUltrasonik(); // Handle ultrasonic obstacle detection
   // delay(1000);
   if (isAgvMode) {
     // AGV Mode - Run normal AGV operation
-    pembacaanRpm();
+    // pembacaanRpm();
     displayPrint();
     bacaSensorGaris();
     logicAgv();
 
     // Check for B button to exit AGV mode
-    if (B()) {
+    if (STOP()) {
       isAgvMode = false;
       modeBerhenti = true;
       buttonStep = 0;  // Reset button step

@@ -1,183 +1,144 @@
-int nilai_tombol;
+// Variables for button handling
 bool tombolBoot = false;
 unsigned long bootHoldStart = 0;
 int lastPressed;
-int settingIndex = -1;
-String labelTombol[] = { "UP", "LEFT", "RIGHT", "DOWN", "X", "Y", "A", "B" };
-int nilaiTombol[8];  // Menyimpan nilai yang dibaca dari Preferences
+
+// Button pin variables
+int upPin = 2;
+int downPin = 40;
+int rightPin = 39;
+int leftPin = 42;
+int startPin = 1;
+int stopPin = 41;
+
+// Debounce variables
+unsigned long lastUpPress = 0;
+unsigned long lastDownPress = 0;
+unsigned long lastLeftPress = 0;
+unsigned long lastRightPress = 0;
+unsigned long lastStartPress = 0;
+unsigned long lastStopPress = 0;
+const unsigned long debounceDelay = 500; // 200ms debounce
+
 void setupTombol() {
   pinMode(BOOT_PIN, INPUT_PULLUP);
-  pinMode(tombol, INPUT);
-  preferences.begin("tombol", false);
-  for (int i = 0; i < 8; i++) {
-    nilaiTombol[i] = preferences.getInt(labelTombol[i].c_str(), 0);
-    Serial.print(labelTombol[i]);
-    Serial.print(" = ");
-    Serial.println(nilaiTombol[i]);
-  }
-  // Cek apakah semua data sudah tersimpan
-  bool semuaSudahDiset = true;
-  for (int i = 0; i < 8; i++) {
-    if (nilaiTombol[i] <= 0) {
-      semuaSudahDiset = false;
-      break;
-    }
-  }
-  // preferences.end();
-  int currentMillis = millis();
-  while (millis() - currentMillis <= abs(3000)) {
-    // lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("SETUP TOMBOL");
-    if (digitalRead(BOOT_PIN) == LOW) {
-      if (bootHoldStart == 0) bootHoldStart = millis();
-      if (millis() - bootHoldStart >= 2000 && !tombolBoot) {
-        tombolBoot = true;
-
-
-        Serial.println("Masuk mode setup tombol...");
-        aturNilaiTombol();
-        tombolBoot = false;
-        bootHoldStart = 0;
-      }
-    } else {
-      bootHoldStart = 0;
-    }
-  }
-  if (!semuaSudahDiset) {
-    tombolBoot = true;
-    aturNilaiTombol();
-  }
-  Serial.println("SETUP TOMBOL SELESAI");
-  lcd.clear();
-}
-
-void aturNilaiTombol() {
-  lcd.clear();
+  
+  // Setup manual assigned button pins for ACTIVE HIGH with internal pull-down
+  pinMode(upPin, INPUT_PULLDOWN);     // UP - active HIGH
+  pinMode(downPin, INPUT_PULLDOWN);   // DOWN - active HIGH
+  pinMode(leftPin, INPUT_PULLDOWN);   // LEFT - active HIGH
+  pinMode(rightPin, INPUT_PULLDOWN);  // RIGHT - active HIGH
+  pinMode(startPin, INPUT_PULLDOWN);  // START - active HIGH
+  pinMode(stopPin, INPUT_PULLDOWN);   // STOP - active HIGH
+  
+  Serial.println("SETUP TOMBOL MANUAL (ACTIVE HIGH + PULLDOWN):");
+  Serial.println("UP=39, DOWN=40, LEFT=41, RIGHT=42, START=2, STOP=1");
+  Serial.println("Tekan = HIGH, Tidak tekan = LOW (pulldown)");
+  
+  // Display setup complete message
   lcd.setCursor(0, 0);
-  lcd.print("PENCET TOMBOL BOOT");
-
-  while (tombolBoot) {
-    if (digitalRead(BOOT_PIN) == LOW && millis() - lastPressed > 1000) {
-      lastPressed = millis();
-      settingIndex++;
-
-      if (settingIndex < 8) {
-        tampilkanKalibrasiTombol(settingIndex);
-      } else {
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("Semua tombol");
-        lcd.setCursor(0, 1);
-        lcd.print("berhasil diset!");
-        delay(2000);
-        settingIndex = -1;
-        break;
-      }
-    }
-
-    if (settingIndex >= 0 && settingIndex < 8) {
-      nilai_tombol = analogRead(tombol);
-      if (nilai_tombol > 50) {
-        nilaiTombol[settingIndex] = nilai_tombol;
-        preferences.putInt(labelTombol[settingIndex].c_str(), nilai_tombol);
-        tampilkanKalibrasiTombol(settingIndex);
-        delay(500);
-      }
-    }
-  }
-
-  lcd.setCursor(0, 0);
-  lcd.print("Keluar kalibrasi");
-  preferences.end();
-  delay(1000);
+  lcd.print("TOMBOL PULLDOWN");
+  delay(1500);
   lcd.clear();
 }
-void tampilkanKalibrasiTombol(int indexAktif) {
-  lcd.clear();
-  
-  String labelTombolList[8] = {"UP", "LEFT", "RIGHT", "DOWN", "X", "Y", "A", "B"};
-  
-  // Show current button being calibrated
-  lcd.setCursor(0, 0);
-  lcd.print("Kalibrasi Tombol:");
-  lcd.setCursor(0, 1);
-  lcd.print(">");
-  lcd.print(labelTombolList[indexAktif]);
-  lcd.print(" (");
-  lcd.print(indexAktif + 1);
-  lcd.print("/8)");
-  
-  // Show current value
-  lcd.setCursor(0, 2);
-  lcd.print("Nilai: ");
-  lcd.print(nilaiTombol[indexAktif]);
-  
-  // Show instruction
-  lcd.setCursor(0, 3);
-  lcd.print("Tekan tombol ini");
-}
 
-bool tombolDitekan(int index) {
-  nilai_tombol = analogRead(tombol);
-  return abs(nilai_tombol - nilaiTombol[index]) < 300;  // toleransi 100
-}
-
+// Button functions using digitalRead == HIGH format with 200ms debounce
 bool UP() {
-  return tombolDitekan(0);
-}
-bool LEFT() {
-  return tombolDitekan(1);
-}
-bool RIGHT() {
-  return tombolDitekan(2);
-}
-bool DOWN() {
-  return tombolDitekan(3);
-}
-bool X() {
-  return tombolDitekan(4);
-}
-bool Y() {
-  return tombolDitekan(5);
-}
-bool A() {
-  return tombolDitekan(6);
-}
-bool B() {
-  return tombolDitekan(7);
+  if (digitalRead(upPin) == HIGH) {
+    unsigned long currentTime = millis();
+    if (currentTime - lastUpPress >= debounceDelay) {
+      lastUpPress = currentTime;
+      return true;
+    }
+  }
+  return false;
 }
 
+bool LEFT() {
+  if (digitalRead(leftPin) == HIGH) {
+    unsigned long currentTime = millis();
+    if (currentTime - lastLeftPress >= debounceDelay) {
+      lastLeftPress = currentTime;
+      return true;
+    }
+  }
+  return false;
+}
+
+bool RIGHT() {
+  if (digitalRead(rightPin) == HIGH) {
+    unsigned long currentTime = millis();
+    if (currentTime - lastRightPress >= debounceDelay) {
+      lastRightPress = currentTime;
+      return true;
+    }
+  }
+  return false;
+}
+
+bool DOWN() {
+  if (digitalRead(downPin) == HIGH) {
+    unsigned long currentTime = millis();
+    if (currentTime - lastDownPress >= debounceDelay) {
+      lastDownPress = currentTime;
+      return true;
+    }
+  }
+  return false;
+}
+
+bool START() {
+  if (digitalRead(startPin) == HIGH) {
+    unsigned long currentTime = millis();
+    if (currentTime - lastStartPress >= debounceDelay) {
+      lastStartPress = currentTime;
+      return true;
+    }
+  }
+  return false;
+}
+
+bool STOP() {
+  if (digitalRead(stopPin) == HIGH) {
+    unsigned long currentTime = millis();
+    if (currentTime - lastStopPress >= debounceDelay) {
+      lastStopPress = currentTime;
+      return true;
+    }
+  }
+  return false;
+}
 
 void uji_tombol() {
-  nilai_tombol = analogRead(tombol);
   // Show button press on LCD at position (13,2) - right side
+  // NOTE: No debounce in test function for real-time feedback
   lcd.setCursor(13, 2);
-  if (UP()) {
+  
+  if (digitalRead(upPin) == HIGH) {
     lcd.print("UP ");
+    Serial.println("Tombol UP ditekan");
   }
-  else if (LEFT()) {
+  else if (digitalRead(leftPin) == HIGH) {
     lcd.print("LF ");
+    Serial.println("Tombol LEFT ditekan");
   }
-  else if (RIGHT()) {
+  else if (digitalRead(rightPin) == HIGH) {
     lcd.print("RT ");
+    Serial.println("Tombol RIGHT ditekan");
   }
-  else if (DOWN()) {
+  else if (digitalRead(downPin) == HIGH) {
     lcd.print("DN ");
+    Serial.println("Tombol DOWN ditekan");
   }
-  else if (X()) {
-    lcd.print("X  ");
+  else if (digitalRead(startPin) == HIGH) {
+    lcd.print("Start  ");
+    Serial.println("Tombol START ditekan");
   }
-  else if (Y()) {
-    lcd.print("Y  ");
-  }
-  else if (A()) {
-    lcd.print("A  ");
-  }
-  else if (B()) {
-    lcd.print("B  ");
+  else if (digitalRead(stopPin) == HIGH) {
+    lcd.print("Stop  ");
+    Serial.println("Tombol STOP ditekan");
   }
   else {
-    lcd.print("   "); // Clear if no button pressed
+    lcd.print("       "); // Clear if no button pressed
   }
 }
