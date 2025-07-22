@@ -15,17 +15,17 @@ void changeStateMode(String mode){
     }
 }
 
-// void preTransmission()
-// {
-//     digitalWrite(MAX485_RE, 1);
-//     digitalWrite(MAX485_DE, 1);
-// }
+void preTransmission()
+{
+    digitalWrite(MAX485_RE, 1);
+    digitalWrite(MAX485_DE, 1);
+}
 
-// void postTransmission()
-// {
-//     digitalWrite(MAX485_RE, 0);
-//     digitalWrite(MAX485_DE, 0);
-// }
+void postTransmission()
+{
+    digitalWrite(MAX485_RE, 0);
+    digitalWrite(MAX485_DE, 0);
+}
 
 
 void bacaSensorGaris()
@@ -42,7 +42,8 @@ void bacaSensorGaris()
 // ==================== Fungsi Membaca Sensor ====================
 void bacaSensor()
 {
-    // Serial.println(F("Mengirim permintaan pembacaan..."));
+    Serial.println(F("Mengirim permintaan pembacaan..."));
+    
     static int consecutiveFailures = 0; // Track consecutive communication failures
     
     uint8_t result = node.readHoldingRegisters(0x0000, 2);

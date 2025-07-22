@@ -141,6 +141,10 @@ void setupWebServer() {
 }
 
 void setupUltrasonikWithParams(int rx = RX_ULTRASONIK_FRONT, int tx = TX_ULTRASONIK_FRONT, int baudrate = 115200) {
+  pinMode(MAX485_RE, OUTPUT);
+  pinMode(MAX485_DE, OUTPUT);
+  digitalWrite(MAX485_RE, 0);
+  digitalWrite(MAX485_DE, 0);
   Serial1.begin(baudrate, SERIAL_8N1, rx, tx);
   Serial.println("--- Program Parser Sensor Ultrasonik ---");
   Serial.println("Mencari paket data dari sensor...");
@@ -148,13 +152,13 @@ void setupUltrasonikWithParams(int rx = RX_ULTRASONIK_FRONT, int tx = TX_ULTRASO
 
 void setupSensorMagnet(int slaveId, int rx, int tx, int baudrate) {
   Serial2.begin(baudrate, SERIAL_8N1, rx, tx);
-  // pinMode(MAX485_RE, OUTPUT);
-  // pinMode(MAX485_DE, OUTPUT);
-  // digitalWrite(MAX485_RE, 0);
-  // digitalWrite(MAX485_DE, 0);
+  pinMode(MAX485_RE, OUTPUT);
+  pinMode(MAX485_DE, OUTPUT);
+  digitalWrite(MAX485_RE, 0);
+  digitalWrite(MAX485_DE, 0);
   node.begin(slaveId, Serial2);  // Slave ID
-  // node.preTransmission(preTransmission);
-  // node.postTransmission(postTransmission);
+  node.preTransmission(preTransmission);
+  node.postTransmission(postTransmission);
   Serial.println(F("Inisialisasi Sensor Magnet selesai."));
 }
 

@@ -13,9 +13,11 @@
 #define MENU_MUSIC_TEST 9
 #define MENU_HOOK_TEST 10
 #define MENU_RESET 11
+#define MENU_MAGNET_CHECK 12
+#define MENU_ULTRASONIC_CHECK 13
 
 int selectedItem = 0;
-int maxItems = 11;
+int maxItems = 13;
 int menuStartIndex = 0; // For scrolling menu
 const int maxMenuDisplay = 3; // Max items shown at once (row 1-3, row 0 for header)
 bool isAgvMode = false;
@@ -88,6 +90,9 @@ const int maxMusicItems = 4;
 
 // Motor test variables
 int motorTestState = 0;  // 0=stop, 1=forward, 2=backward, 3=left, 4=right
+
+// Hook test variables
+int hookTestState = 0;  // 0=stop, 1=naik, 2=turun
 
 // Global display functions
 void displayIndicator(int current, int selected) {
@@ -217,7 +222,7 @@ void saveSettings() {
 
 void displayMainMenu() {
   // Menu items array
-  String menuItems[11] = {
+  String menuItems[13] = {
     "AGV Mode",
     "Motor Test", 
     "PID Settings",
@@ -228,7 +233,9 @@ void displayMainMenu() {
     "Music Settings",
     "Music Test",
     "Hook Test",
-    "Reset Settings"
+    "Reset Settings",
+    "Magnet Check",
+    "Ultrasonic Check"
   };
 
   // Update scroll position if needed
@@ -920,6 +927,12 @@ void handleMenu() {
           } else if (selectedItem == 10) {  // Reset Settings (item 11)
             currentMenu = MENU_RESET;
             menuNeedsRefresh = true;
+          } else if (selectedItem == 11) {  // Magnet Check (item 12)
+            currentMenu = MENU_MAGNET_CHECK;
+            menuNeedsRefresh = true;
+          } else if (selectedItem == 12) {  // Ultrasonic Check (item 13)
+            currentMenu = MENU_ULTRASONIC_CHECK;
+            menuNeedsRefresh = true;
           } else {
             currentMenu = selectedItem + 1;
             menuNeedsRefresh = true;
@@ -1198,6 +1211,26 @@ void handleMenu() {
         }
       }
       break;
+
+    case MENU_MAGNET_CHECK:
+      displayMagnetCheck();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleMagnetCheck();
+        if (STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_ULTRASONIC_CHECK:
+      displayUltrasonicCheck();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleUltrasonicCheck();
+        if (STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
   }
 }
 
@@ -1249,24 +1282,115 @@ void displayHookTest() {
   lcd.setCursor(0, 2);
   lcd.print("DOWN : Hook Turun");
   lcd.setCursor(0, 3);
-  lcd.print("STOP : Stop & Back");
+  
+  // Show current hook state
+  switch(hookTestState) {
+    case 0: lcd.print("Status: STOP    "); break;
+    case 1: lcd.print("Status: NAIK    "); break;
+    case 2: lcd.print("Status: TURUN   "); break;
+  }
+  
+  lcd.setCursor(15, 3);
+  lcd.print("B:OK");
+}
+
+void displayMagnetCheck() {
+  displayMenuHeader("Magnet Check");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Err:");
+  lcd.print(errorValue);
+  lcd.print(" Act:");
+  lcd.print(totalSensorAktif);
+  
+  lcd.setCursor(0, 2);
+  lcd.print("Segments:");
+  if (totalSensorAktif > 0) {
+    for (int i = 0; i < 16; i++) {
+      if (jumlahMagnet[i]) {
+        lcd.print(i+1);
+        lcd.print(",");
+        break; // Show only first few due to space
+      }
+    }
+  } else {
+    lcd.print("None");
+  }
+  
+  lcd.setCursor(0, 3);
+  lcd.print("B:Back");
+}
+
+void displayUltrasonicCheck() {
+  displayMenuHeader("Ultrasonic Check");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("P1:");
+  lcd.print(ultrasonicDistances[0]);
+  lcd.print(" P2:");
+  lcd.print(ultrasonicDistances[1]);
+  
+  lcd.setCursor(0, 2);
+  lcd.print("P3:");
+  lcd.print(ultrasonicDistances[2]);
+  lcd.print(" P4:");
+  lcd.print(ultrasonicDistances[3]);
+  lcd.print(" P5:");
+  lcd.print(ultrasonicDistances[4]);
+  
+  lcd.setCursor(0, 3);
+  if (obstacleDetected) {
+    lcd.print("OBSTACLE! ");
+  } else {
+    lcd.print("Clear ");
+  }
+  lcd.print("B:Back");
 }
 
 void handleHookTest() {
   if (UP()) {
+    hookTestState = 1;  // Set to naik
     hook("naik");
-    lcd.setCursor(15, 1);
-    lcd.print("ON ");
   } else if (DOWN()) {
+    hookTestState = 2;  // Set to turun
     hook("turun");
-    lcd.setCursor(15, 2);
-    lcd.print("ON ");
   } else if (STOP()) {
+    hookTestState = 0;  // Stop
     hook("stop");  // Stop hook movement
     currentMenu = MENU_MAIN;
     menuStartIndex = 0;
     menuNeedsRefresh = true;
   } else {
-    // No button pressed, keep current state
+    // Continue current state
+    switch(hookTestState) {
+      case 1: // Continue naik
+        hook("naik");
+        break;
+      case 2: // Continue turun
+        hook("turun");
+        break;
+      case 0: // Stopped
+      default:
+        hook("stop");
+        break;
+    }
   }
+}
+
+void handleMagnetCheck() {
+  if (STOP()) {
+    currentMenu = MENU_MAIN;
+    menuStartIndex = 0;
+    menuNeedsRefresh = true;
+  }
+  // Display updates automatically since displayMagnetCheck reads current sensor values
+}
+
+void handleUltrasonicCheck() {
+  if (STOP()) {
+    currentMenu = MENU_MAIN;
+    menuStartIndex = 0;
+    menuNeedsRefresh = true;
+  }
+  // Display updates automatically since displayUltrasonicCheck reads current sensor values
 }

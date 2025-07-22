@@ -18,7 +18,7 @@ unsigned long lastLeftPress = 0;
 unsigned long lastRightPress = 0;
 unsigned long lastStartPress = 0;
 unsigned long lastStopPress = 0;
-const unsigned long debounceDelay = 500; // 200ms debounce
+const unsigned long debounceDelay = 300; // 200ms debounce
 
 void setupTombol() {
   pinMode(BOOT_PIN, INPUT_PULLUP);

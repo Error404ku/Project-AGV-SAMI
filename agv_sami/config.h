@@ -75,8 +75,8 @@ LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 // #define encKiriB 48
 
 // #Inisialisasi Sensor Magnet dan ultrasonik
-// #define MAX485_DE 35
-// #define MAX485_RE 35
+#define MAX485_DE 36
+#define MAX485_RE 36
 // #Inisialisasi Pin Sensor Magnet dan Ultrasonik yang depan
 #define RX_MAGNET_FRONT 11//3
 #define TX_MAGNET_FRONT 10//8
@@ -88,6 +88,12 @@ LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 #define TX_MAGNET_BACK 8//10
 #define RX_ULTRASONIK_BACK 9
 #define TX_ULTRASONIK_BACK 46
+
+// #Inisialisasi Pin Hook Motor
+#define MOTOR_DI1_PIN 20
+#define MOTOR_DI2_PIN 19
+#define MOTOR_PWM_PIN 21
+#define HOOK_PWM_CHANNEL 2
 
 
 // Alamat slave sensor yang diharapkan

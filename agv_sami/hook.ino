@@ -14,15 +14,15 @@ void hook(String mode) {
   if (actualMode == "naik") {
     digitalWrite(pinHook1, HIGH);
     digitalWrite(pinHook2, LOW);
-    digitalWrite(pinMotorHook, HIGH);
+    digitalWrite(pinMotorHook, LOW);
   } else if (actualMode == "turun") {
     digitalWrite(pinHook1, LOW);
     digitalWrite(pinHook2, HIGH);
-    digitalWrite(pinMotorHook, HIGH);
+    digitalWrite(pinMotorHook, LOW);
   } else {
     // Stop hook (both pins LOW)
     digitalWrite(pinHook1, LOW);
     digitalWrite(pinHook2, LOW);
-    digitalWrite(pinMotorHook, LOW);
+    digitalWrite(pinMotorHook, HIGH);
   }
 }
