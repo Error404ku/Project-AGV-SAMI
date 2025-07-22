@@ -103,19 +103,19 @@ void pwmMotor(int motor1, int motor2)
         // Motor kanan maju
         digitalWrite(IN1, HIGH);
         // digitalWrite(IN2, LOW);
-        ledcWrite(ENA, motor1);
+        ledcWrite(channelKanan, motor1);
     }
     else if (motor1 < 0) {
         // Motor kanan mundur
         digitalWrite(IN1, LOW);
         // digitalWrite(IN2, HIGH);
-        ledcWrite(ENA, abs(motor1));
+        ledcWrite(channelKanan, motor1 + maxPwm);
     }
     else {
         // Motor kanan stop
         digitalWrite(IN1, LOW);
         // digitalWrite(IN2, LOW);
-        ledcWrite(ENA, 0);
+        ledcWriteChannel(channelKanan, 0);
     }
     
     // Kontrol Motor Kiri (motor2) menggunakan L298N
@@ -123,18 +123,18 @@ void pwmMotor(int motor1, int motor2)
         // Motor kiri maju
         digitalWrite(IN3, HIGH);
         // digitalWrite(IN4, LOW);
-        ledcWrite(ENB, motor2);
+        ledcWriteChannel(channelKiri, motor2);
     }   
     else if (motor2 < 0) {
         // Motor kiri mundur
         digitalWrite(IN3, LOW);
         // digitalWrite(IN4, HIGH);
-        ledcWrite(ENB, abs(motor2));
+        ledcWriteChannel(channelKiri, motor2 + maxPwm);
     }
     else {   
         // Motor kiri stop
         digitalWrite(IN3, LOW);
         // digitalWrite(IN4, LOW);
-        ledcWrite(ENB, 0);
+        ledcWriteChannel(channelKiri, 0);
     }   
 }

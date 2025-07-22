@@ -36,8 +36,8 @@ void setupMusicAndLed() {
 }
 
 void setupHook() {
-  pinMode(pinHook1, OUTPUT);
-  pinMode(pinHook2, OUTPUT);
+  pinMode(pinHook1, INPUT_PULLDOWN);
+  pinMode(pinHook2, INPUT_PULLDOWN);
   pinMode(pinMotorHook, OUTPUT);
 }
 // void setupEncoder() {
@@ -149,7 +149,7 @@ void setupWebServer() {
 //   Serial.println("Mencari paket data dari sensor...");
 // }
 
-void setupSensorMagnet(int slaveId, int rx, int tx, int rx2, int tx2,int baudrate,int baudrate2) {
+void setupSensorMagnet(int slaveId, int rx, int tx,int baudrate) {
   Serial2.begin(baudrate, SERIAL_8N1, rx, tx);
   pinMode(MAX485_RE, OUTPUT);
   pinMode(MAX485_DE, OUTPUT);
@@ -195,11 +195,12 @@ void setupAll() {
   setupMusicAndLed();
   setupDisplay();
   setupMenu();  // Initialize menu system
-  setupSensorMagnet(1,2, RX_MAGNET_FRONT, TX_MAGNET_FRONT, RX_MAGNET_BACK, TX_MAGNET_BACK, BAUDRATE_MAGNET_FRONT,BAUDRATE_MAGNET_BACK);
+  setupSensorMagnet(1, RX_MAGNET_FRONT, TX_MAGNET_FRONT, BAUDRATE_MAGNET_FRONT);
   // setupBuzzer();
   // setupUltrasonikWithParams(RX_ULTRASONIK_FRONT, TX_ULTRASONIK_FRONT, BAUDRATE_ULTRASONIC);
   // setupUltrasonikWithParams(RX_ULTRASONIK_BACK, TX_ULTRASONIK_BACK, BAUDRATE_ULTRASONIC);
   // setupWebServer();
+  setupHook();
   setupTombol();
   setupRfid();
   Serial.println("SETUP ALL SELESAI");

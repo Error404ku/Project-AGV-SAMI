@@ -1,7 +1,7 @@
 // hook mode : naik dan turun
 void hook(String mode) {
   // Apply hook inversion if enabled
-  
+
   String actualMode = mode;
   if (invertHook) {
     if (mode == "naik") {
@@ -10,19 +10,18 @@ void hook(String mode) {
       actualMode = "naik";
     }
   }
-  
+
   if (actualMode == "naik") {
-    digitalWrite(pinHook1, HIGH);
-    digitalWrite(pinHook2, LOW);
-    digitalWrite(pinMotorHook, LOW);
-  } else if (actualMode == "turun") {
-    digitalWrite(pinHook1, LOW);
-    digitalWrite(pinHook2, HIGH);
-    digitalWrite(pinMotorHook, LOW);
-  } else {
-    // Stop hook (both pins LOW)
-    digitalWrite(pinHook1, LOW);
-    digitalWrite(pinHook2, LOW);
     digitalWrite(pinMotorHook, HIGH);
+    if (pinHook1 != 0) {
+      digitalWrite(pinMotorHook, LOW);
+    }
+  } else if (actualMode == "turun") {
+    digitalWrite(pinMotorHook, HIGH);
+    if (pinHook2 != 0) {
+      digitalWrite(pinMotorHook, LOW);
+    }
+  } else {
+    digitalWrite(pinMotorHook, LOW);
   }
 }
