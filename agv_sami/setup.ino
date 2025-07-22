@@ -13,14 +13,14 @@ void setupMotor() {
 
   // ledcSetup(channelKiri, pwmFrequency, pwmResolution);
   ledcAttachChannel(ENB, pwmFrequency, pwmResolution, channelKiri);
-  
+
   // Matikan motor saat startup
   digitalWrite(IN1, LOW);
   digitalWrite(IN2, LOW);
   digitalWrite(IN3, LOW);
   digitalWrite(IN4, LOW);
-  ledcWrite(channelKanan, 0);
-  ledcWrite(channelKiri, 0);
+  ledcWrite(ENA, 0);
+  ledcWrite(ENB, 0);
 }
 
 void setupMusicAndLed() {
@@ -33,7 +33,6 @@ void setupMusicAndLed() {
   digitalWrite(pinMusic2, HIGH);
   digitalWrite(pinMusic3, HIGH);
   digitalWrite(pinMusic4, HIGH);
-  
 }
 
 void setupHook() {
@@ -61,18 +60,18 @@ void setupHook() {
 void initializeDisplay() {
   lcd.begin(LCD_COLUMNS, LCD_ROWS);  // Inisialisasi LCD
   lcd.backlight();                   // Nyalakan backlight
-  
+
   // Test LCD communication
   lcd.setCursor(0, 0);
   lcd.print("Mulai Program");
   lcd.setCursor(0, 1);
   lcd.print("AGV System");
-  
+
   // Simple LCD test - try to set cursor and check if it works
   delay(100);
   lcd.setCursor(0, 0);
   // If LCD is not responding, this will be detected in normal operation
-  
+
   delay(1000);
   lcd.clear();
 }
@@ -99,16 +98,16 @@ void setupWebServer() {
     Serial.println("Error: Gagal mengkonfigurasi IP Statis");
     error(ERROR_WIFI_CONNECTION, "Gagal config IP static");
   }
-  
+
   int wifiAttempts = 0;
   while (WiFi.status() != WL_CONNECTED) {
     // lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("MENCARI WIFI");
     delay(500);
-    
+
     wifiAttempts++;
-    if (wifiAttempts > 60) { // 30 seconds timeout
+    if (wifiAttempts > 60) {  // 30 seconds timeout
       error(ERROR_WIFI_CONNECTION, "WiFi timeout 30 detik");
     }
   }
@@ -122,9 +121,9 @@ void setupWebServer() {
   lcd.print("IP: ");
   lcd.print(WiFi.localIP());
   // Registrasi Endpoint HTTP yang diminta
-  server.on("/updatestations", HTTP_POST, handleUpdateStations); // Untuk menyimpan/menimpa daftar stasiun
+  server.on("/updatestations", HTTP_POST, handleUpdateStations);  // Untuk menyimpan/menimpa daftar stasiun
   server.on("/showstations", HTTP_GET, handleShowStations);       // Untuk menampilkan daftar stasiun
-  
+
   // Halaman utama server
   server.on("/", HTTP_GET, []() {
     server.send(200, "text/html", "Server ESP32 Aktif. <br> Coba: <br> /updatestations (POST)<br> /showstations (GET)");
@@ -134,29 +133,30 @@ void setupWebServer() {
   server.onNotFound([]() {
     server.send(404, "text/plain", "Endpoint tidak ditemukan.");
   });
-  
-  server.begin(); // Memulai server HTTP
+
+  server.begin();  // Memulai server HTTP
   Serial.println("Server HTTP telah dimulai.");
   delay(1000);
 }
 
-void setupUltrasonikWithParams(int rx = RX_ULTRASONIK_FRONT, int tx = TX_ULTRASONIK_FRONT, int baudrate = 115200) {
-  pinMode(MAX485_RE, OUTPUT);
-  pinMode(MAX485_DE, OUTPUT);
-  digitalWrite(MAX485_RE, 0);
-  digitalWrite(MAX485_DE, 0);
-  Serial1.begin(baudrate, SERIAL_8N1, rx, tx);
-  Serial.println("--- Program Parser Sensor Ultrasonik ---");
-  Serial.println("Mencari paket data dari sensor...");
-}
+// void setupUltrasonikWithParams(int rx = RX_ULTRASONIK_FRONT, int tx = TX_ULTRASONIK_FRONT, int baudrate = 115200) {
+//   pinMode(MAX485_RE, OUTPUT);
+//   pinMode(MAX485_DE, OUTPUT);
+//   digitalWrite(MAX485_RE, 0);
+//   digitalWrite(MAX485_DE, 0);
+//   Serial1.begin(baudrate, SERIAL_8N1, rx, tx);
+//   Serial.println("--- Program Parser Sensor Ultrasonik ---");
+//   Serial.println("Mencari paket data dari sensor...");
+// }
 
-void setupSensorMagnet(int slaveId, int rx, int tx, int baudrate) {
+void setupSensorMagnet(int slaveId, int rx, int tx, int rx2, int tx2,int baudrate,int baudrate2) {
   Serial2.begin(baudrate, SERIAL_8N1, rx, tx);
   pinMode(MAX485_RE, OUTPUT);
   pinMode(MAX485_DE, OUTPUT);
   digitalWrite(MAX485_RE, 0);
   digitalWrite(MAX485_DE, 0);
-  node.begin(slaveId, Serial2);  // Slave ID
+  node.begin(slaveId, Serial2);
+    // Slave ID
   node.preTransmission(preTransmission);
   node.postTransmission(postTransmission);
   Serial.println(F("Inisialisasi Sensor Magnet selesai."));
@@ -195,9 +195,10 @@ void setupAll() {
   setupMusicAndLed();
   setupDisplay();
   setupMenu();  // Initialize menu system
-  setupSensorMagnet(1, RX_MAGNET_FRONT, TX_MAGNET_FRONT, BAUDRATE);
+  setupSensorMagnet(1,2, RX_MAGNET_FRONT, TX_MAGNET_FRONT, RX_MAGNET_BACK, TX_MAGNET_BACK, BAUDRATE_MAGNET_FRONT,BAUDRATE_MAGNET_BACK);
   // setupBuzzer();
-  setupUltrasonikWithParams(RX_ULTRASONIK_FRONT, TX_ULTRASONIK_FRONT, BAUDRATE);
+  // setupUltrasonikWithParams(RX_ULTRASONIK_FRONT, TX_ULTRASONIK_FRONT, BAUDRATE_ULTRASONIC);
+  // setupUltrasonikWithParams(RX_ULTRASONIK_BACK, TX_ULTRASONIK_BACK, BAUDRATE_ULTRASONIC);
   // setupWebServer();
   setupTombol();
   setupRfid();

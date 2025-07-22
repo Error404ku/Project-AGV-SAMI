@@ -24,7 +24,10 @@ Preferences preferences;
 Preferences stationsPreferences; // Objek Preferences untuk station yang ditemukan
 std::vector<int> stationsList; // Array di RAM untuk menyimpan station yang ditemukan
 
-int BAUDRATE = 9600;
+int BAUDRATE_MAGNET_FRONT = 19200;
+int BAUDRATE_MAGNET_BACK = 9600;
+int BAUDRATE_ULTRASONIC = 9600;
+
 void setupUltrasonikWithParams(int rx, int tx, int baudrate);
 
 // ### DEFINE ###
@@ -78,14 +81,14 @@ LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 #define MAX485_DE 36
 #define MAX485_RE 36
 // #Inisialisasi Pin Sensor Magnet dan Ultrasonik yang depan
-#define RX_MAGNET_FRONT 11//3
-#define TX_MAGNET_FRONT 10//8
+#define RX_MAGNET_FRONT 3
+#define TX_MAGNET_FRONT 8
 #define RX_ULTRASONIK_FRONT 18
 #define TX_ULTRASONIK_FRONT 17
 
 // #Inisialisasi Pin Sensor Magnet dan Ultrasonik yang belakang
-#define RX_MAGNET_BACK 3//11
-#define TX_MAGNET_BACK 8//10
+#define RX_MAGNET_BACK 11
+#define TX_MAGNET_BACK 10
 #define RX_ULTRASONIK_BACK 9
 #define TX_ULTRASONIK_BACK 46
 

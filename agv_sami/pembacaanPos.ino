@@ -64,7 +64,7 @@ void inTerminal() {
 void outTerminal() {
   setModeWarehouse();
   // modeMaju = true;
-  changeStateMode("maju");
+  // changeStateMode("maju");
   force = true;
 }
 
@@ -90,7 +90,7 @@ void outWarehouse() {
   sortStationsList();
   // modeMundur = false;
   // modeMaju = true;
-  changeStateMode("maju");
+  // changeStateMode("maju");
   force = true;
   statusMusic = false;
 }
@@ -107,7 +107,7 @@ void outStation() {
     ujungStation();
   } else {
     // modeMaju = true;
-    changeStateMode("maju");
+    // changeStateMode("maju");
     force = true;
     sudahStopPelanPelan = false;
   }
@@ -116,7 +116,7 @@ void outStation() {
 void ujungStation() {  // ujung station → mundur ke warehouse
   // modeMaju = false;
   // modeMundur = true;
-  changeStateMode("mundur");
+  // changeStateMode("mundur");
   force = true;
   pidLinefollower(errorValue, "FORCEMUNDUR");
   // delay(1000);

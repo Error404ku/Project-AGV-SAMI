@@ -5,7 +5,7 @@ void setup() {
   setupAll();
 
   // lcd.clear();
-  changeStateMode("maju");
+  // changeStateMode("maju");
   Serial.println("SETUP SELESAI");
 }
 

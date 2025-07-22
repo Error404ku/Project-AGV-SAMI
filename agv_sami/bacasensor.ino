@@ -1,19 +1,19 @@
 extern bool modeMaju;
 extern bool modeMundur;
 
-void changeStateMode(String mode){
-    if (mode == "maju" && !modeMundur){
-        setupSensorMagnet(1, RX_MAGNET_FRONT, TX_MAGNET_FRONT, BAUDRATE);
-        setupUltrasonikWithParams(RX_ULTRASONIK_FRONT, TX_ULTRASONIK_FRONT, BAUDRATE);
-        modeMaju = true;
-        modeMundur = false;
-    }else if (mode == "mundur" && !modeMaju){
-        setupSensorMagnet(1, RX_MAGNET_BACK, TX_MAGNET_BACK, BAUDRATE);
-        setupUltrasonikWithParams(RX_ULTRASONIK_BACK, TX_ULTRASONIK_BACK, BAUDRATE);
-        modeMaju = false;
-        modeMundur = true;
-    }
-}
+// void changeStateMode(String mode){
+//     if (mode == "maju" && !modeMundur){
+//         setupSensorMagnet(1, RX_MAGNET_FRONT, TX_MAGNET_FRONT, BAUDRATE);
+//         setupUltrasonikWithParams(RX_ULTRASONIK_FRONT, TX_ULTRASONIK_FRONT, BAUDRATE);
+//         modeMaju = true;
+//         modeMundur = false;
+//     }else if (mode == "mundur" && !modeMaju){
+//         setupSensorMagnet(1, RX_MAGNET_BACK, TX_MAGNET_BACK, BAUDRATE);
+//         setupUltrasonikWithParams(RX_ULTRASONIK_BACK, TX_ULTRASONIK_BACK, BAUDRATE);
+//         modeMaju = false;
+//         modeMundur = true;
+//     }
+// }
 
 void preTransmission()
 {
