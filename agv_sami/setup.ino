@@ -8,11 +8,11 @@ void setupMotor() {
   pinMode(ENB, OUTPUT);
 
   // Setup PWM for enable pins (ENA dan ENB)
-  // ledcSetup(channelKanan, pwmFrequency, pwmResolution);
-  ledcAttachChannel(ENA, pwmFrequency, pwmResolution, channelKanan);
+  ledcSetup(channelKanan, pwmFrequency, pwmResolution);
+  ledcAttachPin(ENA, channelKanan);
 
-  // ledcSetup(channelKiri, pwmFrequency, pwmResolution);
-  ledcAttachChannel(ENB, pwmFrequency, pwmResolution, channelKiri);
+  ledcSetup(channelKiri, pwmFrequency, pwmResolution);
+  ledcAttachPin(ENB, channelKiri);
   
   // Matikan motor saat startup
   digitalWrite(IN1, LOW);
