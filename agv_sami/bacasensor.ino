@@ -42,7 +42,6 @@ void bacaSensorGaris()
 // ==================== Fungsi Membaca Sensor ====================
 void bacaSensor()
 {
-    Serial.println(F("Mengirim permintaan pembacaan..."));
     
     static int consecutiveFailures = 0; // Track consecutive communication failures
     
@@ -75,12 +74,9 @@ void bacaSensor()
     }
     else
     {
-        Serial.print(F("Gagal membaca data sensor. Error Code: 0x"));
-        Serial.println(result, HEX);
         
         // Count consecutive failures
         consecutiveFailures++;
-        Serial.println(consecutiveFailures);
         // If too many consecutive failures, trigger system error
         // if (consecutiveFailures >= 30) {
         //     error(ERROR_SENSOR_COMMUNICATION, "Sensor Modbus Gagal 30x berturut-turut");
@@ -101,16 +97,9 @@ void printActiveSegmentsFromBitmask(uint16_t positionValue)
     {
         if (!((positionValue >> i) & 0x01))
         {
-            Serial.print(i + 1);
-            Serial.print(" ");
             foundAny = true;
         }
     }
-    if (!foundAny)
-    {
-        Serial.print(F("Tidak ada segmen aktif (Error Logika)."));
-    }
-    Serial.println();
 }
 int hitungErrorPosisi(uint16_t bitmask)
 {

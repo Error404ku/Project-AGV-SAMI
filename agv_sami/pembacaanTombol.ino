@@ -31,9 +31,9 @@ void setupTombol() {
   pinMode(startPin, INPUT_PULLDOWN);  // START - active HIGH
   pinMode(stopPin, INPUT_PULLDOWN);   // STOP - active HIGH
   
-  Serial.println("SETUP TOMBOL MANUAL (ACTIVE HIGH + PULLDOWN):");
-  Serial.println("UP=39, DOWN=40, LEFT=41, RIGHT=42, START=2, STOP=1");
-  Serial.println("Tekan = HIGH, Tidak tekan = LOW (pulldown)");
+  // Serial.println("SETUP TOMBOL MANUAL (ACTIVE HIGH + PULLDOWN):");
+  // Serial.println("UP=39, DOWN=40, LEFT=41, RIGHT=42, START=2, STOP=1");
+  // Serial.println("Tekan = HIGH, Tidak tekan = LOW (pulldown)");
   
   // Display setup complete message
   lcd.setCursor(0, 0);
@@ -116,27 +116,27 @@ void uji_tombol() {
   
   if (digitalRead(upPin) == HIGH) {
     lcd.print("UP ");
-    Serial.println("Tombol UP ditekan");
+    // Serial.println("Tombol UP ditekan");
   }
   else if (digitalRead(leftPin) == HIGH) {
     lcd.print("LF ");
-    Serial.println("Tombol LEFT ditekan");
+    // Serial.println("Tombol LEFT ditekan");
   }
   else if (digitalRead(rightPin) == HIGH) {
     lcd.print("RT ");
-    Serial.println("Tombol RIGHT ditekan");
+    // Serial.println("Tombol RIGHT ditekan");
   }
   else if (digitalRead(downPin) == HIGH) {
     lcd.print("DN ");
-    Serial.println("Tombol DOWN ditekan");
+    // Serial.println("Tombol DOWN ditekan");
   }
   else if (digitalRead(startPin) == HIGH) {
     lcd.print("Start  ");
-    Serial.println("Tombol START ditekan");
+    // Serial.println("Tombol START ditekan");
   }
   else if (digitalRead(stopPin) == HIGH) {
     lcd.print("Stop  ");
-    Serial.println("Tombol STOP ditekan");
+    // Serial.println("Tombol STOP ditekan");
   }
   else {
     lcd.print("       "); // Clear if no button pressed

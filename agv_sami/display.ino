@@ -3,7 +3,6 @@ void displayPrint() {
   displaySensorData();
   uji_tombol();
   displayLogicAgv();
-  Serial.println("Display Print");
   // displayEncoderValue();
   // displayRpm();
 }

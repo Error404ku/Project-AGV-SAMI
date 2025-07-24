@@ -103,7 +103,7 @@ void inStation() {
 void outStation() {
   // Check if this is the last station in the list
   if (indexTarget >= stationsList.size()) {
-    Serial.println("Last station reached via outStation - calling ujungStation!");
+    // Serial.println("Last station reached via outStation - calling ujungStation!");
     ujungStation();
   } else {
     // modeMaju = true;
@@ -186,8 +186,8 @@ void pembacaanStation() {
     if (detectedStationId > 0) {
       // Use RFID station ID directly
       station = detectedStationId;
-      Serial.print("RFID detected - Station ID: ");
-      Serial.println(detectedStationId);
+      // Serial.print("RFID detected - Station ID: ");
+    // Serial.println(detectedStationId);
 
       errorValue = 0;
       sudahDeteksiStasiun = true;
@@ -196,11 +196,11 @@ void pembacaanStation() {
       bool isTargetStation = false;
       for (size_t i = 0; i < stationsList.size(); i++) {
         if (stationsList[i] == station) {
-          Serial.println("Target station reached via RFID!");
+          // Serial.println("Target station reached via RFID!");
 
           // Check if this is the last station
           if (indexTarget >= stationsList.size() - 1) {
-            Serial.println("Last station reached - calling ujungStation!");
+            // Serial.println("Last station reached - calling ujungStation!");
             ujungStation();
           } else {
             inStation();
@@ -213,7 +213,7 @@ void pembacaanStation() {
       }
 
       if (!isTargetStation) {
-        Serial.println("Non-target station detected via RFID - continue");
+        // Serial.println("Non-target station detected via RFID - continue");
         pidLinefollower(errorValue, "MAJU");
       }
       return;

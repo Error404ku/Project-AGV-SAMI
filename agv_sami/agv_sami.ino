@@ -6,13 +6,13 @@ void setup() {
 
   // lcd.clear();
   // changeStateMode("maju");
-  Serial.println("SETUP SELESAI");
 }
 
 void loop() {
   server.handleClient();
   loopRfid(); // Handle RFID scanning - now controlled internally by conditions
   loopUltrasonik(); // Handle ultrasonic obstacle detection
+  updateHookStatus(); // Update hook status and handle automatic operations
   // delay(1000);
   if (isAgvMode) {
     // AGV Mode - Run normal AGV operation

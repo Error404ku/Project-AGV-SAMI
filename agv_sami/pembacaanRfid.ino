@@ -18,16 +18,16 @@ void pinStateChanged() {
 // Notifies when a reader has been connected or disconnected.
 // Instead of a message, the seconds parameter can be anything you want -- Whatever you specify on `wiegand.onStateChange()`
 void stateChanged(bool plugged, const char* message) {
-  Serial.print(message);
-  Serial.println(plugged ? "CONNECTED" : "DISCONNECTED");
+  // Serial.print(message);
+  // Serial.println(plugged ? "CONNECTED" : "DISCONNECTED");
 }
 
 // Notifies when a card was read.
 // Instead of a message, the seconds parameter can be anything you want -- Whatever you specify on `wiegand.onReceive()`
 void receivedData(uint8_t* data, uint8_t bits, const char* message) {
-  Serial.print(message);
-  Serial.print(bits);
-  Serial.print("bits / ");
+  // Serial.print(message);
+  // Serial.print(bits);
+  // Serial.print("bits / ");
   
   // Convert RFID data to string for storage
   String rfidString = "";
@@ -46,21 +46,21 @@ void receivedData(uint8_t* data, uint8_t bits, const char* message) {
   
   //Print value in HEX
   for (int i = 0; i < bytes; i++) {
-    Serial.print(data[i] >> 4, 16);
-    Serial.print(data[i] & 0xF, 16);
+    // Serial.print(data[i] >> 4, 16);
+    // Serial.print(data[i] & 0xF, 16);
   }
-  Serial.println();
+  // Serial.println();
   
   // Different feedback based on current mode
   if (currentMenu == MENU_RFID_SETTINGS) {
-    Serial.println("RFID Scanned for Settings: " + rfidString);
+    // Serial.println("RFID Scanned for Settings: " + rfidString);
   } else if (modeStation) {
-    Serial.println("RFID Scanned at Station: " + rfidString);
+    // Serial.println("RFID Scanned at Station: " + rfidString);
     // Check if this RFID matches any configured station
     for (int i = 0; i < rfidStationCount; i++) {
       if (rfidStations[i].isActive && rfidStations[i].rfidId == rfidString) {
-        Serial.print("Matched Station ID: ");
-        Serial.println(rfidStations[i].stationId);
+        // Serial.print("Matched Station ID: ");
+      // Serial.println(rfidStations[i].stationId);
         break;
       }
     }
@@ -69,19 +69,19 @@ void receivedData(uint8_t* data, uint8_t bits, const char* message) {
 
 // Notifies when an invalid transmission is detected
 void receivedDataError(Wiegand::DataError error, uint8_t* rawData, uint8_t rawBits, const char* message) {
-  Serial.print(message);
-  Serial.print(Wiegand::DataErrorStr(error));
-  Serial.print(" - Raw data: ");
-  Serial.print(rawBits);
-  Serial.print("bits / ");
+  // Serial.print(message);
+  // Serial.print(Wiegand::DataErrorStr(error));
+  // Serial.print(" - Raw data: ");
+  // Serial.print(rawBits);
+  // Serial.print("bits / ");
 
   //Print value in HEX
   uint8_t bytes = (rawBits + 7) / 8;
   for (int i = 0; i < bytes; i++) {
-    Serial.print(rawData[i] >> 4, 16);
-    Serial.print(rawData[i] & 0xF, 16);
+    // Serial.print(rawData[i] >> 4, 16);
+    // Serial.print(rawData[i] & 0xF, 16);
   }
-  Serial.println();
+  // Serial.println();
   
   // Count RFID errors
   static int rfidErrorCount = 0;
@@ -112,13 +112,13 @@ void loadRfidStations() {
   
   preferences.end();
   
-  Serial.println("Loaded RFID stations:");
+  // Serial.println("Loaded RFID stations:");
   for (int i = 0; i < rfidStationCount; i++) {
     if (rfidStations[i].isActive) {
-      Serial.print("Station ");
-      Serial.print(rfidStations[i].stationId);
-      Serial.print(": ");
-      Serial.println(rfidStations[i].rfidId);
+      // Serial.print("Station ");
+      // Serial.print(rfidStations[i].stationId);
+      // Serial.print(": ");
+      // Serial.println(rfidStations[i].rfidId);
     }
   }
 }
@@ -138,7 +138,7 @@ void saveRfidStations() {
   }
   
   preferences.end();
-  Serial.println("RFID stations saved successfully");
+  // Serial.println("RFID stations saved successfully");
 }
 
 int findRfidStation(int stationId) {
@@ -214,7 +214,7 @@ void clearAllRfidStations() {
   }
   rfidStationCount = 0;
   
-  Serial.println("All RFID stations cleared");
+  // Serial.println("All RFID stations cleared");
 }
 
 // Function to check if current RFID matches a station and return station ID

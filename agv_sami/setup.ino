@@ -36,9 +36,20 @@ void setupMusicAndLed() {
 }
 
 void setupHook() {
-  pinMode(pinHook1, INPUT_PULLDOWN);
-  pinMode(pinHook2, INPUT_PULLDOWN);
-  pinMode(pinMotorHook, OUTPUT);
+  // Setup SSR relay pin untuk kontrol hook motor
+  pinMode(HOOK_RELAY_PIN, OUTPUT);
+  digitalWrite(HOOK_RELAY_PIN, LOW); // Pastikan relay mati saat startup
+  
+  // Setup limit switch pins dengan pull-up internal
+  pinMode(LIMIT_SWITCH_UP_PIN, INPUT_PULLDOWN);
+  pinMode(LIMIT_SWITCH_DOWN_PIN, INPUT_PULLDOWN);
+  
+  // Inisialisasi variabel hook
+  hookMotorRunning = false;
+  hookDirection = 0;
+  currentHookState = HOOK_IDLE;
+  
+  // Serial.println("Hook system initialized with SSR relay and limit switches");
 }
 // void setupEncoder() {
 //   pinMode(encKananA, INPUT);
@@ -95,7 +106,7 @@ void setupWebServer() {
   // Konfigurasi dan mulai koneksi Wi-Fi
   WiFi.begin(ssid, password);
   if (!WiFi.config(staticIP, gateway, subnet, dns)) {
-    Serial.println("Error: Gagal mengkonfigurasi IP Statis");
+    // Serial.println("Error: Gagal mengkonfigurasi IP Statis");
     error(ERROR_WIFI_CONNECTION, "Gagal config IP static");
   }
 
@@ -111,9 +122,9 @@ void setupWebServer() {
       error(ERROR_WIFI_CONNECTION, "WiFi timeout 30 detik");
     }
   }
-  Serial.println("\nKoneksi Wi-Fi berhasil!");
-  Serial.print("Alamat IP: ");
-  Serial.println(WiFi.localIP());
+  // Serial.println("\nKoneksi Wi-Fi berhasil!");
+  // Serial.print("Alamat IP: ");
+  // Serial.println(WiFi.localIP());
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("Wi-Fi Berhasil!");
@@ -135,7 +146,7 @@ void setupWebServer() {
   });
 
   server.begin();  // Memulai server HTTP
-  Serial.println("Server HTTP telah dimulai.");
+  // Serial.println("Server HTTP telah dimulai.");
   delay(1000);
 }
 
@@ -159,7 +170,7 @@ void setupSensorMagnet(int slaveId, int rx, int tx,int baudrate) {
     // Slave ID
   node.preTransmission(preTransmission);
   node.postTransmission(postTransmission);
-  Serial.println(F("Inisialisasi Sensor Magnet selesai."));
+  // Serial.println(F("Inisialisasi Sensor Magnet selesai."));
 }
 
 
@@ -203,5 +214,5 @@ void setupAll() {
   setupHook();
   setupTombol();
   setupRfid();
-  Serial.println("SETUP ALL SELESAI");
+  // Serial.println("SETUP ALL SELESAI");
 }

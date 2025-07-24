@@ -12,7 +12,7 @@ void pidLinefollower(int errorPosisi, String mode) {
   if (obstacleDetected && mode != "BERHENTI") {
     // Emergency stop - obstacle detected
     pwmMotor(0, 0);
-    Serial.println("MOTOR STOPPED - Obstacle detected!");
+    // Serial.println("MOTOR STOPPED - Obstacle detected!");
     // buzzerError();
     music("error");
     return; // Exit function early
@@ -56,6 +56,6 @@ void pidLinefollower(int errorPosisi, String mode) {
   } else {
     pwmMotor(0, 0);
   }
-  Serial.println(mode);
+  // Serial.println(mode);
   lastError = pidError;
 }

@@ -92,11 +92,10 @@ LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 #define RX_ULTRASONIK_BACK 9
 #define TX_ULTRASONIK_BACK 46
 
-// #Inisialisasi Pin Hook Motor
-#define MOTOR_DI1_PIN 20
-#define MOTOR_DI2_PIN 19
-#define MOTOR_PWM_PIN 21
-#define HOOK_PWM_CHANNEL 2
+// #Inisialisasi Pin Hook Motor dengan SSR Relay
+#define HOOK_RELAY_PIN 21        // Pin untuk relay SSR-40 DA
+#define LIMIT_SWITCH_UP_PIN 20   // Pin untuk limit switch atas
+#define LIMIT_SWITCH_DOWN_PIN 19 // Pin untuk limit switch bawah
 
 
 // Alamat slave sensor yang diharapkan
@@ -227,10 +226,10 @@ extern uint16_t ultrasonicDistances[5];
 
 bool statusMusic = false;
 
-// pin hook 20 dan 19, menggunakan relay
-#define pinHook1 20
-#define pinHook2 19
-#define pinMotorHook 21
+// pin hook dengan SSR relay dan limit switches
+#define pinHookRelay 21          // Pin relay SSR untuk kontrol hook motor
+#define pinLimitUp 20            // Pin limit switch atas
+#define pinLimitDown 19          // Pin limit switch bawah
 
 // Motor inversion settings
 bool invertMotorY = false;  // Invers maju-mundur (forward/backward)
@@ -258,4 +257,4 @@ int musicKomputerPin = 3;   // Default: pinMusic4 untuk komputer
 #define ERROR_INVALID_CONFIGURATION 10
 #define ERROR_ULTRASONIC_COMMUNICATION 11
 
-#endif 
+#endif

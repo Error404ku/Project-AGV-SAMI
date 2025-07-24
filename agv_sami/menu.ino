@@ -167,8 +167,8 @@ void setupMenu() {
   // Load stations list from HTTP preferences
   loadStationsListFromPreferences();
   
-  Serial.print("Loaded stationsList size: ");
-  Serial.println(stationsList.size());
+  // Serial.print("Loaded stationsList size: ");
+  // Serial.println(stationsList.size());
 }
 
 void saveSettings() {
@@ -1283,11 +1283,13 @@ void displayHookTest() {
   lcd.print("DOWN : Hook Turun");
   lcd.setCursor(0, 3);
   
-  // Show current hook state
-  switch(hookTestState) {
-    case 0: lcd.print("Status: STOP    "); break;
-    case 1: lcd.print("Status: NAIK    "); break;
-    case 2: lcd.print("Status: TURUN   "); break;
+  // Show current hook position using the new function
+  String position = getHookPosition();
+  lcd.print("Pos: ");
+  lcd.print(position);
+  // Clear remaining characters
+  for(int i = position.length() + 5; i < 15; i++) {
+    lcd.print(" ");
   }
   
   lcd.setCursor(15, 3);

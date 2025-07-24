@@ -51,14 +51,9 @@ void error(int code, String text) {
     }
     
     // Also print to Serial for debugging
-    Serial.print("SYSTEM ERROR - Code: ");
-    Serial.print(code);
-    Serial.print(" - ");
-    Serial.println(text);
     
     // Blink error indication if possible
     while(1) {
-    Serial.println("ERROR");
         delay(1000);
         // You can add LED blinking here if you have error LEDs
     }
@@ -66,10 +61,6 @@ void error(int code, String text) {
 
 // Non-fatal error function - logs error but continues operation
 void logError(int code, String text) {
-    Serial.print("WARNING - Code: ");
-    Serial.print(code);
-    Serial.print(" - ");
-    Serial.println(text);
     
     // Could also briefly show on LCD without stopping system
     // For now, just log to Serial

@@ -9,7 +9,7 @@ const unsigned long obstacleCheckInterval = 100; // Check every 100ms
 void loopUltrasonik() {
   if (Serial1.available()) {
     byte incomingByte = Serial1.read();
-    Serial.println("Seial 1 tersedia");
+    // Serial.println("Seial 1 tersedia");
     // Logika untuk sinkronisasi paket data
     if (!inPacket) {
       // Mencari byte pertama dari header paket (Alamat Slave)
@@ -52,7 +52,7 @@ void parsePacket() {
     uint16_t received_crc = (dataPacket[PACKET_LENGTH - 1] << 8) | dataPacket[PACKET_LENGTH - 2];
 
     if (calculated_crc == received_crc) {
-      Serial.println("--- Paket Data Valid Diterima ---");
+      // Serial.println("--- Paket Data Valid Diterima ---");
 
       // Ekstrak dan hitung jarak untuk setiap probe
       // Rumus: Jarak = (High Byte * 256) + Low Byte
@@ -73,15 +73,15 @@ void parsePacket() {
       checkObstacles();
 
       // Tampilkan hasil
-      Serial.printf("  Jarak Probe 1: %d cm\n", dist1);
-      Serial.printf("  Jarak Probe 2: %d cm\n", dist2);
-      Serial.printf("  Jarak Probe 3: %d cm\n", dist3);
-      Serial.printf("  Jarak Probe 4: %d cm\n", dist4);
-      Serial.printf("  Jarak Probe 5: %d cm\n\n", dist5);
+      // Serial.printf("  Jarak Probe 1: %d cm\n", dist1);
+      // Serial.printf("  Jarak Probe 2: %d cm\n", dist2);
+      // Serial.printf("  Jarak Probe 3: %d cm\n", dist3);
+      // Serial.printf("  Jarak Probe 4: %d cm\n", dist4);
+      // Serial.printf("  Jarak Probe 5: %d cm\n\n", dist5);
 
     } else {
         error(ERROR_ULTRASONIC_COMMUNICATION, "CRC Checksum tidak cocok. Data korup.");
-      Serial.println("Error: CRC Checksum tidak cocok. Data korup.");
+      // Serial.println("Error: CRC Checksum tidak cocok. Data korup.");
     }
   }
 }
@@ -119,20 +119,20 @@ void checkObstacles() {
   for (int i = 0; i < 5; i++) {
     if (ultrasonicDistances[i] > 0 && ultrasonicDistances[i] < minSafeDistance) {
       obstacleDetected = true;
-      Serial.printf("OBSTACLE DETECTED! Probe %d: %d cm\n", i+1, ultrasonicDistances[i]);
+      // Serial.printf("OBSTACLE DETECTED! Probe %d: %d cm\n", i+1, ultrasonicDistances[i]);
       break;
     }
   }
   
   // If obstacle just detected, trigger buzzer
   if (obstacleDetected && !previousObstacleState) {
-    Serial.println("EMERGENCY STOP - Obstacle detected!");
+    // Serial.println("EMERGENCY STOP - Obstacle detected!");
     // buzzerError();
     music("error");
   }
   
   // If obstacle cleared, notify
   if (!obstacleDetected && previousObstacleState) {
-    Serial.println("Path clear - obstacle removed");
+    // Serial.println("Path clear - obstacle removed");
   }
 }

@@ -1,9 +1,9 @@
 void music(String mode) {
-    Serial.print("Start Music : ");
-    Serial.println(mode);
+    // Serial.print("Start Music : ");
+  // Serial.println(mode);
   
     if (statusMusic) {
-      Serial.println("Music already on");
+      // Serial.println("Music already on");
       return;
     }
   
@@ -22,8 +22,8 @@ void music(String mode) {
     else if (mode == "detect")   targetPin = musicDetectPin;
     else if (mode == "komputer") targetPin = musicKomputerPin;
     // print target pin
-    Serial.print("Target Pin : ");
-    Serial.println(targetPin);
+    // Serial.print("Target Pin : ");
+  // Serial.println(targetPin);
   
     // Set selected pin ON
     if (targetPin >= 0 && targetPin <= 3) {
