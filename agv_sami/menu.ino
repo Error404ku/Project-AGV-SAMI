@@ -1308,8 +1308,9 @@ void displayMagnetCheck() {
   lcd.setCursor(0, 2);
   lcd.print("Segments:");
   if (totalSensorAktif > 0) {
+    int* currentMagnetData = getCurrentMagnetData();
     for (int i = 0; i < 16; i++) {
-      if (jumlahMagnet[i]) {
+      if (currentMagnetData[i]) {
         lcd.print(i+1);
         lcd.print(",");
         break; // Show only first few due to space
@@ -1326,22 +1327,25 @@ void displayMagnetCheck() {
 void displayUltrasonicCheck() {
   displayMenuHeader("Ultrasonic Check");
   
+  // Get current ultrasonic data (front sensors by default)
+  uint16_t* frontDistances = getUltrasonicData(true);
+  
   lcd.setCursor(0, 1);
-  lcd.print("P1:");
-  lcd.print(ultrasonicDistances[0]);
+  lcd.print("F-P1:");
+  lcd.print(frontDistances[0]);
   lcd.print(" P2:");
-  lcd.print(ultrasonicDistances[1]);
+  lcd.print(frontDistances[1]);
   
   lcd.setCursor(0, 2);
   lcd.print("P3:");
-  lcd.print(ultrasonicDistances[2]);
+  lcd.print(frontDistances[2]);
   lcd.print(" P4:");
-  lcd.print(ultrasonicDistances[3]);
+  lcd.print(frontDistances[3]);
   lcd.print(" P5:");
-  lcd.print(ultrasonicDistances[4]);
+  lcd.print(frontDistances[4]);
   
   lcd.setCursor(0, 3);
-  if (obstacleDetected) {
+  if (hasObstacle(true)) {
     lcd.print("OBSTACLE! ");
   } else {
     lcd.print("Clear ");

@@ -307,9 +307,10 @@ void tombolAgv() {
  ***********************************************************/
 void logicAgv() {
   // ― Update processed sensor flags ―
-  tengahAktif = jumlahMagnet[7] && jumlahMagnet[8];
-  kananHilang = jumlahMagnet[14] || jumlahMagnet[15];
-  kiriHilang = jumlahMagnet[0] || jumlahMagnet[2];
+  int* currentMagnetData = getCurrentMagnetData();
+  tengahAktif = currentMagnetData[7] && currentMagnetData[8];
+  kananHilang = currentMagnetData[14] || currentMagnetData[15];
+  kiriHilang = currentMagnetData[0] || currentMagnetData[2];
   sensorkebacasemua = (totalSensorAktif > 14);
 
   tombolAgv();

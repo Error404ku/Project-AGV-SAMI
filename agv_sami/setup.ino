@@ -88,8 +88,8 @@ void initializeDisplay() {
 }
 
 void setupDisplay() {
-  // Initialize I2C SDA 38, SCL 39
-  Wire.begin(38, 37);
+  // Initialize I2C SDA 3, SCL 8
+  Wire.begin(3, 8);
   Wire.setClock(400000);
   delay(100);
 
@@ -150,27 +150,17 @@ void setupWebServer() {
   delay(1000);
 }
 
-// void setupUltrasonikWithParams(int rx = RX_ULTRASONIK_FRONT, int tx = TX_ULTRASONIK_FRONT, int baudrate = 115200) {
-//   pinMode(MAX485_RE, OUTPUT);
-//   pinMode(MAX485_DE, OUTPUT);
-//   digitalWrite(MAX485_RE, 0);
-//   digitalWrite(MAX485_DE, 0);
-//   Serial1.begin(baudrate, SERIAL_8N1, rx, tx);
-//   Serial.println("--- Program Parser Sensor Ultrasonik ---");
-//   Serial.println("Mencari paket data dari sensor...");
-// }
+// Individual sensor setup functions replaced by unified RS485 setup
+// Legacy functions kept for compatibility but functionality moved to setupUnifiedRS485()
 
-void setupSensorMagnet(int slaveId, int rx, int tx,int baudrate) {
-  Serial2.begin(baudrate, SERIAL_8N1, rx, tx);
-  pinMode(MAX485_RE, OUTPUT);
-  pinMode(MAX485_DE, OUTPUT);
-  digitalWrite(MAX485_RE, 0);
-  digitalWrite(MAX485_DE, 0);
-  node.begin(slaveId, Serial2);
-    // Slave ID
-  node.preTransmission(preTransmission);
-  node.postTransmission(postTransmission);
-  // Serial.println(F("Inisialisasi Sensor Magnet selesai."));
+void setupUltrasonikWithParams(int rx, int tx, int baudrate) {
+  // This function is now handled by setupUnifiedRS485()
+  // Kept for compatibility but does nothing
+}
+
+void setupSensorMagnet(int slaveId, int rx, int tx, int baudrate) {
+  // This function is now handled by setupUnifiedRS485()
+  // Kept for compatibility but does nothing
 }
 
 
@@ -206,10 +196,10 @@ void setupAll() {
   setupMusicAndLed();
   setupDisplay();
   setupMenu();  // Initialize menu system
-  setupSensorMagnet(1, RX_MAGNET_FRONT, TX_MAGNET_FRONT, BAUDRATE_MAGNET_FRONT);
-  // setupBuzzer();
-  // setupUltrasonikWithParams(RX_ULTRASONIK_FRONT, TX_ULTRASONIK_FRONT, BAUDRATE_ULTRASONIC);
-  // setupUltrasonikWithParams(RX_ULTRASONIK_BACK, TX_ULTRASONIK_BACK, BAUDRATE_ULTRASONIC);
+  
+  // Setup unified RS485 communication for all sensors
+  setupUnifiedRS485();
+  
   // setupWebServer();
   setupHook();
   setupTombol();

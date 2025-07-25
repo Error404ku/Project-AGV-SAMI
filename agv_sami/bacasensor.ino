@@ -1,19 +1,8 @@
 extern bool modeMaju;
 extern bool modeMundur;
 
-// void changeStateMode(String mode){
-//     if (mode == "maju" && !modeMundur){
-//         setupSensorMagnet(1, RX_MAGNET_FRONT, TX_MAGNET_FRONT, BAUDRATE);
-//         setupUltrasonikWithParams(RX_ULTRASONIK_FRONT, TX_ULTRASONIK_FRONT, BAUDRATE);
-//         modeMaju = true;
-//         modeMundur = false;
-//     }else if (mode == "mundur" && !modeMaju){
-//         setupSensorMagnet(1, RX_MAGNET_BACK, TX_MAGNET_BACK, BAUDRATE);
-//         setupUltrasonikWithParams(RX_ULTRASONIK_BACK, TX_ULTRASONIK_BACK, BAUDRATE);
-//         modeMaju = false;
-//         modeMundur = true;
-//     }
-// }
+// Mode switching now handled by unified RS485 system
+// All sensors are accessible simultaneously through address switching
 
 void preTransmission()
 {
@@ -35,52 +24,24 @@ void bacaSensorGaris()
     if (currentMillis - previousMillis >= interval)
     {
         previousMillis = currentMillis;
-        bacaSensor();
+        // Use unified RS485 communication instead of individual sensor reading
+        loopUnifiedRS485();
+        
+        // Update total active sensors based on current magnet data
+        updateTotalSensorAktif();
     }
 }
 
-// ==================== Fungsi Membaca Sensor ====================
-void bacaSensor()
+// ==================== Update Total Sensor Aktif ====================
+void updateTotalSensorAktif()
 {
+    // Get current magnet data (front magnet for line following)
+    int* currentMagnetData = getCurrentMagnetData();
     
-    static int consecutiveFailures = 0; // Track consecutive communication failures
-    
-    uint8_t result = node.readHoldingRegisters(0x0000, 2);
-
-    if (result == node.ku8MBSuccess)
+    totalSensorAktif = 0;
+    for (int i = 0; i < 16; i++)
     {
-        // Reset consecutive failures counter on successful communication
-        consecutiveFailures = 0;
-        
-        uint16_t medianValue = node.getResponseBuffer(0);
-        uint16_t positionValue = node.getResponseBuffer(1);
-
-        printActiveSegmentsFromBitmask(positionValue);
-        updateJumlahMagnet(positionValue);
-
-        if (positionValue == 0xFFFF)
-        {
-            totalSensorAktif = 0; 
-        }
-        else
-        {
-            totalSensorAktif = 0;
-                for (int i = 0; i < 16; i++)
-                {
-                    if (jumlahMagnet[i]) totalSensorAktif++;
-                }
-            errorValue = hitungErrorPosisi(positionValue);
-        }
-    }
-    else
-    {
-        
-        // Count consecutive failures
-        consecutiveFailures++;
-        // If too many consecutive failures, trigger system error
-        // if (consecutiveFailures >= 30) {
-        //     error(ERROR_SENSOR_COMMUNICATION, "Sensor Modbus Gagal 30x berturut-turut");
-        // }
+        if (currentMagnetData[i]) totalSensorAktif++;
     }
 }
 
@@ -161,11 +122,10 @@ int hitungErrorPosisi(uint16_t bitmask)
         return 0; // tengah atau seimbang
 }
 
+// Function moved to unified_rs485.ino as updateMagnetData()
+// This function is kept for compatibility but redirects to new system
 void updateJumlahMagnet(uint16_t bitmask)
 {
-    for (int i = 0; i < 16; i++)
-    {
-        jumlahMagnet[i] = !((bitmask >> i) & 0x01) ? 1 : 0;
-    }
+    updateMagnetData(bitmask, getCurrentMagnetData());
 }
 

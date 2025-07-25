@@ -24,11 +24,29 @@ Preferences preferences;
 Preferences stationsPreferences; // Objek Preferences untuk station yang ditemukan
 std::vector<int> stationsList; // Array di RAM untuk menyimpan station yang ditemukan
 
-int BAUDRATE_MAGNET_FRONT = 19200;
-int BAUDRATE_MAGNET_BACK = 9600;
-int BAUDRATE_ULTRASONIC = 9600;
+// Unified RS485 configuration
+int BAUDRATE_RS485 = 9600;
 
+// Device addresses for unified RS485 communication
+#define ADDR_MAGNET_FRONT 1
+#define ADDR_ULTRASONIC_FRONT 2  
+#define ADDR_ULTRASONIC_BACK 3
+#define ADDR_MAGNET_BACK 4
+
+// Function declarations for unified RS485 system
+void setupUnifiedRS485();
+void loopUnifiedRS485();
 void setupUltrasonikWithParams(int rx, int tx, int baudrate);
+int* getCurrentMagnetData();
+int* getMagnetData(bool useFront);
+uint16_t* getUltrasonicData(bool useFront);
+bool isDeviceOnline(int deviceIndex);
+String getDeviceStatusString();
+void updateMagnetData(uint16_t bitmask, int* magnetArray);
+void checkObstaclesFront();
+void checkObstaclesBack();
+bool hasObstacle(bool checkFront);
+uint16_t calculate_crc(byte* buffer, int len);
 
 // ### DEFINE ###
 // # TOMBOL
@@ -77,20 +95,12 @@ LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 // #define encKiriA 39
 // #define encKiriB 48
 
-// #Inisialisasi Sensor Magnet dan ultrasonik
+// #Inisialisasi Pin Sensor - Unified RS485
 #define MAX485_DE 36
 #define MAX485_RE 36
-// #Inisialisasi Pin Sensor Magnet dan Ultrasonik yang depan
-#define RX_MAGNET_FRONT 3
-#define TX_MAGNET_FRONT 8
-#define RX_ULTRASONIK_FRONT 18
-#define TX_ULTRASONIK_FRONT 17
-
-// #Inisialisasi Pin Sensor Magnet dan Ultrasonik yang belakang
-#define RX_MAGNET_BACK 11
-#define TX_MAGNET_BACK 10
-#define RX_ULTRASONIK_BACK 9
-#define TX_ULTRASONIK_BACK 46
+// Unified RS485 pins for all sensors
+#define RX_RS485 18
+#define TX_RS485 17
 
 // #Inisialisasi Pin Hook Motor dengan SSR Relay
 #define HOOK_RELAY_PIN 21        // Pin untuk relay SSR-40 DA
@@ -98,16 +108,24 @@ LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 #define LIMIT_SWITCH_DOWN_PIN 19 // Pin untuk limit switch bawah
 
 
-// Alamat slave sensor yang diharapkan
-const byte SENSOR_ADDRESS = 0x01;
+// Unified RS485 communication variables
 const int PACKET_LENGTH = 15;
 byte dataPacket[PACKET_LENGTH];
 int byteCounter = 0;
 bool inPacket = false;
 
-int jumlahMagnet[16];
+// Current active device address
+byte currentDeviceAddress = ADDR_MAGNET_FRONT;
 
-ModbusMaster node;
+// Sensor data arrays
+int jumlahMagnetFront[16];
+int jumlahMagnetBack[16];
+uint16_t ultrasonicDistancesFront[5] = {0};
+uint16_t ultrasonicDistancesBack[5] = {0};
+
+// Modbus master instances
+ModbusMaster nodeMagnetFront;
+ModbusMaster nodeMagnetBack;
 
 // ## VARIABLE ##
 // # variable Web Server
@@ -216,7 +234,6 @@ bool newRfidScanned = false;
 
 // Obstacle detection variables
 extern bool obstacleDetected;
-extern uint16_t ultrasonicDistances[5];
 
 // Pin Relay music 7, 15, 16, 14
 #define pinMusic1 7

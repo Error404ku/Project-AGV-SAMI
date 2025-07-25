@@ -10,15 +10,17 @@ void displayPrint() {
 
 void displaySensorData() {
   // Display sensor data on LCD (16 sensors in 2 rows)
+  int* currentMagnetData = getCurrentMagnetData();
+  
   lcd.setCursor(0, 0);
   lcd.print("Sensor:");
   lcd.setCursor(0, 1);
   for (int i = 0; i < 8; i++) {
-    lcd.print(jumlahMagnet[i] ? "1" : "0");
+    lcd.print(currentMagnetData[i] ? "1" : "0");
   }
   lcd.setCursor(8, 1);
   for (int i = 8; i < 16; i++) {
-    lcd.print(jumlahMagnet[i] ? "1" : "0");
+    lcd.print(currentMagnetData[i] ? "1" : "0");
   }
   
   // Show error value
