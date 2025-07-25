@@ -1,4 +1,6 @@
 #include "config.h"
+extern bool modeMaju;
+extern bool modeMundur;
 
 void setup() {
   Serial.begin(115200);
@@ -12,13 +14,25 @@ void setup() {
 void loop() {
   server.handleClient();
   loopRfid(); // Handle RFID scanning - now controlled internally by conditions
-  loopUltrasonik(); // Handle ultrasonic obstacle detection
-  // delay(1000);
+  // loopUltrasonik(); // Akan dipanggil manual sesuai mode
+
   if (isAgvMode) {
     // AGV Mode - Run normal AGV operation
     // pembacaanRpm();
     displayPrint();
-    bacaSensorGaris();
+    // bacaSensorGaris(); // Akan dipanggil manual sesuai mode
+
+    // --- Pembacaan sensor sesuai mode ---
+    if (modeMaju) {
+      bacaSensor(SLAVEID_MAGNET_DEPAN);
+      setUltrasonicSlaveId(SLAVEID_ULTRASONIK_DEPAN);
+      loopUltrasonik();
+    } else if (modeMundur) {
+      bacaSensor(SLAVEID_MAGNET_BELAKANG);
+      setUltrasonicSlaveId(SLAVEID_ULTRASONIK_BELAKANG);
+      loopUltrasonik();
+    }
+
     logicAgv();
 
     // Check for B button to exit AGV mode

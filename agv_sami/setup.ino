@@ -78,9 +78,9 @@ void initializeDisplay() {
 }
 
 void setupDisplay() {
-  // Initialize I2C SDA 38, SCL 39
-  Wire.begin(38, 37);
-  Wire.setClock(400000);
+  // Initialize I2C SDA 3, SCL 8
+  Wire.begin(3, 8);
+  Wire.setClock(200000);
   delay(100);
 
   // Initialize display
@@ -140,18 +140,18 @@ void setupWebServer() {
   delay(1000);
 }
 
-void setupUltrasonikWithParams(int rx = RX_ULTRASONIK_FRONT, int tx = TX_ULTRASONIK_FRONT, int baudrate = 115200) {
+void setupUltrasonikWithParams(int slaveId, int baudrate = 9600) {
   pinMode(MAX485_RE, OUTPUT);
   pinMode(MAX485_DE, OUTPUT);
   digitalWrite(MAX485_RE, 0);
   digitalWrite(MAX485_DE, 0);
-  Serial1.begin(baudrate, SERIAL_8N1, rx, tx);
-  Serial.println("--- Program Parser Sensor Ultrasonik ---");
-  Serial.println("Mencari paket data dari sensor...");
+  Serial1.begin(baudrate, SERIAL_8N1, RS485_RX, RS485_TX);
+  // Simpan slaveId jika perlu untuk pembacaan
+  Serial.printf("--- Setup Ultrasonik Slave ID: %d ---\n", slaveId);
 }
 
-void setupSensorMagnet(int slaveId, int rx, int tx, int baudrate) {
-  Serial2.begin(baudrate, SERIAL_8N1, rx, tx);
+void setupSensorMagnet(int slaveId, int baudrate = 9600) {
+  Serial2.begin(baudrate, SERIAL_8N1, RS485_RX, RS485_TX);
   pinMode(MAX485_RE, OUTPUT);
   pinMode(MAX485_DE, OUTPUT);
   digitalWrite(MAX485_RE, 0);
@@ -159,7 +159,7 @@ void setupSensorMagnet(int slaveId, int rx, int tx, int baudrate) {
   node.begin(slaveId, Serial2);  // Slave ID
   node.preTransmission(preTransmission);
   node.postTransmission(postTransmission);
-  Serial.println(F("Inisialisasi Sensor Magnet selesai."));
+  Serial.printf("Inisialisasi Sensor Magnet selesai. Slave ID: %d\n", slaveId);
 }
 
 
@@ -195,9 +195,9 @@ void setupAll() {
   setupMusicAndLed();
   setupDisplay();
   setupMenu();  // Initialize menu system
-  setupSensorMagnet(1, RX_MAGNET_FRONT, TX_MAGNET_FRONT, BAUDRATE);
+  setupSensorMagnet(SLAVEID_MAGNET_DEPAN, BAUDRATE);
+  setupUltrasonikWithParams(SLAVEID_ULTRASONIK_DEPAN, BAUDRATE);
   // setupBuzzer();
-  setupUltrasonikWithParams(RX_ULTRASONIK_FRONT, TX_ULTRASONIK_FRONT, BAUDRATE);
   // setupWebServer();
   setupTombol();
   setupRfid();

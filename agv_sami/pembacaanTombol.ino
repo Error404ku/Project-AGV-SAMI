@@ -4,12 +4,12 @@ unsigned long bootHoldStart = 0;
 int lastPressed;
 
 // Button pin variables
-int upPin = 2;
-int downPin = 40;
-int rightPin = 39;
-int leftPin = 42;
-int startPin = 1;
-int stopPin = 41;
+int upPin = PIN_UP;
+int downPin = PIN_DOWN;
+int rightPin = PIN_RIGHT;
+int leftPin = PIN_LEFT;
+int startPin = PIN_START;
+int stopPin = PIN_STOP;
 
 // Debounce variables
 unsigned long lastUpPress = 0;
@@ -21,7 +21,7 @@ unsigned long lastStopPress = 0;
 const unsigned long debounceDelay = 300; // 200ms debounce
 
 void setupTombol() {
-  pinMode(BOOT_PIN, INPUT_PULLUP);
+  // pinMode(BOOT_PIN, INPUT_PULLUP);
   
   // Setup manual assigned button pins for ACTIVE HIGH with internal pull-down
   pinMode(upPin, INPUT_PULLDOWN);     // UP - active HIGH

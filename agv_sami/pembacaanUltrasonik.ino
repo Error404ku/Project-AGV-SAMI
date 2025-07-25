@@ -6,6 +6,11 @@ uint16_t ultrasonicDistances[5] = {0}; // Store distances from 5 probes
 unsigned long lastObstacleCheck = 0;
 const unsigned long obstacleCheckInterval = 100; // Check every 100ms
 
+int currentUltrasonicSlaveId = SLAVEID_ULTRASONIK_DEPAN;
+void setUltrasonicSlaveId(int slaveId) {
+    currentUltrasonicSlaveId = slaveId;
+}
+
 void loopUltrasonik() {
   if (Serial1.available()) {
     byte incomingByte = Serial1.read();
@@ -13,7 +18,7 @@ void loopUltrasonik() {
     // Logika untuk sinkronisasi paket data
     if (!inPacket) {
       // Mencari byte pertama dari header paket (Alamat Slave)
-      if (incomingByte == SENSOR_ADDRESS) {
+      if (incomingByte == currentUltrasonicSlaveId) {
         dataPacket[0] = incomingByte;
         byteCounter = 1;
         inPacket = true;

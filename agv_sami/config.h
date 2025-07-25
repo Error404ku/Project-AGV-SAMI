@@ -25,7 +25,8 @@ Preferences stationsPreferences; // Objek Preferences untuk station yang ditemuk
 std::vector<int> stationsList; // Array di RAM untuk menyimpan station yang ditemukan
 
 int BAUDRATE = 9600;
-void setupUltrasonikWithParams(int rx, int tx, int baudrate);
+void setupSensorMagnet(int slaveId, int baudrate);
+void setupUltrasonikWithParams(int slaveId, int baudrate);
 
 // ### DEFINE ###
 // # TOMBOL
@@ -33,12 +34,12 @@ void setupUltrasonikWithParams(int rx, int tx, int baudrate);
 #define BOOT_PIN 0
 
 // Individual button pins (manual assignment)
-#define PIN_UP 39     // UP button
-#define PIN_LEFT 41   // LEFT button  
-#define PIN_RIGHT 42  // RIGHT button
+#define PIN_UP 10     // UP button
+#define PIN_LEFT 42   // LEFT button  
+#define PIN_RIGHT 39  // RIGHT button
 #define PIN_DOWN 40   // DOWN button
-#define PIN_START 2   // START button
-#define PIN_STOP 1    // STOP button
+#define PIN_START 9   // START button
+#define PIN_STOP 41    // STOP button
 
 // Available pins for button calibration (not used with manual assignment)
 const int availablePins[] = {39, 40, 41, 42, 2, 1};
@@ -77,17 +78,25 @@ LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 // #Inisialisasi Sensor Magnet dan ultrasonik
 #define MAX485_DE 36
 #define MAX485_RE 36
-// #Inisialisasi Pin Sensor Magnet dan Ultrasonik yang depan
-#define RX_MAGNET_FRONT 11//3
-#define TX_MAGNET_FRONT 10//8
-#define RX_ULTRASONIK_FRONT 18
-#define TX_ULTRASONIK_FRONT 17
+// RS485 Serial Pins (shared for all sensors)
+#define RS485_RX 18
+#define RS485_TX 17
 
-// #Inisialisasi Pin Sensor Magnet dan Ultrasonik yang belakang
-#define RX_MAGNET_BACK 3//11
-#define TX_MAGNET_BACK 8//10
-#define RX_ULTRASONIK_BACK 9
-#define TX_ULTRASONIK_BACK 46
+// Mapping Slave ID ke Sensor
+#define SLAVEID_MAGNET_DEPAN      1
+#define SLAVEID_ULTRASONIK_DEPAN  2
+#define SLAVEID_ULTRASONIK_BELAKANG 3
+#define SLAVEID_MAGNET_BELAKANG   4
+
+// Hapus/abaikan pin RX/TX sensor lain (semua pakai RS485_RX dan RS485_TX)
+// #define RX_MAGNET_FRONT 11//3
+// #define TX_MAGNET_FRONT 10//8
+// #define RX_ULTRASONIK_FRONT 18
+// #define TX_ULTRASONIK_FRONT 17
+// #define RX_MAGNET_BACK 3//11
+// #define TX_MAGNET_BACK 8//10
+// #define RX_ULTRASONIK_BACK 9
+// #define TX_ULTRASONIK_BACK 46
 
 // #Inisialisasi Pin Hook Motor
 #define MOTOR_DI1_PIN 20

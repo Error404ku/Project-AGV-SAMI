@@ -3,13 +3,13 @@ extern bool modeMundur;
 
 void changeStateMode(String mode){
     if (mode == "maju" && !modeMundur){
-        setupSensorMagnet(1, RX_MAGNET_FRONT, TX_MAGNET_FRONT, BAUDRATE);
-        setupUltrasonikWithParams(RX_ULTRASONIK_FRONT, TX_ULTRASONIK_FRONT, BAUDRATE);
+        setupSensorMagnet(SLAVEID_MAGNET_DEPAN, BAUDRATE);
+        setupUltrasonikWithParams(SLAVEID_ULTRASONIK_DEPAN, BAUDRATE);
         modeMaju = true;
         modeMundur = false;
     }else if (mode == "mundur" && !modeMaju){
-        setupSensorMagnet(1, RX_MAGNET_BACK, TX_MAGNET_BACK, BAUDRATE);
-        setupUltrasonikWithParams(RX_ULTRASONIK_BACK, TX_ULTRASONIK_BACK, BAUDRATE);
+        setupSensorMagnet(SLAVEID_MAGNET_BELAKANG, BAUDRATE);
+        setupUltrasonikWithParams(SLAVEID_ULTRASONIK_BELAKANG, BAUDRATE);
         modeMaju = false;
         modeMundur = true;
     }
@@ -40,52 +40,40 @@ void bacaSensorGaris()
 }
 
 // ==================== Fungsi Membaca Sensor ====================
-void bacaSensor()
-{
+void bacaSensor(int slaveId) {
+    node.begin(slaveId, Serial2);
     Serial.println(F("Mengirim permintaan pembacaan..."));
-    
-    static int consecutiveFailures = 0; // Track consecutive communication failures
-    
+    static int consecutiveFailures = 0;
     uint8_t result = node.readHoldingRegisters(0x0000, 2);
-
-    if (result == node.ku8MBSuccess)
-    {
-        // Reset consecutive failures counter on successful communication
+    Serial.print("Modbus result: ");
+    Serial.println(result);
+    if (result == node.ku8MBSuccess) {
         consecutiveFailures = 0;
-        
         uint16_t medianValue = node.getResponseBuffer(0);
         uint16_t positionValue = node.getResponseBuffer(1);
-
+        Serial.print("positionValue: 0x");
+        Serial.println(positionValue, HEX);
         printActiveSegmentsFromBitmask(positionValue);
         updateJumlahMagnet(positionValue);
-
-        if (positionValue == 0xFFFF)
-        {
-            totalSensorAktif = 0; 
-        }
-        else
-        {
+        if (positionValue == 0xFFFF) {
             totalSensorAktif = 0;
-                for (int i = 0; i < 16; i++)
-                {
-                    if (jumlahMagnet[i]) totalSensorAktif++;
-                }
+        } else {
+            totalSensorAktif = 0;
+            for (int i = 0; i < 16; i++) {
+                if (jumlahMagnet[i]) totalSensorAktif++;
+            }
             errorValue = hitungErrorPosisi(positionValue);
         }
-    }
-    else
-    {
+    } else {
         Serial.print(F("Gagal membaca data sensor. Error Code: 0x"));
         Serial.println(result, HEX);
-        
-        // Count consecutive failures
         consecutiveFailures++;
         Serial.println(consecutiveFailures);
-        // If too many consecutive failures, trigger system error
-        // if (consecutiveFailures >= 30) {
-        //     error(ERROR_SENSOR_COMMUNICATION, "Sensor Modbus Gagal 30x berturut-turut");
-        // }
     }
+}
+// Overload agar tetap kompatibel
+void bacaSensor() {
+    bacaSensor(SLAVEID_MAGNET_DEPAN);
 }
 
 // ==================== Fungsi untuk mencetak semua segmen aktif dari Bitmask (Active Low) ====================

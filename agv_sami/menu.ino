@@ -521,16 +521,16 @@ void handleMotorTest() {
       pwmMotor(0, 0);
       break;
     case 1: // FORWARD
-      pwmMotor(baseSpeed, -baseSpeed);
-      break;
-    case 2: // BACKWARD
       pwmMotor(-baseSpeed, baseSpeed);
       break;
+    case 2: // BACKWARD
+      pwmMotor(baseSpeed, -baseSpeed);
+      break;
     case 3: // LEFT
-      pwmMotor(-baseSpeed, -baseSpeed);
+      pwmMotor(baseSpeed, baseSpeed);
       break;
     case 4: // RIGHT
-      pwmMotor(baseSpeed, baseSpeed);
+      pwmMotor(-baseSpeed, -baseSpeed);
       break;
   }
 }
@@ -1378,6 +1378,8 @@ void handleHookTest() {
 }
 
 void handleMagnetCheck() {
+  // Selalu baca sensor saat menu ini aktif
+  bacaSensor(SLAVEID_MAGNET_DEPAN); // Ganti ke belakang jika ingin cek belakang
   if (STOP()) {
     currentMenu = MENU_MAIN;
     menuStartIndex = 0;
