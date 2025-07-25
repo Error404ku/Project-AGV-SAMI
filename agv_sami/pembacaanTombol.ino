@@ -4,11 +4,11 @@ unsigned long bootHoldStart = 0;
 int lastPressed;
 
 // Button pin variables
-int upPin = 2;
+int upPin = 10;
 int downPin = 40;
 int rightPin = 39;
 int leftPin = 42;
-int startPin = 1;
+int startPin = 9;
 int stopPin = 41;
 
 // Debounce variables

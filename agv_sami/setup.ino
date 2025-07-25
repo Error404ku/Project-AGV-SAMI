@@ -90,7 +90,7 @@ void initializeDisplay() {
 void setupDisplay() {
   // Initialize I2C SDA 3, SCL 8
   Wire.begin(3, 8);
-  Wire.setClock(400000);
+  Wire.setClock(200000);
   delay(100);
 
   // Initialize display

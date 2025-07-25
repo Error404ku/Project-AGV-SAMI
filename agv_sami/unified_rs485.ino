@@ -14,23 +14,32 @@ unsigned long lastSuccessfulComm[4] = {0, 0, 0, 0};
 const unsigned long commTimeoutMs = 5000; // 5 seconds timeout
 
 void setupUnifiedRS485() {
+  Serial.println("=== SETUP UNIFIED RS485 SYSTEM ===");
+  
   // Setup RS485 control pins
   pinMode(MAX485_DE, OUTPUT);
   pinMode(MAX485_RE, OUTPUT);
   digitalWrite(MAX485_RE, 0);
   digitalWrite(MAX485_DE, 0);
+  Serial.println("RS485 control pins initialized");
   
   // Initialize unified serial communication
   Serial1.begin(BAUDRATE_RS485, SERIAL_8N1, RX_RS485, TX_RS485);
+  Serial.print("Serial1 initialized at baudrate: ");
+  Serial.println(BAUDRATE_RS485);
   
   // Initialize Modbus masters for magnet sensors
   nodeMagnetFront.begin(ADDR_MAGNET_FRONT, Serial1);
   nodeMagnetFront.preTransmission(preTransmission);
   nodeMagnetFront.postTransmission(postTransmission);
+  Serial.print("Magnet Front Modbus initialized with address: ");
+  Serial.println(ADDR_MAGNET_FRONT);
   
   nodeMagnetBack.begin(ADDR_MAGNET_BACK, Serial1);
   nodeMagnetBack.preTransmission(preTransmission);
   nodeMagnetBack.postTransmission(postTransmission);
+  Serial.print("Magnet Back Modbus initialized with address: ");
+  Serial.println(ADDR_MAGNET_BACK);
   
   // Initialize sensor data arrays
   for (int i = 0; i < 16; i++) {
@@ -42,6 +51,9 @@ void setupUnifiedRS485() {
     ultrasonicDistancesFront[i] = 0;
     ultrasonicDistancesBack[i] = 0;
   }
+  
+  Serial.println("Sensor data arrays initialized");
+  Serial.println("=== UNIFIED RS485 SETUP COMPLETE ===");
 }
 
 void loopUnifiedRS485() {
@@ -50,6 +62,11 @@ void loopUnifiedRS485() {
   // Switch between devices periodically
   if (currentMillis - lastDeviceSwitch >= deviceSwitchInterval) {
     lastDeviceSwitch = currentMillis;
+    
+    // Debug: Show current device being communicated with
+    const char* deviceNames[] = {"Magnet Front", "Ultrasonic Front", "Ultrasonic Back", "Magnet Back"};
+    Serial.print("Communicating with: ");
+    Serial.println(deviceNames[currentDeviceIndex]);
     
     // Communicate with current device
     switch (currentDeviceIndex) {
@@ -80,6 +97,10 @@ void loopUnifiedRS485() {
 
 void communicateWithMagnetFront() {
   currentDeviceAddress = ADDR_MAGNET_FRONT;
+  
+  // Add small delay before communication
+  delay(10);
+  
   uint8_t result = nodeMagnetFront.readHoldingRegisters(0x0000, 2);
   
   if (result == nodeMagnetFront.ku8MBSuccess) {
@@ -89,6 +110,12 @@ void communicateWithMagnetFront() {
     uint16_t medianValue = nodeMagnetFront.getResponseBuffer(0);
     uint16_t positionValue = nodeMagnetFront.getResponseBuffer(1);
     
+    // Debug output (comment out in production)
+    Serial.print("Magnet Front - Median: ");
+    Serial.print(medianValue);
+    Serial.print(", Position: 0x");
+    Serial.println(positionValue, HEX);
+    
     updateMagnetData(positionValue, jumlahMagnetFront);
     
     if (positionValue != 0xFFFF) {
@@ -97,11 +124,17 @@ void communicateWithMagnetFront() {
     }
   } else {
     deviceOnline[0] = false;
+    Serial.print("Magnet Front Error: 0x");
+    Serial.println(result, HEX);
   }
 }
 
 void communicateWithMagnetBack() {
   currentDeviceAddress = ADDR_MAGNET_BACK;
+  
+  // Add small delay before communication
+  delay(10);
+  
   uint8_t result = nodeMagnetBack.readHoldingRegisters(0x0000, 2);
   
   if (result == nodeMagnetBack.ku8MBSuccess) {
@@ -111,9 +144,17 @@ void communicateWithMagnetBack() {
     uint16_t medianValue = nodeMagnetBack.getResponseBuffer(0);
     uint16_t positionValue = nodeMagnetBack.getResponseBuffer(1);
     
+    // Debug output (comment out in production)
+    Serial.print("Magnet Back - Median: ");
+    Serial.print(medianValue);
+    Serial.print(", Position: 0x");
+    Serial.println(positionValue, HEX);
+    
     updateMagnetData(positionValue, jumlahMagnetBack);
   } else {
     deviceOnline[3] = false;
+    Serial.print("Magnet Back Error: 0x");
+    Serial.println(result, HEX);
   }
 }
 
