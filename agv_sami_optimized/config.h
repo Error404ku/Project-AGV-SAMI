@@ -15,22 +15,22 @@
 // ==================== HARDWARE PIN DEFINITIONS ====================
 
 // LCD I2C Configuration
-#define LCD_COLUMNS 20
+#define LCD_COLUMNS 16
 #define LCD_ROWS 4
 #define LCD_ADDRESS 0x27
 
 // Motor L298N Pins
-#define MOTOR_IN1 32
-#define MOTOR_IN2 33
-#define MOTOR_IN3 25
-#define MOTOR_IN4 26
-#define MOTOR_ENA 27
-#define MOTOR_ENB 14
+#define MOTOR_IN1 48
+#define MOTOR_IN2 45
+#define MOTOR_IN3 4
+#define MOTOR_IN4 5
+#define MOTOR_ENA 35
+#define MOTOR_ENB 6
 
 // RS485 Communication Pins
-#define MAX485_DE 4
-#define MAX485_RE 4
-#define RX_RS485 16
+#define MAX485_DE 36
+#define MAX485_RE 36
+#define RX_RS485 18
 #define TX_RS485 17
 
 // Hook Motor Pins
