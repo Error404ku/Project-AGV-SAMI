@@ -1389,6 +1389,7 @@ void handleMagnetCheck() {
 }
 
 void handleUltrasonicCheck() {
+  loopUltrasonik();
   if (STOP()) {
     currentMenu = MENU_MAIN;
     menuStartIndex = 0;

@@ -14,7 +14,7 @@ void setUltrasonicSlaveId(int slaveId) {
 void loopUltrasonik() {
   if (Serial1.available()) {
     byte incomingByte = Serial1.read();
-    Serial.println("Seial 1 tersedia");
+    Serial.println("Serial 1 tersedia");
     // Logika untuk sinkronisasi paket data
     if (!inPacket) {
       // Mencari byte pertama dari header paket (Alamat Slave)
