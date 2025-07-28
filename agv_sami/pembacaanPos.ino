@@ -1,6 +1,6 @@
 extern int totalSensorAktif;  // counter sensor aktif
 extern int errorValue;        // nilai error PID
-String statusJalan;
+// String statusJalan; // Replaced with optimized version in performance_optimization.ino
 /***********************************************************
  *  GLOBAL STATE                                          *
  ***********************************************************/
@@ -325,7 +325,7 @@ void logicAgv() {
   if (force)
     modeBerhenti = false;
   // ― Prioritas gerakan global ―
-  if (statusJalan != "BERHENTI") {
+  if (strcmp(getStatusJalan(), "BERHENTI") != 0) {
     modeBerhenti = false;
   }
   if (modeBerhenti) {
@@ -345,39 +345,41 @@ void logicAgv() {
 void displayLogicAgv() {
 
   if (modeMaju) {
-    statusJalan = "MAJU";
+    setStatusJalan("MAJU");
   } else if (modeMundur) {
-    statusJalan = "MUNDUR";
+    setStatusJalan("MUNDUR");
   } else if (modeBerhenti) {
-    statusJalan = "BERHENTI";
+    setStatusJalan("BERHENTI");
   } else {
-    statusJalan = "BERHENTI";
+    setStatusJalan("BERHENTI");
     modeBerhenti = true;
   }
 
   // Tentukan mode aktif
-  String currentMode = "UNKNOWN";
   if (modeTerminal) {
-    currentMode = "TERMINAL";
+    setCurrentMode("TERMINAL");
   } else if (modeWarehouse) {
-    currentMode = "WAREHOUSE";
+    setCurrentMode("WAREHOUSE");
   } else if (modeStation) {
-    currentMode = "STATION";
+    setCurrentMode("STATION");
   } else {
+    setCurrentMode("UNKNOWN");
     // modeTerminal = true;
     modeWarehouse = true;
   }
 
   // Display on row 3 (last available row)
   lcd.setCursor(0, 3);
-  lcd.print(currentMode.substring(0, 8));  // First 8 chars
-  lcd.print(" ");
-  lcd.print(statusJalan.substring(0, 7));  // Fit remaining space
+  
+  // Use optimized char arrays instead of String operations
+  char displayBuffer[21]; // LCD width + null terminator
+  snprintf(displayBuffer, sizeof(displayBuffer), "%.8s %.7s", getCurrentMode(), getStatusJalan());
+  lcd.print(displayBuffer);
 
   if (modeStation) {
     // Clear part of row 3 and show station info
     lcd.setCursor(0, 3);
-    lcd.print("ST:");
+    lcd.print(" ST:");
     lcd.print(station);
     lcd.print(" TG:");
     if (indexTarget < stationsList.size()) {

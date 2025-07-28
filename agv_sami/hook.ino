@@ -12,17 +12,17 @@ void hook(String mode) {
   }
   
   if (actualMode == "naik") {
-    digitalWrite(pinHook1, HIGH);
-    digitalWrite(pinHook2, LOW);
     digitalWrite(pinMotorHook, LOW);
+    if (digitalRead(pinHook1) == HIGH) {
+      digitalWrite(pinMotorHook, HIGH);
+    }
   } else if (actualMode == "turun") {
-    digitalWrite(pinHook1, LOW);
-    digitalWrite(pinHook2, HIGH);
     digitalWrite(pinMotorHook, LOW);
+    if (digitalRead(pinHook2) == HIGH) {
+      digitalWrite(pinMotorHook, HIGH);
+    }
   } else {
     // Stop hook (both pins LOW)
-    digitalWrite(pinHook1, LOW);
-    digitalWrite(pinHook2, LOW);
     digitalWrite(pinMotorHook, HIGH);
   }
 }

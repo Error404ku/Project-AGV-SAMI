@@ -56,11 +56,22 @@ void error(int code, String text) {
     Serial.print(" - ");
     Serial.println(text);
     
-    // Blink error indication if possible
-    while(1) {
-    Serial.println("ERROR");
-        delay(1000);
-        // You can add LED blinking here if you have error LEDs
+    // Attempt error recovery instead of infinite loop
+    if (!attemptErrorRecovery(code)) {
+        // If recovery fails, enter safe mode but allow system monitoring
+        Serial.println("CRITICAL ERROR - Entering safe mode");
+        
+        // Set system to safe state
+        systemInErrorState = true;
+        
+        // Start error recovery timer for periodic retry
+        startTimer(&errorRecoveryTimer, 10000); // Retry every 10 seconds
+        
+        // Continue with limited functionality instead of complete halt
+        return;
+    } else {
+        Serial.println("Error recovery successful - system resumed");
+        systemInErrorState = false;
     }
 }
 

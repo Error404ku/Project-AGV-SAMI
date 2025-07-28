@@ -1,6 +1,9 @@
 extern bool modeMaju;
 extern bool modeMundur;
 
+// Current magnet slave ID (default: front sensor)
+int currentMagnetSlaveId = SLAVEID_MAGNET_DEPAN;
+
 void changeStateMode(String mode){
     if (mode == "maju" && !modeMundur){
         setupSensorMagnet(SLAVEID_MAGNET_DEPAN, BAUDRATE);
@@ -41,7 +44,7 @@ void bacaSensorGaris()
 
 // ==================== Fungsi Membaca Sensor ====================
 void bacaSensor(int slaveId) {
-    node.begin(slaveId, Serial2);
+    node.begin(slaveId, Serial1);
     Serial.println(F("Mengirim permintaan pembacaan..."));
     static int consecutiveFailures = 0;
     uint8_t result = node.readHoldingRegisters(0x0000, 2);
@@ -73,7 +76,7 @@ void bacaSensor(int slaveId) {
 }
 // Overload agar tetap kompatibel
 void bacaSensor() {
-    bacaSensor(SLAVEID_MAGNET_DEPAN);
+    bacaSensor(currentMagnetSlaveId);
 }
 
 // ==================== Fungsi untuk mencetak semua segmen aktif dari Bitmask (Active Low) ====================
@@ -166,5 +169,27 @@ void updateJumlahMagnet(uint16_t bitmask)
     {
         jumlahMagnet[i] = !((bitmask >> i) & 0x01) ? 1 : 0;
     }
+}
+
+// ==================== Magnet Sensor Switching Functions ====================
+
+/**
+ * Switch between front and back magnet sensors
+ */
+void switchMagnetSensor(bool useFrontSensor) {
+  if (useFrontSensor) {
+    currentMagnetSlaveId = SLAVEID_MAGNET_DEPAN;
+    Serial.println("Switched to FRONT magnet sensor");
+  } else {
+    currentMagnetSlaveId = SLAVEID_MAGNET_BELAKANG;
+    Serial.println("Switched to BACK magnet sensor");
+  }
+}
+
+/**
+ * Get current magnet sensor slave ID
+ */
+int getCurrentMagnetSlaveId() {
+  return currentMagnetSlaveId;
 }
 

@@ -54,7 +54,7 @@ extern int currentPinStart;
 extern int currentPinStop;
 
 // LCD I2C
-#define LCD_COLUMNS 20    // Jumlah kolom LCD
+#define LCD_COLUMNS 16    // Jumlah kolom LCD
 #define LCD_ROWS 4      // Jumlah baris LCD
 #define LCD_ADDRESS 0x27 // Alamat I2C LCD (biasanya 0x27 atau 0x3F)
 LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
@@ -218,7 +218,8 @@ int rfidStationCount = 0;
 // RFID scanning variables
 bool isScanning = false;
 int currentScanStation = 0;
-String lastScannedRfid = "";
+// String lastScannedRfid = ""; // Replaced with optimized char array
+extern char lastScannedRfidOptimized[32]; // Optimized RFID storage
 bool newRfidScanned = false;
 
 // Obstacle detection variables
@@ -264,4 +265,59 @@ int musicKomputerPin = 3;   // Default: pinMusic4 untuk komputer
 #define ERROR_INVALID_CONFIGURATION 10
 #define ERROR_ULTRASONIC_COMMUNICATION 11
 
-#endif 
+// ===== ULTRASONIC SENSOR FUNCTIONS =====
+void setUltrasonicSlaveId(int slaveId);
+void initUltrasonicSensor(int slaveId);
+void switchUltrasonicSensor(bool useFrontSensor);
+int getCurrentUltrasonicSlaveId();
+void loopUltrasonik();
+void checkObstacles();
+void preTransmissionUltrasonic();
+void postTransmissionUltrasonic();
+
+// ===== MAGNET SENSOR FUNCTIONS =====
+void switchMagnetSensor(bool useFrontSensor);
+int getCurrentMagnetSlaveId();
+
+// ===== PERFORMANCE OPTIMIZATION FUNCTIONS =====
+// Timer system
+struct Timer;
+extern Timer stopPelanPelanTimer;
+extern Timer ultrasonicSwitchTimer;
+extern Timer magnetSwitchTimer;
+extern Timer buttonDebounceTimer;
+extern Timer menuDelayTimer;
+extern Timer errorRecoveryTimer;
+extern Timer performanceTimer;
+
+void startTimer(Timer* timer, unsigned long interval);
+void stopTimer(Timer* timer);
+bool checkTimer(Timer* timer);
+bool isTimerActive(Timer* timer);
+bool wasTimerTriggered(Timer* timer);
+
+// Performance monitoring
+void startPerformanceMonitoring();
+void endPerformanceMonitoring();
+void printPerformanceStats();
+void resetPerformanceStats();
+void initPerformanceOptimization();
+void updatePerformanceOptimization();
+
+// Optimized state management
+void setStatusJalan(const char* status);
+void setCurrentMode(const char* mode);
+const char* getStatusJalan();
+const char* getCurrentMode();
+
+// Error recovery system
+extern bool systemInErrorState;
+bool attemptErrorRecovery(int errorCode);
+bool recoverSensorCommunication();
+bool recoverMotorControl();
+bool recoverRfidCommunication();
+bool recoverWifiConnection();
+void checkErrorRecovery();
+void initErrorRecovery();
+
+#endif

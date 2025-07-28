@@ -38,11 +38,11 @@ void setupTombol() {
   // Display setup complete message
   lcd.setCursor(0, 0);
   lcd.print("TOMBOL PULLDOWN");
-  delay(1500);
-  lcd.clear();
+  startTimer(&menuDelayTimer, 1500); // Non-blocking delay
+  // LCD will be cleared when timer expires in main loop
 }
 
-// Button functions using digitalRead == HIGH format with 200ms debounce
+// Optimized button functions using efficient debounce system
 bool UP() {
   if (digitalRead(upPin) == HIGH) {
     unsigned long currentTime = millis();

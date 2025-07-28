@@ -47,10 +47,11 @@ void pidLinefollower(int errorPosisi, String mode) {
   } else if (mode == "STOPPELANPELAN") {
     if (!sudahStopPelanPelan) {
       pwmMotor(-baseSpeed / 2, baseSpeed / 2);
-      delay(500);
-      pwmMotor(0, 0);
+      startTimer(&stopPelanPelanTimer, 500);
       sudahStopPelanPelan = true;
-    } else {
+    } else if (checkTimer(&stopPelanPelanTimer)) {
+      pwmMotor(0, 0);
+    } else if (!isTimerActive(&stopPelanPelanTimer)) {
       pwmMotor(0, 0);
     }
   } else {

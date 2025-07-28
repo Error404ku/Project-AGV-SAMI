@@ -6,38 +6,64 @@ uint16_t ultrasonicDistances[5] = {0}; // Store distances from 5 probes
 unsigned long lastObstacleCheck = 0;
 const unsigned long obstacleCheckInterval = 100; // Check every 100ms
 
+// Current ultrasonic slave ID (default: front sensor)
 int currentUltrasonicSlaveId = SLAVEID_ULTRASONIK_DEPAN;
+
+// Function to set ultrasonic slave ID dynamically
 void setUltrasonicSlaveId(int slaveId) {
     currentUltrasonicSlaveId = slaveId;
+    Serial.printf("Ultrasonic slave ID set to: %d\n", slaveId);
+}
+
+// Pre and post transmission functions for RS485
+void preTransmissionUltrasonic() {
+  digitalWrite(MAX485_RE, HIGH);
+  digitalWrite(MAX485_DE, HIGH);
+}
+
+void postTransmissionUltrasonic() {
+  digitalWrite(MAX485_RE, LOW);
+  digitalWrite(MAX485_DE, LOW);
 }
 
 void loopUltrasonik() {
-  if (Serial1.available()) {
-    byte incomingByte = Serial1.read();
-    Serial.println("Seial 1 tersedia");
-    // Logika untuk sinkronisasi paket data
-    if (!inPacket) {
-      // Mencari byte pertama dari header paket (Alamat Slave)
-      if (incomingByte == currentUltrasonicSlaveId) {
-        dataPacket[0] = incomingByte;
-        byteCounter = 1;
-        inPacket = true;
+  static unsigned long lastReadTime = 0;
+  const unsigned long readInterval = 100; // Read every 100ms
+  
+  unsigned long currentTime = millis();
+  if (currentTime - lastReadTime >= readInterval) {
+    lastReadTime = currentTime;
+    
+    // Set current slave ID for node communication
+    node.begin(currentUltrasonicSlaveId, Serial1);
+    node.preTransmission(preTransmissionUltrasonic);
+    node.postTransmission(postTransmissionUltrasonic);
+    
+    // Read 5 holding registers from address 0x0000 (Probe 1-5)
+    uint8_t result = node.readHoldingRegisters(0x0000, 5);
+    
+    if (result == node.ku8MBSuccess) {
+      Serial.printf("=== Ultrasonic Data (Slave ID: %d) ===\n", currentUltrasonicSlaveId);
+      
+      // Extract distance data from response buffer
+      for (int i = 0; i < 5; i++) {
+        ultrasonicDistances[i] = node.getResponseBuffer(i);
+        Serial.printf("  Probe %d: %d cm\n", i + 1, ultrasonicDistances[i]);
       }
+      
+      // Check for obstacles
+      checkObstacles();
+      Serial.println("========================\n");
+      
     } else {
-      // Jika sudah di dalam paket, lanjutkan mengisi buffer
-      dataPacket[byteCounter] = incomingByte;
-      byteCounter++;
-
-      // Jika buffer sudah penuh (15 byte terkumpul)
-      if (byteCounter >= PACKET_LENGTH) {
-        parsePacket();     // Kirim paket untuk diproses
-        inPacket = false;  // Reset untuk mencari paket berikutnya
-        byteCounter = 0;
-      }
+      // Handle communication error
+      Serial.printf("Error reading ultrasonic sensor (Slave ID: %d), error code: 0x%02X\n", 
+                   currentUltrasonicSlaveId, result);
+      
+      // Log error but don't stop system
+      logError(ERROR_ULTRASONIC_COMMUNICATION, 
+               "Gagal baca sensor ultrasonik slave " + String(currentUltrasonicSlaveId));
     }
-  } else {
-    // serial 1 tidak tersedia
-    // Serial.println("Serial 1 tidak tersedia"); 
   }
 }
 
@@ -45,73 +71,50 @@ void loopUltrasonik() {
 // ------------------- FUNGSI-FUNGSI BANTUAN -------------------
 
 /**
- * Memproses satu paket data yang telah lengkap diterima.
+ * Initialize ultrasonic sensor to polling mode
+ * Call this during setup for each ultrasonic sensor
  */
-void parsePacket() {
-  // Verifikasi header paket
-  // byte ke-0 adalah Alamat Slave, byte ke-1 adalah Kode Fungsi
-  if (dataPacket[0] == SENSOR_ADDRESS && dataPacket[1] == 0x03) {
+void initUltrasonicSensor(int slaveId) {
+  // Set current slave ID
+  setUltrasonicSlaveId(slaveId);
+  
+  // Configure node for this slave
+  node.begin(slaveId, Serial1);
+  node.preTransmission(preTransmissionUltrasonic);
+  node.postTransmission(postTransmissionUltrasonic);
+  
+  // Set sensor to polling mode (register 0x0007 = 0x0000)
+  uint8_t setMode = node.writeSingleRegister(0x0007, 0x0000);
+  if (setMode == node.ku8MBSuccess) {
+    Serial.printf("Ultrasonic sensor (Slave ID: %d) set to polling mode successfully.\n", slaveId);
+  } else {
+    Serial.printf("Failed to set ultrasonic sensor (Slave ID: %d) mode, error code: 0x%02X\n", slaveId, setMode);
+    logError(ERROR_ULTRASONIC_COMMUNICATION, 
+             "Gagal set mode sensor ultrasonik slave " + String(slaveId));
+  }
+}
 
-    // Validasi data dengan CRC Checksum
-    uint16_t calculated_crc = calculate_crc(dataPacket, PACKET_LENGTH - 2);
-    uint16_t received_crc = (dataPacket[PACKET_LENGTH - 1] << 8) | dataPacket[PACKET_LENGTH - 2];
 
-    if (calculated_crc == received_crc) {
-      Serial.println("--- Paket Data Valid Diterima ---");
 
-      // Ekstrak dan hitung jarak untuk setiap probe
-      // Rumus: Jarak = (High Byte * 256) + Low Byte
-      uint16_t dist1 = (dataPacket[3] << 8) | dataPacket[4];
-      uint16_t dist2 = (dataPacket[5] << 8) | dataPacket[6];
-      uint16_t dist3 = (dataPacket[7] << 8) | dataPacket[8];
-      uint16_t dist4 = (dataPacket[9] << 8) | dataPacket[10];
-      uint16_t dist5 = (dataPacket[11] << 8) | dataPacket[12];
-
-      // Store distances in array for obstacle detection
-      ultrasonicDistances[0] = dist1;
-      ultrasonicDistances[1] = dist2;
-      ultrasonicDistances[2] = dist3;
-      ultrasonicDistances[3] = dist4;
-      ultrasonicDistances[4] = dist5;
-
-      // Check for obstacles
-      checkObstacles();
-
-      // Tampilkan hasil
-      Serial.printf("  Jarak Probe 1: %d cm\n", dist1);
-      Serial.printf("  Jarak Probe 2: %d cm\n", dist2);
-      Serial.printf("  Jarak Probe 3: %d cm\n", dist3);
-      Serial.printf("  Jarak Probe 4: %d cm\n", dist4);
-      Serial.printf("  Jarak Probe 5: %d cm\n\n", dist5);
-
-    } else {
-        error(ERROR_ULTRASONIC_COMMUNICATION, "CRC Checksum tidak cocok. Data korup.");
-      Serial.println("Error: CRC Checksum tidak cocok. Data korup.");
-    }
+/**
+ * Switch between front and back ultrasonic sensors
+ */
+void switchUltrasonicSensor(bool useFrontSensor) {
+  if (useFrontSensor) {
+    setUltrasonicSlaveId(SLAVEID_ULTRASONIK_DEPAN);
+    Serial.println("Switched to FRONT ultrasonic sensor");
+  } else {
+    setUltrasonicSlaveId(SLAVEID_ULTRASONIK_BELAKANG);
+    Serial.println("Switched to BACK ultrasonic sensor");
   }
 }
 
 /**
- * Menghitung CRC-16 untuk validasi data Modbus.
- * Ini adalah fungsi standar dan tidak perlu diubah.
+ * Get current ultrasonic sensor slave ID
  */
-uint16_t calculate_crc(byte* buffer, int len) {
-  uint16_t crc = 0xFFFF;
-  for (int pos = 0; pos < len; pos++) {
-    crc ^= (uint16_t)buffer[pos];
-    for (int i = 8; i != 0; i--) {
-      if ((crc & 0x0001) != 0) {
-        crc >>= 1;
-        crc ^= 0xA001;
-      } else {
-        crc >>= 1;
-      }
-    }
-  }
-  return crc;
+int getCurrentUltrasonicSlaveId() {
+  return currentUltrasonicSlaveId;
 }
-
-
 
 /**
  * Check for obstacles in front of AGV
@@ -121,10 +124,11 @@ void checkObstacles() {
   obstacleDetected = false;
   
   // Check each probe for obstacles
-  for (int i = 0; i < 5; i++) {
+  for (int i = 1; i < 4; i++) {
     if (ultrasonicDistances[i] > 0 && ultrasonicDistances[i] < minSafeDistance) {
       obstacleDetected = true;
-      Serial.printf("OBSTACLE DETECTED! Probe %d: %d cm\n", i+1, ultrasonicDistances[i]);
+      Serial.printf("OBSTACLE DETECTED! Probe %d: %d cm (Slave ID: %d)\n", 
+                   i+1, ultrasonicDistances[i], currentUltrasonicSlaveId);
       break;
     }
   }
@@ -134,8 +138,9 @@ void checkObstacles() {
     Serial.println("EMERGENCY STOP - Obstacle detected!");
     // buzzerError();
     music("error");
+  } else if (!obstacleDetected && previousObstacleState) {
+    stopMusic();
   }
-  
   // If obstacle cleared, notify
   if (!obstacleDetected && previousObstacleState) {
     Serial.println("Path clear - obstacle removed");

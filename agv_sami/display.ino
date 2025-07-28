@@ -1,7 +1,7 @@
 void displayPrint() {
   // lcd.clear();
   displaySensorData();
-  uji_tombol();
+  // uji_tombol();
   displayLogicAgv();
   Serial.println("Display Print");
   // displayEncoderValue();
