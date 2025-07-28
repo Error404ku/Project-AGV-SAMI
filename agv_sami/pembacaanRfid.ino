@@ -29,19 +29,24 @@ void receivedData(uint8_t* data, uint8_t bits, const char* message) {
   Serial.print(bits);
   Serial.print("bits / ");
   
-  // Convert RFID data to string for storage
-  String rfidString = "";
+  // Convert RFID data to optimized char array for storage
+  char rfidBuffer[32] = "";
   uint8_t bytes = (bits + 7) / 8;
-  for (int i = 0; i < bytes; i++) {
-    if (data[i] >> 4 < 10) rfidString += "0";
-    rfidString += String(data[i] >> 4, 16);
-    if ((data[i] & 0xF) < 10) rfidString += "0";
-    rfidString += String(data[i] & 0xF, 16);
-  }
-  rfidString.toUpperCase();
+  int bufferIndex = 0;
   
-  // Store the scanned RFID for menu use
-  lastScannedRfid = rfidString;
+  for (int i = 0; i < bytes && bufferIndex < 30; i++) {
+    // Convert to hex with proper formatting
+    char hexChar1 = (data[i] >> 4) < 10 ? '0' + (data[i] >> 4) : 'A' + (data[i] >> 4) - 10;
+    char hexChar2 = (data[i] & 0xF) < 10 ? '0' + (data[i] & 0xF) : 'A' + (data[i] & 0xF) - 10;
+    
+    rfidBuffer[bufferIndex++] = hexChar1;
+    rfidBuffer[bufferIndex++] = hexChar2;
+  }
+  rfidBuffer[bufferIndex] = '\0';
+  
+  // Store the scanned RFID for menu use (optimized)
+  strncpy(lastScannedRfidOptimized, rfidBuffer, sizeof(lastScannedRfidOptimized) - 1);
+  lastScannedRfidOptimized[sizeof(lastScannedRfidOptimized) - 1] = '\0';
   newRfidScanned = true;
   
   //Print value in HEX
@@ -51,14 +56,16 @@ void receivedData(uint8_t* data, uint8_t bits, const char* message) {
   }
   Serial.println();
   
-  // Different feedback based on current mode
+  // Different feedback based on current mode (optimized)
   if (currentMenu == MENU_RFID_SETTINGS) {
-    Serial.println("RFID Scanned for Settings: " + rfidString);
+    Serial.print("RFID Scanned for Settings: ");
+    Serial.println(rfidBuffer);
   } else if (modeStation) {
-    Serial.println("RFID Scanned at Station: " + rfidString);
+    Serial.print("RFID Scanned at Station: ");
+    Serial.println(rfidBuffer);
     // Check if this RFID matches any configured station
     for (int i = 0; i < rfidStationCount; i++) {
-      if (rfidStations[i].isActive && rfidStations[i].rfidId == rfidString) {
+      if (rfidStations[i].isActive && rfidStations[i].rfidId.equals(rfidBuffer)) {
         Serial.print("Matched Station ID: ");
         Serial.println(rfidStations[i].stationId);
         break;
@@ -217,14 +224,14 @@ void clearAllRfidStations() {
   Serial.println("All RFID stations cleared");
 }
 
-// Function to check if current RFID matches a station and return station ID
+// Function to check if current RFID matches a station and return station ID (optimized)
 int getStationFromLastRfid() {
-  if (lastScannedRfid.length() == 0 || !newRfidScanned) {
+  if (strlen(lastScannedRfidOptimized) == 0 || !newRfidScanned) {
     return -1; // No RFID scanned
   }
   
   for (int i = 0; i < rfidStationCount; i++) {
-    if (rfidStations[i].isActive && rfidStations[i].rfidId == lastScannedRfid) {
+    if (rfidStations[i].isActive && rfidStations[i].rfidId.equals(lastScannedRfidOptimized)) {
       newRfidScanned = false; // Reset flag to prevent repeated processing
       return rfidStations[i].stationId;
     }

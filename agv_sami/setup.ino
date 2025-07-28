@@ -40,6 +40,7 @@ void setupHook() {
   pinMode(pinHook1, INPUT_PULLDOWN);
   pinMode(pinHook2, INPUT_PULLDOWN);
   pinMode(pinMotorHook, OUTPUT);
+  digitalWrite(pinMotorHook, HIGH);
 }
 // void setupEncoder() {
 //   pinMode(encKananA, INPUT);
@@ -72,15 +73,13 @@ void initializeDisplay() {
   delay(100);
   lcd.setCursor(0, 0);
   // If LCD is not responding, this will be detected in normal operation
-  
-  delay(1000);
   lcd.clear();
 }
 
 void setupDisplay() {
   // Initialize I2C SDA 3, SCL 8
   Wire.begin(3, 8);
-  Wire.setClock(200000);
+  // Wire.setClock(200000);
   delay(100);
 
   // Initialize display
@@ -141,12 +140,8 @@ void setupWebServer() {
 }
 
 void setupUltrasonikWithParams(int slaveId, int baudrate = 9600) {
-  pinMode(MAX485_RE, OUTPUT);
-  pinMode(MAX485_DE, OUTPUT);
-  digitalWrite(MAX485_RE, 0);
-  digitalWrite(MAX485_DE, 0);
-  Serial1.begin(baudrate, SERIAL_8N1, RS485_RX, RS485_TX);
-  // Simpan slaveId jika perlu untuk pembacaan
+  // Initialize ultrasonic sensor with ModbusMaster
+  initUltrasonicSensor(slaveId);
   Serial.printf("--- Setup Ultrasonik Slave ID: %d ---\n", slaveId);
 }
 
@@ -197,7 +192,7 @@ void setupAll() {
   setupMenu();  // Initialize menu system
   setupSensorMagnet(SLAVEID_MAGNET_DEPAN, BAUDRATE);
   setupUltrasonikWithParams(SLAVEID_ULTRASONIK_DEPAN, BAUDRATE);
-  // setupBuzzer();
+  setupHook();// setupBuzzer();
   // setupWebServer();
   setupTombol();
   setupRfid();

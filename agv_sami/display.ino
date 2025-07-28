@@ -1,7 +1,7 @@
 void displayPrint() {
   // lcd.clear();
   displaySensorData();
-  uji_tombol();
+  // uji_tombol();
   displayLogicAgv();
   Serial.println("Display Print");
   // displayEncoderValue();
@@ -17,10 +17,10 @@ void displaySensorData() {
   for (int i = 0; i < 8; i++) {
     lcd.print(jumlahMagnet[i] ? "1" : "0");
   }
-  lcd.setCursor(8, 1);
-  for (int i = 8; i < 16; i++) {
-    lcd.print(jumlahMagnet[i] ? "1" : "0");
-  }
+  // lcd.setCursor(8, 1);
+  // for (int i = 8; i < 16; i++) {
+  //   lcd.print(jumlahMagnet[i] ? "1" : "0");
+  // }
   
   // Show error value
   lcd.setCursor(0, 2);

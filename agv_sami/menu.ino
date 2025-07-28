@@ -647,7 +647,7 @@ void handleRfidSettings() {
     // Check if new RFID was scanned
     if (newRfidScanned) {
       // RFID card detected, save it
-      if (addRfidStation(selectedStationId, lastScannedRfid)) {
+      if (addRfidStation(selectedStationId, String(lastScannedRfidOptimized))) {
         lcd.clear();
         lcd.setCursor(0, 1);
         lcd.print("Station ");
@@ -655,7 +655,11 @@ void handleRfidSettings() {
         lcd.print(" saved!");
         lcd.setCursor(0, 2);
         lcd.print("RFID: ");
-        lcd.print(lastScannedRfid.substring(0, 8));
+        // Display first 8 characters of RFID (optimized)
+        char rfidDisplay[9]; // 8 chars + null terminator
+        strncpy(rfidDisplay, lastScannedRfidOptimized, 8);
+        rfidDisplay[8] = '\0';
+        lcd.print(rfidDisplay);
         lcd.print("...");
         delay(2000);
       } else {
@@ -1318,7 +1322,13 @@ void displayMagnetCheck() {
   }
   
   lcd.setCursor(0, 3);
-  lcd.print("B:Back");
+  // Show current sensor (Front/Back) and controls
+  if (getCurrentMagnetSlaveId() == SLAVEID_MAGNET_DEPAN) {
+    lcd.print("F");
+  } else {
+    lcd.print("B");
+  }
+  lcd.print(" LR:Switch B:Back");
 }
 
 void displayUltrasonicCheck() {
@@ -1344,7 +1354,15 @@ void displayUltrasonicCheck() {
   } else {
     lcd.print("Clear ");
   }
-  lcd.print("B:Back");
+  
+  // Show current sensor (Front/Back) and controls
+  lcd.setCursor(10, 3);
+  if (getCurrentUltrasonicSlaveId() == SLAVEID_ULTRASONIK_DEPAN) {
+    lcd.print("F");
+  } else {
+    lcd.print("B");
+  }
+  lcd.print(" LR:Switch");
 }
 
 void handleHookTest() {
@@ -1379,8 +1397,17 @@ void handleHookTest() {
 
 void handleMagnetCheck() {
   // Selalu baca sensor saat menu ini aktif
-  bacaSensor(SLAVEID_MAGNET_DEPAN); // Ganti ke belakang jika ingin cek belakang
-  if (STOP()) {
+  bacaSensor(getCurrentMagnetSlaveId());
+  
+  if (LEFT() && !isTimerActive(&magnetSwitchTimer)) {
+    // Switch to front magnet sensor
+    switchMagnetSensor(true);
+    startTimer(&magnetSwitchTimer, 100); // Non-blocking delay to prevent multiple triggers
+  } else if (RIGHT() && !isTimerActive(&magnetSwitchTimer)) {
+    // Switch to back magnet sensor
+    switchMagnetSensor(false);
+    startTimer(&magnetSwitchTimer, 100); // Non-blocking delay to prevent multiple triggers
+  } else if (STOP()) {
     currentMenu = MENU_MAIN;
     menuStartIndex = 0;
     menuNeedsRefresh = true;
@@ -1390,7 +1417,16 @@ void handleMagnetCheck() {
 
 void handleUltrasonicCheck() {
   loopUltrasonik();
-  if (STOP()) {
+  
+  if (LEFT() && !isTimerActive(&ultrasonicSwitchTimer)) {
+    // Switch to front ultrasonic sensor
+    switchUltrasonicSensor(true);
+    startTimer(&ultrasonicSwitchTimer, 100); // Non-blocking delay to prevent multiple triggers
+  } else if (RIGHT() && !isTimerActive(&ultrasonicSwitchTimer)) {
+    // Switch to back ultrasonic sensor
+    switchUltrasonicSensor(false);
+    startTimer(&ultrasonicSwitchTimer, 100); // Non-blocking delay to prevent multiple triggers
+  } else if (STOP()) {
     currentMenu = MENU_MAIN;
     menuStartIndex = 0;
     menuNeedsRefresh = true;
