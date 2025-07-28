@@ -151,12 +151,12 @@ void setupUltrasonikWithParams(int slaveId, int baudrate = 9600) {
 }
 
 void setupSensorMagnet(int slaveId, int baudrate = 9600) {
-  Serial2.begin(baudrate, SERIAL_8N1, RS485_RX, RS485_TX);
+  Serial1.begin(baudrate, SERIAL_8N1, RS485_RX, RS485_TX);
   pinMode(MAX485_RE, OUTPUT);
   pinMode(MAX485_DE, OUTPUT);
   digitalWrite(MAX485_RE, 0);
   digitalWrite(MAX485_DE, 0);
-  node.begin(slaveId, Serial2);  // Slave ID
+  node.begin(slaveId, Serial1);  // Slave ID
   node.preTransmission(preTransmission);
   node.postTransmission(postTransmission);
   Serial.printf("Inisialisasi Sensor Magnet selesai. Slave ID: %d\n", slaveId);

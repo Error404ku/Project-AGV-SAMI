@@ -41,7 +41,7 @@ void bacaSensorGaris()
 
 // ==================== Fungsi Membaca Sensor ====================
 void bacaSensor(int slaveId) {
-    node.begin(slaveId, Serial2);
+    node.begin(slaveId, Serial1);
     Serial.println(F("Mengirim permintaan pembacaan..."));
     static int consecutiveFailures = 0;
     uint8_t result = node.readHoldingRegisters(0x0000, 2);
