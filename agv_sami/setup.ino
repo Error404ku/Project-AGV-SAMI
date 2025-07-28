@@ -37,8 +37,8 @@ void setupMusicAndLed() {
 }
 
 void setupHook() {
-  pinMode(pinHook1, OUTPUT);
-  pinMode(pinHook2, OUTPUT);
+  pinMode(pinHook1, INPUT_PULLDOWN);
+  pinMode(pinHook2, INPUT_PULLDOWN);
   pinMode(pinMotorHook, OUTPUT);
 }
 // void setupEncoder() {
