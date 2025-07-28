@@ -18,8 +18,6 @@ unsigned long lastLeftPress = 0;
 unsigned long lastRightPress = 0;
 unsigned long lastStartPress = 0;
 unsigned long lastStopPress = 0;
-const unsigned long debounceDelay = 300; // 200ms debounce
-
 void setupTombol() {
   pinMode(BOOT_PIN, INPUT_PULLUP);
   
@@ -42,71 +40,55 @@ void setupTombol() {
   lcd.clear();
 }
 
-// Button functions using digitalRead == HIGH format with 200ms debounce
-bool UP() {
-  if (digitalRead(upPin) == HIGH) {
-    unsigned long currentTime = millis();
-    if (currentTime - lastUpPress >= debounceDelay) {
-      lastUpPress = currentTime;
-      return true;
+// Non-blocking debounce variables
+static unsigned long lastDebounceTime[6] = {0}; // UP, DOWN, LEFT, RIGHT, START, STOP
+static bool lastButtonState[6] = {false};
+static bool buttonState[6] = {false};
+const unsigned long debounceDelay = 50; // Optimized debounce delay
+
+// Optimized non-blocking button reading function
+bool readButtonWithDebounce(int pin, int buttonIndex) {
+  bool reading = digitalRead(pin) == HIGH;
+  
+  if (reading != lastButtonState[buttonIndex]) {
+    lastDebounceTime[buttonIndex] = millis();
+  }
+  
+  if ((millis() - lastDebounceTime[buttonIndex]) > debounceDelay) {
+    if (reading != buttonState[buttonIndex]) {
+      buttonState[buttonIndex] = reading;
+      lastButtonState[buttonIndex] = reading;
+      return reading; // Return true only on state change to HIGH
     }
   }
+  
+  lastButtonState[buttonIndex] = reading;
   return false;
+}
+
+// Button functions using digitalRead == HIGH format with 50ms debounce
+bool UP() {
+  return readButtonWithDebounce(upPin, 0);
 }
 
 bool LEFT() {
-  if (digitalRead(leftPin) == HIGH) {
-    unsigned long currentTime = millis();
-    if (currentTime - lastLeftPress >= debounceDelay) {
-      lastLeftPress = currentTime;
-      return true;
-    }
-  }
-  return false;
+  return readButtonWithDebounce(leftPin, 2);
 }
 
 bool RIGHT() {
-  if (digitalRead(rightPin) == HIGH) {
-    unsigned long currentTime = millis();
-    if (currentTime - lastRightPress >= debounceDelay) {
-      lastRightPress = currentTime;
-      return true;
-    }
-  }
-  return false;
+  return readButtonWithDebounce(rightPin, 3);
 }
 
 bool DOWN() {
-  if (digitalRead(downPin) == HIGH) {
-    unsigned long currentTime = millis();
-    if (currentTime - lastDownPress >= debounceDelay) {
-      lastDownPress = currentTime;
-      return true;
-    }
-  }
-  return false;
+  return readButtonWithDebounce(downPin, 1);
 }
 
 bool START() {
-  if (digitalRead(startPin) == HIGH) {
-    unsigned long currentTime = millis();
-    if (currentTime - lastStartPress >= debounceDelay) {
-      lastStartPress = currentTime;
-      return true;
-    }
-  }
-  return false;
+  return readButtonWithDebounce(startPin, 4);
 }
 
 bool STOP() {
-  if (digitalRead(stopPin) == HIGH) {
-    unsigned long currentTime = millis();
-    if (currentTime - lastStopPress >= debounceDelay) {
-      lastStopPress = currentTime;
-      return true;
-    }
-  }
-  return false;
+  return readButtonWithDebounce(stopPin, 5);
 }
 
 void uji_tombol() {

@@ -21,23 +21,57 @@ enum MenuState {
   MENU_HOOK_TEST = 10,
   MENU_RESET = 11,
   MENU_MAGNET_CHECK = 12,
-  MENU_ULTRASONIC_CHECK = 13
+  MENU_ULTRASONIC_CHECK = 13,
+  MENU_STATION_SETUP = 14,
+  MENU_RFID_SETUP = 15,
+  MENU_SENSOR_STATUS = 16,
+  MENU_SYSTEM_INFO = 17,
+  MENU_SETTINGS = 18
 };
 
 // Hook states
 enum HookState {
-  HOOK_IDLE,
+  HOOK_STATE_IDLE,
   HOOK_MOVING_UP,
   HOOK_AT_TOP,
   HOOK_MOVING_DOWN,
   HOOK_AT_BOTTOM
 };
 
+// Hook status for display
+enum HookStatus {
+  HOOK_STATUS_UNKNOWN,
+  HOOK_STATUS_UP,
+  HOOK_STATUS_DOWN,
+  HOOK_STATUS_MOVING_UP,
+  HOOK_STATUS_MOVING_DOWN,
+  HOOK_STATUS_ERROR
+};
+
+// Hook movement status
+enum HookMovementStatus {
+  HOOK_IDLE,
+  HOOK_MOVING,
+  HOOK_UP,
+  HOOK_DOWN
+};
+
 // AGV modes
 enum AgvMode {
+  MODE_IDLE,
+  MODE_MANUAL,
+  MODE_LINE_FOLLOW,
   MODE_TERMINAL,
   MODE_WAREHOUSE,
   MODE_STATION
+};
+
+// Menu Navigation
+enum MenuAction {
+  MENU_UP = 0,
+  MENU_DOWN = 1,
+  MENU_SELECT = 2,
+  MENU_BACK = 3
 };
 
 // Movement states
@@ -60,7 +94,15 @@ enum ErrorCode {
   ERROR_ENCODER_FAILURE = 7,
   ERROR_PID_CALCULATION = 8,
   ERROR_MEMORY_ALLOCATION = 9,
-  ERROR_INVALID_CONFIGURATION = 10
+  ERROR_INVALID_CONFIGURATION = 10,
+  ERROR_HOOK_TIMEOUT = 11,
+  ERROR_HOOK_LIMIT_SWITCH = 12,
+  ERROR_HOOK_SAFETY = 13,
+  ERROR_HOOK_EMERGENCY = 18,
+  ERROR_SYSTEM_STATE = 14,
+  ERROR_LINE_LOST = 15,
+  ERROR_EMERGENCY_STOP = 16,
+  ERROR_SYSTEM_STUCK = 17
 };
 
 // ==================== STRUCTURES ====================
@@ -133,9 +175,10 @@ struct RfidStation {
 struct DeviceStatus {
   bool isOnline;
   unsigned long lastSuccessfulComm;
+  unsigned long lastSeen;
   int errorCount;
   
-  DeviceStatus() : isOnline(false), lastSuccessfulComm(0), errorCount(0) {}
+  DeviceStatus() : isOnline(false), lastSuccessfulComm(0), lastSeen(0), errorCount(0) {}
 };
 
 // System configuration structure
@@ -186,18 +229,24 @@ struct SystemConfig {
 struct SystemState {
   MenuState currentMenu;
   AgvMode currentAgvMode;
+  AgvMode currentMode;  // Alias for compatibility
   MovementState currentMovement;
   HookState currentHookState;
+  HookMovementStatus hookStatus;  // For compatibility
   bool isAgvMode;
   bool isInitialized;
+  bool rfidReaderConnected;
   
   SystemState() {
     currentMenu = MENU_MAIN;
-    currentAgvMode = MODE_TERMINAL;
+    currentAgvMode = MODE_IDLE;
+    currentMode = MODE_IDLE;
     currentMovement = MOVEMENT_STOP;
-    currentHookState = HOOK_IDLE;
+    currentHookState = HOOK_STATE_IDLE;
+    hookStatus = HOOK_IDLE;
     isAgvMode = false;
     isInitialized = false;
+    rfidReaderConnected = false;
   }
 };
 

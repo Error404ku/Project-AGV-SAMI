@@ -35,16 +35,14 @@ const long hookDelayAtLimit = 2000; // Jeda 2 detik di posisi limit
 
 // Fungsi untuk menggerakkan hook ke atas
 void moveHookUp() {
-  bool limitUpActive = (digitalRead(LIMIT_SWITCH_UP_PIN) == LOW); // LOW = switch ditekan (dengan INPUT_PULLUP)
+  bool limitUpActive = (digitalRead(LIMIT_SWITCH_UP_PIN) == HIGH); // HIGH = switch tertrigger
   
   if (!limitUpActive && hookDirection != 1) {
-    
     // Pastikan pin dalam mode output
     pinMode(HOOK_RELAY_PIN, OUTPUT);
     
-    // PERINGATAN: SSR hanya mengontrol ON/OFF, bukan arah!
-     // Pastikan wiring motor sudah benar untuk arah NAIK
-     digitalWrite(HOOK_RELAY_PIN, HIGH); // Aktifkan relay SSR
+    // LOW untuk mengaktifkan relay SSR
+    digitalWrite(HOOK_RELAY_PIN, LOW); // Aktifkan relay SSR
     
     hookDirection = 1;
     hookMotorRunning = true;
@@ -55,25 +53,18 @@ void moveHookUp() {
 
 // Fungsi untuk menggerakkan hook ke bawah
 void moveHookDown() {
-  bool limitDownActive = (digitalRead(LIMIT_SWITCH_DOWN_PIN) == LOW); // LOW = switch ditekan (dengan INPUT_PULLUP)
+  bool limitDownActive = (digitalRead(LIMIT_SWITCH_DOWN_PIN) == HIGH); // HIGH = switch tertrigger
   
   if (!limitDownActive && hookDirection != -1) {
-    
     // Pastikan pin dalam mode output
     pinMode(HOOK_RELAY_PIN, OUTPUT);
     
-    // PERINGATAN: SSR hanya mengontrol ON/OFF, bukan arah!
-     // Pastikan wiring motor sudah benar untuk arah TURUN
-     digitalWrite(HOOK_RELAY_PIN, HIGH); // Aktifkan relay SSR
-     
-     // Serial.print("Relay pin "); Serial.print(HOOK_RELAY_PIN);
-    // Serial.println(" set to HIGH for DOWN movement");
-    // Serial.println("PERINGATAN: Pastikan motor terhubung untuk arah TURUN!");
+    // LOW untuk mengaktifkan relay SSR
+    digitalWrite(HOOK_RELAY_PIN, LOW); // Aktifkan relay SSR
     
     hookDirection = -1;
     hookMotorRunning = true;
   } else if (limitDownActive) {
-    // Serial.println("Hook sudah di posisi bawah. Tidak bisa turun lagi.");
     stopHook();
   }
 }
@@ -81,8 +72,8 @@ void moveHookDown() {
 // Fungsi untuk menghentikan hook
 void stopHook() {
   if (hookMotorRunning) {
-    // Serial.println("Hook berhenti.");
-    digitalWrite(HOOK_RELAY_PIN, LOW); // Matikan relay SSR
+    // HIGH untuk mematikan relay SSR
+    digitalWrite(HOOK_RELAY_PIN, HIGH); // Matikan relay SSR
     hookDirection = 0;
     hookMotorRunning = false;
   }
@@ -153,8 +144,8 @@ void hook(String mode) {
 // Fungsi untuk memulai siklus otomatis hook
 void startHookAutoCycle() {
   // Serial.println("Hook: Memulai siklus otomatis.");
-  bool limitUpActive = (digitalRead(LIMIT_SWITCH_UP_PIN) == LOW);
-  bool limitDownActive = (digitalRead(LIMIT_SWITCH_DOWN_PIN) == LOW);
+  bool limitUpActive = (digitalRead(LIMIT_SWITCH_UP_PIN) == HIGH);
+  bool limitDownActive = (digitalRead(LIMIT_SWITCH_DOWN_PIN) == HIGH);
   
   if (limitDownActive) {
     currentHookState = HOOK_AT_BOTTOM;
@@ -170,19 +161,17 @@ void startHookAutoCycle() {
 
 // Fungsi untuk update status hook (dipanggil di loop utama)
 void updateHookStatus() {
-  bool limitUpActive = (digitalRead(LIMIT_SWITCH_UP_PIN) == LOW);
-  bool limitDownActive = (digitalRead(LIMIT_SWITCH_DOWN_PIN) == LOW);
+  bool limitUpActive = (digitalRead(LIMIT_SWITCH_UP_PIN) == HIGH);   // Konsisten: HIGH = aktif
+  bool limitDownActive = (digitalRead(LIMIT_SWITCH_DOWN_PIN) == HIGH); // Konsisten: HIGH = aktif
 
   // Safety check: stop motor jika limit switch aktif
   if (hookDirection == 1 && limitUpActive) {
-    // Serial.println("Hook: Batas atas tercapai. Hook berhenti.");
     stopHook();
     if (currentHookState == HOOK_MOVING_UP) {
       currentHookState = HOOK_AT_TOP;
       hookStateChangeTime = millis();
     }
   } else if (hookDirection == -1 && limitDownActive) {
-    // Serial.println("Hook: Batas bawah tercapai. Hook berhenti.");
     stopHook();
     if (currentHookState == HOOK_MOVING_DOWN) {
       currentHookState = HOOK_AT_BOTTOM;
@@ -219,8 +208,8 @@ void updateHookStatus() {
 
 // Fungsi untuk mendapatkan status posisi hook
 String getHookPosition() {
-  bool limitUpActive = (digitalRead(LIMIT_SWITCH_UP_PIN) == LOW);
-  bool limitDownActive = (digitalRead(LIMIT_SWITCH_DOWN_PIN) == LOW);
+  bool limitUpActive = (digitalRead(LIMIT_SWITCH_UP_PIN) == HIGH);
+  bool limitDownActive = (digitalRead(LIMIT_SWITCH_DOWN_PIN) == HIGH);
   
   if (limitUpActive && limitDownActive) {
     return "ERROR: Kedua limit switch aktif!";
@@ -237,8 +226,8 @@ String getHookPosition() {
 
 // Fungsi debug untuk troubleshooting hook
 void debugHookStatus() {
-  bool limitUpActive = (digitalRead(LIMIT_SWITCH_UP_PIN) == LOW);
-  bool limitDownActive = (digitalRead(LIMIT_SWITCH_DOWN_PIN) == LOW);
+  bool limitUpActive = (digitalRead(LIMIT_SWITCH_UP_PIN) == HIGH);
+  bool limitDownActive = (digitalRead(LIMIT_SWITCH_DOWN_PIN) == HIGH);
   bool relayStatus = digitalRead(HOOK_RELAY_PIN);
   
   // Serial.println("=== HOOK DEBUG STATUS ===");
@@ -368,17 +357,12 @@ void checkPinConflicts() {
 
 // Fungsi untuk test relay dengan durasi tertentu
 void testHookRelayTimed(int seconds) {
-  // Serial.print("Testing relay ON for "); Serial.print(seconds); Serial.println(" seconds...");
-  
   pinMode(HOOK_RELAY_PIN, OUTPUT);
-  digitalWrite(HOOK_RELAY_PIN, HIGH);
-  // Serial.println("Relay ON - Periksa apakah motor hook bergerak!");
+  digitalWrite(HOOK_RELAY_PIN, LOW);  // LOW untuk mengaktifkan
   
   for(int i = seconds; i > 0; i--) {
-    // Serial.print("Countdown: "); Serial.println(i);
     delay(1000);
   }
   
-  digitalWrite(HOOK_RELAY_PIN, LOW);
-  // Serial.println("Relay OFF - Motor hook harus berhenti.");
+  digitalWrite(HOOK_RELAY_PIN, HIGH); // HIGH untuk mematikan
 }

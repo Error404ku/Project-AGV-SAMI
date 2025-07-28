@@ -28,14 +28,25 @@ void bacaSensorGaris() {
 }
 
 void updateTotalSensorAktif() {
-  sensorData.totalActiveSensors = 0;
+  // Count total active magnet sensors from both front and back
+  totalSensorAktif = 0;
   
-  // Count active sensors from front magnet array
-  for (int i = 0; i < MAX_MAGNET_SENSORS; i++) {
-    if (sensorData.magnetFront[i]) {
-      sensorData.totalActiveSensors++;
+  // Count front sensors
+  for (int i = 0; i < 16; i++) {
+    if (sensorData.magnetFront[i] == 1) {
+      totalSensorAktif++;
     }
   }
+  
+  // Count back sensors
+  for (int i = 0; i < 16; i++) {
+    if (sensorData.magnetBack[i] == 1) {
+      totalSensorAktif++;
+    }
+  }
+  
+  // Update sensor data structure
+  sensorData.totalActiveSensors = totalSensorAktif;
 }
 
 void updateSensorFlags() {
@@ -134,7 +145,7 @@ void communicateWithMagnetFront() {
     deviceStatus[0].errorCount++;
     
     if (deviceStatus[0].errorCount >= 5) {
-      logError(ERROR_SENSOR_COMMUNICATION, "Magnet Front comm failed");
+      logError(ERROR_SENSOR_COMMUNICATION, String("Magnet Front comm failed"));
       deviceStatus[0].errorCount = 0;  // Reset to prevent spam
     }
   }
@@ -160,7 +171,7 @@ void communicateWithMagnetBack() {
     deviceStatus[3].errorCount++;
     
     if (deviceStatus[3].errorCount >= 5) {
-      logError(ERROR_SENSOR_COMMUNICATION, "Magnet Back comm failed");
+      logError(ERROR_SENSOR_COMMUNICATION, String("Magnet Back comm failed"));
       deviceStatus[3].errorCount = 0;
     }
   }
@@ -377,6 +388,26 @@ uint16_t calculate_crc(byte* buffer, int len) {
 // These functions maintain compatibility with existing code
 int* getCurrentMagnetData() {
   return sensorData.magnetFront;
+}
+
+// Overloaded version for front/back selection
+int* getCurrentMagnetData(bool useFront) {
+  return useFront ? sensorData.magnetFront : sensorData.magnetBack;
+}
+
+// New overloaded version that returns uint16_t bitmask
+uint16_t getCurrentMagnetDataBitmask(bool useFront) {
+  int* magnetArray = useFront ? sensorData.magnetFront : sensorData.magnetBack;
+  uint16_t bitmask = 0;
+  
+  // Convert array to bitmask
+  for (int i = 0; i < MAX_MAGNET_SENSORS; i++) {
+    if (magnetArray[i] == 1) {
+      bitmask |= (1 << i);
+    }
+  }
+  
+  return bitmask;
 }
 
 uint16_t* getUltrasonicDistancesFront() {

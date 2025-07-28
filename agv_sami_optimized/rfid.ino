@@ -8,6 +8,8 @@
   - RFID-station association
 */
 
+#include <algorithm>
+
 // ==================== RFID READING FUNCTIONS ====================
 
 void loopRfid() {
@@ -281,6 +283,56 @@ void clearAllRfidStations() {
   DEBUG_PRINTLN("All RFID stations cleared");
 }
 
+void loadStationsListFromPreferences() {
+  // Load stations list from preferences
+  preferences.begin(PREF_NAMESPACE_STATIONS, false);
+  
+  size_t dataSize = preferences.getBytesLength("stationsList");
+  if (dataSize > 0) {
+    uint8_t* buffer = new uint8_t[dataSize];
+    preferences.getBytes("stationsList", buffer, dataSize);
+    
+    // Parse buffer to stationsList
+    stationsList.clear();
+    size_t numStations = dataSize / sizeof(int);
+    int* stationData = (int*)buffer;
+    
+    for (size_t i = 0; i < numStations; i++) {
+      stationsList.push_back(stationData[i]);
+    }
+    
+    delete[] buffer;
+    DEBUG_PRINTF("Loaded %d stations from preferences\n", stationsList.size());
+  } else {
+    stationsList.clear();
+    DEBUG_PRINTLN("No stations list found in preferences");
+  }
+  
+  preferences.end();
+}
+
+void clearStationsData() {
+  // Clear all station data
+  stationsList.clear();
+  jumlahStasiun = 0;
+  currentStationId = 1;
+  
+  // Clear from preferences
+  preferences.begin(PREF_NAMESPACE_STATIONS, false);
+  preferences.clear();
+  preferences.end();
+  
+  DEBUG_PRINTLN("All station data cleared");
+}
+
+void sortStationsList() {
+  // Sort stations list in ascending order
+  if (stationsList.size() > 1) {
+    std::sort(stationsList.begin(), stationsList.end());
+    DEBUG_PRINTLN("Stations list sorted");
+  }
+}
+
 void listRfidStations() {
   // List all configured RFID stations
   DEBUG_PRINTLN("=== RFID STATIONS ===");
@@ -442,6 +494,17 @@ void music(String type) {
     delay(100);
     digitalWrite(LED_PIN, LOW);
   }
+}
+
+void stopMusic() {
+  // Stop all music/sound output
+  digitalWrite(systemConfig.musicErrorPin, LOW);
+  digitalWrite(systemConfig.musicDetectPin, LOW);
+  digitalWrite(systemConfig.musicKomputerPin, LOW);
+  digitalWrite(systemConfig.musicStationPin, LOW);
+  
+  statusMusic = false;
+  DEBUG_PRINTLN("All music stopped");
 }
 
 // ==================== DIAGNOSTIC FUNCTIONS ====================

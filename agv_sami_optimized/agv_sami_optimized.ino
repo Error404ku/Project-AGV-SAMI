@@ -85,12 +85,19 @@ bool sensorkebacasemua = false;
 int station = 0;
 bool sudahDeteksiStasiun = false;
 int indexTarget = 0;
+int totalSensorAktif = 0;
+int currentStationId = 1;
+int jumlahStasiun = 0;
 
 // Timing Variables
 unsigned long previousMillis = 0;
 unsigned long lastDeviceSwitch = 0;
 unsigned long lastButtonPress = 0;
 unsigned long lastObstacleCheck = 0;
+unsigned long lastRfidScanTime = 0;
+
+// PID Variables
+int lastError = 0;
 
 // ==================== SETUP FUNCTION ====================
 

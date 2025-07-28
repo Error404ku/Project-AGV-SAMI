@@ -205,8 +205,8 @@ int hitungErrorPosisi() {
   }
   
   // Get current magnet sensor data
-  uint16_t frontMagnet = getCurrentMagnetData(true);
-  uint16_t backMagnet = getCurrentMagnetData(false);
+  uint16_t frontMagnet = getCurrentMagnetDataBitmask(true);
+  uint16_t backMagnet = getCurrentMagnetDataBitmask(false);
   
   // Use front sensors for primary calculation
   uint16_t activeSensors = frontMagnet;
@@ -247,8 +247,8 @@ int hitungErrorPosisi() {
 
 void updateSensorFlags() {
   // Update sensor status flags based on current readings
-  uint16_t frontMagnet = getCurrentMagnetData(true);
-  uint16_t backMagnet = getCurrentMagnetData(false);
+  uint16_t frontMagnet = getCurrentMagnetDataBitmask(true);
+  uint16_t backMagnet = getCurrentMagnetDataBitmask(false);
   
   // Check center sensors (bits 6, 7, 8, 9)
   tengahAktif = (frontMagnet & 0x03C0) != 0;
@@ -322,7 +322,8 @@ void resumeOperation() {
 
 // ==================== SAFETY SYSTEMS ====================
 
-void checkSafetyConditions() {
+// Renamed to avoid conflict with main.ino
+void checkSafetyConditionsLogic() {
   // Check various safety conditions
   
   // Check for obstacles in movement direction
@@ -355,7 +356,7 @@ void checkSafetyConditions() {
   
   // Check if AGV has been stuck (not moving) for too long
   static unsigned long lastMovementTime = 0;
-  static MovementStatus lastMovementStatus = MOVEMENT_STOP;
+  static MovementState lastMovementStatus = MOVEMENT_STOP;
   
   if (systemState.currentMovement != lastMovementStatus) {
     lastMovementTime = millis();
@@ -482,4 +483,87 @@ void prosesMode() {
 void cekMode() {
   // Legacy function - mode checking is now integrated
   DEBUG_PRINTF("Current AGV mode: %s\n", getModeString().c_str());
+}
+
+void logicAgv() {
+  // Legacy function - now handled by runAGVLogic()
+  runAGVLogic();
+}
+
+void inStation() {
+  // Station entry actions
+  music("station");
+  DEBUG_PRINTF("Entered station %d\n", currentStationId);
+}
+
+void outStation() {
+  // Station exit actions
+  // Check if this is the last station in the list
+  if (indexTarget >= stationsList.size()) {
+    DEBUG_PRINTLN("Last station reached via outStation - calling ujungStation!");
+    ujungStation();
+    return;
+  }
+  
+  // Continue to next station
+  indexTarget++;
+  DEBUG_PRINTF("Exiting station, next target index: %d\n", indexTarget);
+}
+
+void ujungStation() {
+  // End station - reverse to warehouse
+  DEBUG_PRINTLN("Reached end station - reversing to warehouse");
+  
+  // Stop current movement
+  stopMovement();
+  
+  // Set reverse mode
+  systemState.currentMode = MODE_MANUAL;
+  
+  // Move backward
+  moveBackward(systemConfig.baseSpeed);
+  
+  // Reset station tracking
+  indexTarget = 0;
+  currentStationId = 1;
+}
+
+void pembacaanStation() {
+  // Station detection and processing
+  if (lastScannedRfid.length() > 0) {
+    int detectedStationId = findRfidStation(lastScannedRfid);
+    if (detectedStationId > 0) {
+      // Use RFID station ID directly
+      station = detectedStationId;
+      currentStationId = detectedStationId;
+      DEBUG_PRINTF("RFID detected - Station ID: %d\n", detectedStationId);
+      
+      // Execute station action
+      executeStationAction(detectedStationId);
+      
+      // Mark as processed
+      lastScannedRfid = "";
+    }
+  }
+}
+
+// ==================== MODE FUNCTIONS (LEGACY COMPATIBILITY) ====================
+
+void setModeStation() {
+  // Set station mode
+  systemState.currentMode = MODE_STATION;
+  DEBUG_PRINTLN("Mode set to Station");
+}
+
+void setModeWarehouse() {
+  // Set warehouse mode (manual mode)
+  systemState.currentMode = MODE_MANUAL;
+  DEBUG_PRINTLN("Mode set to Warehouse (Manual)");
+}
+
+void setModeTerminal() {
+  // Set terminal mode (idle mode)
+  systemState.currentMode = MODE_IDLE;
+  stopMovement();
+  DEBUG_PRINTLN("Mode set to Terminal (Idle)");
 }

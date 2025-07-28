@@ -16,7 +16,7 @@ const int numOutputs = 2;
 
 // Line follower PID variables
 float pidError = 0;
-float lastError = 0;
+float pidLastError = 0; // Renamed to avoid conflict with global lastError
 float integral = 0;
 float derivative = 0;
 bool sudahStopPelanPelan = false;

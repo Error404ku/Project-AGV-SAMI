@@ -28,15 +28,15 @@
 #define MOTOR_ENB 6
 
 // RS485 Communication Pins
-#define MAX485_DE 36
-#define MAX485_RE 36
-#define RX_RS485 18
+#define MAX485_DE 4
+#define MAX485_RE 4
+#define RX_RS485 16
 #define TX_RS485 17
 
 // Hook Motor Pins
-#define HOOK_RELAY_PIN 21
-#define LIMIT_SWITCH_UP_PIN 20
-#define LIMIT_SWITCH_DOWN_PIN 19
+#define HOOK_RELAY 21
+#define HOOK_LIMIT_UP 20
+#define HOOK_LIMIT_DOWN 19
 
 // Button Pins
 #define BUTTON_UP_PIN 10
@@ -55,6 +55,8 @@
 #define MUSIC_PIN_1 18
 #define MUSIC_PIN_2 5
 #define MUSIC_PIN_3 23
+#define MUSIC_PIN 2  // Default music pin
+#define LED_PIN 15   // Status LED pin
 
 // ==================== COMMUNICATION CONSTANTS ====================
 
@@ -86,6 +88,7 @@
 // Button Timing
 #define BUTTON_DEBOUNCE_DELAY 300   // ms
 #define BUTTON_HOLD_DURATION 3000   // ms
+#define LCD_UPDATE_INTERVAL 200     // ms
 
 // Menu Timing
 #define MENU_REFRESH_INTERVAL 100   // ms
@@ -94,6 +97,14 @@
 // Safety Timing
 #define OBSTACLE_CHECK_INTERVAL 100 // ms
 #define HOOK_DELAY_AT_LIMIT 2000    // ms
+#define LINE_SEARCH_TIMEOUT_MS 5000 // ms
+#define DEVICE_TIMEOUT_MS 5000      // ms
+#define STUCK_TIMEOUT_MS 10000      // ms
+#define HEALTH_CHECK_INTERVAL_MS 30000 // ms
+
+// Hook Timing
+#define HOOK_TIMEOUT_MS 5000        // ms
+#define HOOK_STATUS_UPDATE_INTERVAL 100 // ms
 
 // ==================== SYSTEM LIMITS ====================
 
@@ -200,12 +211,19 @@ extern bool sensorkebacasemua;
 extern int station;
 extern bool sudahDeteksiStasiun;
 extern int indexTarget;
+extern int totalSensorAktif;
+extern int currentStationId;
+extern int jumlahStasiun;
 
 // Timing Variables
 extern unsigned long previousMillis;
 extern unsigned long lastDeviceSwitch;
 extern unsigned long lastButtonPress;
 extern unsigned long lastObstacleCheck;
+extern unsigned long lastRfidScanTime;
+
+// PID Variables
+extern int lastError;
 
 // ==================== FUNCTION DECLARATIONS ====================
 
@@ -228,6 +246,18 @@ void logError(ErrorCode code, String message);
 void saveSystemConfig();
 void loadSystemConfig();
 void resetToDefaults();
+void displayMessage(String line1, String line2, int duration);
+
+// Sensor Functions
+int* getCurrentMagnetData();
+int* getCurrentMagnetData(bool useFront);
+uint16_t getCurrentMagnetDataBitmask(bool useFront);
+void updateTotalSensorAktif();
+bool hasObstacle(bool checkFront);
+
+// Music Functions
+void music(String type);
+void stopMusic();
 
 // Debug Functions
 #ifdef DEBUG_MODE

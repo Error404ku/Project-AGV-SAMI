@@ -13,6 +13,10 @@ void loop() {
   loopRfid(); // Handle RFID scanning - now controlled internally by conditions
   loopUltrasonik(); // Handle ultrasonic obstacle detection
   updateHookStatus(); // Update hook status and handle automatic operations
+  
+  // Handle debug commands
+  handleDebugCommands();
+  
   // delay(1000);
   if (isAgvMode) {
     // AGV Mode - Run normal AGV operation
@@ -33,4 +37,19 @@ void loop() {
     handleMenu();
   }
   // LCD doesn't need display() call - content shows immediately
+}
+
+// Function to handle debug commands from Serial
+void handleDebugCommands() {
+  if (Serial.available()) {
+    char command = Serial.read();
+    
+    // Clear any remaining characters in buffer
+    while (Serial.available()) {
+      Serial.read();
+    }
+    
+    // Process debug command
+    toggleDebugMode(command);
+  }
 }

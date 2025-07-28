@@ -25,6 +25,75 @@ void initLCD() {
   DEBUG_PRINTLN("LCD initialized");
 }
 
+void displayPrint() {
+  if (systemState.isAgvMode) {
+    displayAGVStatus();
+  } else {
+    updateLCDDisplay();
+  }
+}
+
+
+
+void displayAGVStatus() {
+  static unsigned long lastUpdate = 0;
+  
+  if (millis() - lastUpdate < LCD_UPDATE_INTERVAL) {
+    return;
+  }
+  lastUpdate = millis();
+  
+  lcd.clear();
+  
+  // Line 1: Mode and sensor count
+  lcd.setCursor(0, 0);
+  lcd.print("AGV ");
+  lcd.print(getModeString());
+  lcd.setCursor(12, 0);
+  lcd.print("S:");
+  lcd.print(sensorData.totalActiveSensors);
+  
+  // Line 2: Movement status and error
+  lcd.setCursor(0, 1);
+  switch (systemState.currentMovement) {
+    case MOVEMENT_FORWARD: lcd.print("FWD"); break;
+    case MOVEMENT_BACKWARD: lcd.print("BWD"); break;
+    case MOVEMENT_LEFT: lcd.print("LFT"); break;
+    case MOVEMENT_RIGHT: lcd.print("RGT"); break;
+    case MOVEMENT_STOP: lcd.print("STP"); break;
+  }
+  
+  lcd.setCursor(5, 1);
+  lcd.print("E:");
+  lcd.print(sensorData.errorValue);
+  
+  // Line 3: Obstacle and hook status
+  lcd.setCursor(0, 2);
+  if (sensorData.obstacleDetected) {
+    lcd.print("OBS!");
+  } else {
+    lcd.print("CLEAR");
+  }
+  
+  lcd.setCursor(8, 2);
+  lcd.print("H:");
+  lcd.print(getHookStatusString());
+  
+  // Line 4: Station info
+  lcd.setCursor(0, 3);
+  if (systemState.currentAgvMode == MODE_STATION) {
+    lcd.print("Station: ");
+    lcd.print(station);
+  } else {
+    lcd.print("RFID: ");
+    if (lastScannedRfid.length() > 0) {
+      lcd.print(lastScannedRfid.substring(0, 8));
+    } else {
+      lcd.print("None");
+    }
+  }
+}
+
 void updateLCDDisplay() {
   static unsigned long lastUpdate = 0;
   
@@ -36,7 +105,7 @@ void updateLCDDisplay() {
   
   lcd.clear();
   
-  switch (currentMenuState) {
+  switch (systemState.currentMenu) {
     case MENU_MAIN:
       displayMainMenu();
       break;
@@ -64,34 +133,15 @@ void updateLCDDisplay() {
   }
 }
 
+int menuIndex = 0;
+
 void displayMainMenu() {
+  lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("MENU UTAMA");
-  lcd.setCursor(0, 1);
-  
-  switch (menuIndex) {
-    case 0:
-      lcd.print(">Mode AGV");
-      break;
-    case 1:
-      lcd.print(">Setup Stasiun");
-      break;
-    case 2:
-      lcd.print(">Setup RFID");
-      break;
-    case 3:
-      lcd.print(">Status Sensor");
-      break;
-    case 4:
-      lcd.print(">Info Sistem");
-      break;
-    case 5:
-      lcd.print(">Pengaturan");
-      break;
-    default:
-      lcd.print(">Mode AGV");
-      menuIndex = 0;
-      break;
+  lcd.print("> " + mainMenuItems[menuIndex]);
+  if (menuIndex + 1 < sizeof(mainMenuItems) / sizeof(mainMenuItems[0])) {
+    lcd.setCursor(0, 1);
+    lcd.print("  " + mainMenuItems[menuIndex + 1]);
   }
 }
 
@@ -223,28 +273,15 @@ void displaySystemInfo() {
   }
 }
 
+int settingsIndex = 0;
+
 void displaySettings() {
+  lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("PENGATURAN");
-  lcd.setCursor(0, 1);
-  
-  switch (settingsIndex) {
-    case 0:
-      lcd.print(">Reset System");
-      break;
-    case 1:
-      lcd.print(">Kalibrasi PID");
-      break;
-    case 2:
-      lcd.print(">Test Motor");
-      break;
-    case 3:
-      lcd.print(">Test Sensor");
-      break;
-    default:
-      lcd.print(">Reset System");
-      settingsIndex = 0;
-      break;
+  lcd.print("> " + settingsMenuItems[settingsIndex]);
+  if (settingsIndex + 1 < sizeof(settingsMenuItems) / sizeof(settingsMenuItems[0])) {
+    lcd.setCursor(0, 1);
+    lcd.print("  " + settingsMenuItems[settingsIndex + 1]);
   }
 }
 
@@ -273,10 +310,10 @@ void handleMenuNavigation() {
   }
   
   // Read button states
-  bool upPressed = digitalRead(BUTTON_UP) == HIGH;
-  bool downPressed = digitalRead(BUTTON_DOWN) == HIGH;
-  bool selectPressed = digitalRead(BUTTON_SELECT) == HIGH;
-  bool backPressed = digitalRead(BUTTON_BACK) == HIGH;
+  bool upPressed = digitalRead(BTN_UP) == HIGH;
+  bool downPressed = digitalRead(BTN_DOWN) == HIGH;
+  bool selectPressed = digitalRead(BTN_SELECT) == HIGH;
+  bool backPressed = digitalRead(BTN_BACK) == HIGH;
   
   if (upPressed || downPressed || selectPressed || backPressed) {
     lastButtonPress = currentTime;
@@ -664,6 +701,68 @@ void handleConfigUpdate() {
     server.send(200, "text/plain", "Configuration updated");
   } else {
     server.send(400, "text/plain", "No valid parameters provided");
+  }
+}
+
+// ==================== BUTTON HANDLING ====================
+
+bool buttonStop() {
+  // Check if stop button is pressed
+  bool stopPressed = digitalRead(BUTTON_STOP_PIN) == LOW;
+  
+  if (stopPressed) {
+    // Emergency stop function
+    stopMovement();
+    systemState.currentMode = MODE_IDLE;
+    
+    DEBUG_PRINTLN("Emergency stop activated!");
+    
+    // Update display
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("EMERGENCY STOP!");
+    lcd.setCursor(0, 1);
+    lcd.print("Press any key...");
+    
+    // Sound alarm if available
+    if (systemConfig.musicErrorPin > 0) {
+      music("error");
+    }
+  }
+  
+  return stopPressed;
+}
+
+void handleMenu() {
+  // Handle menu navigation based on button presses
+  static unsigned long lastButtonPress = 0;
+  unsigned long currentTime = millis();
+  
+  // Debounce protection
+  if (currentTime - lastButtonPress < BUTTON_DEBOUNCE_DELAY) {
+    return;
+  }
+  
+  // Check button states (assuming digital pins for buttons)
+  bool upPressed = digitalRead(systemConfig.buttonUpPin) == LOW;
+  bool downPressed = digitalRead(systemConfig.buttonDownPin) == LOW;
+  bool selectPressed = digitalRead(systemConfig.buttonSelectPin) == LOW;
+  bool backPressed = digitalRead(systemConfig.buttonBackPin) == LOW;
+  
+  if (upPressed || downPressed || selectPressed || backPressed) {
+    lastButtonPress = currentTime;
+    
+    if (upPressed) {
+      handleMenuNavigation(MENU_UP);
+    } else if (downPressed) {
+      handleMenuNavigation(MENU_DOWN);
+    } else if (selectPressed) {
+      handleMenuNavigation(MENU_SELECT);
+    } else if (backPressed) {
+      handleMenuNavigation(MENU_BACK);
+    }
+    
+    updateLCDDisplay();
   }
 }
 

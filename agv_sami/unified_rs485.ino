@@ -2,19 +2,28 @@
 // Handles communication with multiple devices on single RS485 bus
 // Device addresses: 1=magnet front, 2=ultrasonic front, 3=ultrasonic back, 4=magnet back
 
-// Communication timing variables
+// Optimized communication timing with priority system
 unsigned long lastDeviceSwitch = 0;
-const unsigned long deviceSwitchInterval = 100; // Switch device every 100ms
 int currentDeviceIndex = 0;
 const int totalDevices = 4;
 
+// Device priority configuration (0=highest priority)
+const int devicePriority[4] = {0, 1, 3, 2}; // Magnet Front, Ultrasonic Front, Magnet Back, Ultrasonic Back
+const unsigned long deviceSwitchInterval[4] = {50, 100, 150, 120}; // Different intervals based on priority
+const unsigned long deviceTimeout[4] = {3000, 5000, 5000, 3000}; // Different timeouts per device type
+
 // Device communication status
 bool deviceOnline[4] = {false, false, false, false};
-unsigned long lastSuccessfulComm[4] = {0, 0, 0, 0};
-const unsigned long commTimeoutMs = 5000; // 5 seconds timeout
+// lastSuccessfulComm sudah dideklarasikan di debug_rs485.ino
+unsigned long lastCommAttempt[4] = {0, 0, 0, 0};
+int commFailureCount[4] = {0, 0, 0, 0};
+const int maxCommFailures = 3; // Max failures before marking device offline
 
 void setupUnifiedRS485() {
   Serial.println("=== SETUP UNIFIED RS485 SYSTEM ===");
+  
+  // Setup debug system
+  setupRS485Debug();
   
   // Setup RS485 control pins
   pinMode(MAX485_DE, OUTPUT);
@@ -54,19 +63,35 @@ void setupUnifiedRS485() {
   
   Serial.println("Sensor data arrays initialized");
   Serial.println("=== UNIFIED RS485 SETUP COMPLETE ===");
+  
+  // Run initial diagnosis
+  diagnoseCommonIssues();
 }
 
 void loopUnifiedRS485() {
   unsigned long currentMillis = millis();
   
-  // Switch between devices periodically
-  if (currentMillis - lastDeviceSwitch >= deviceSwitchInterval) {
+  // Priority-based device switching
+  if (currentMillis - lastDeviceSwitch >= deviceSwitchInterval[currentDeviceIndex]) {
     lastDeviceSwitch = currentMillis;
     
-    // Debug: Show current device being communicated with
+    // Skip device if it has too many failures and isn't critical
+    if (commFailureCount[currentDeviceIndex] >= maxCommFailures && devicePriority[currentDeviceIndex] > 1) {
+      currentDeviceIndex = getNextPriorityDevice();
+      return;
+    }
+    
+    // Debug: Show current device being communicated with (only in detailed debug)
     const char* deviceNames[] = {"Magnet Front", "Ultrasonic Front", "Ultrasonic Back", "Magnet Back"};
-    Serial.print("Communicating with: ");
-    Serial.println(deviceNames[currentDeviceIndex]);
+    if (enableDetailedDebug) {
+      Serial.print("Communicating with: ");
+      Serial.print(deviceNames[currentDeviceIndex]);
+      Serial.print(" (Priority: ");
+      Serial.print(devicePriority[currentDeviceIndex]);
+      Serial.println(")");
+    }
+    
+    lastCommAttempt[currentDeviceIndex] = currentMillis;
     
     // Communicate with current device
     switch (currentDeviceIndex) {
@@ -84,8 +109,8 @@ void loopUnifiedRS485() {
         break;
     }
     
-    // Move to next device
-    currentDeviceIndex = (currentDeviceIndex + 1) % totalDevices;
+    // Move to next priority device
+    currentDeviceIndex = getNextPriorityDevice();
   }
   
   // Process any incoming ultrasonic data
@@ -93,10 +118,14 @@ void loopUnifiedRS485() {
   
   // Check device timeouts
   checkDeviceTimeouts();
+  
+  // Run debug loop
+  debugRS485Loop();
 }
 
 void communicateWithMagnetFront() {
   currentDeviceAddress = ADDR_MAGNET_FRONT;
+  unsigned long startTime = millis();
   
   // Add small delay before communication
   delay(10);
@@ -106,15 +135,18 @@ void communicateWithMagnetFront() {
   if (result == nodeMagnetFront.ku8MBSuccess) {
     deviceOnline[0] = true;
     lastSuccessfulComm[0] = millis();
+    updateMagnetFrontStats(true);
     
     uint16_t medianValue = nodeMagnetFront.getResponseBuffer(0);
     uint16_t positionValue = nodeMagnetFront.getResponseBuffer(1);
     
     // Debug output (comment out in production)
-    Serial.print("Magnet Front - Median: ");
-    Serial.print(medianValue);
-    Serial.print(", Position: 0x");
-    Serial.println(positionValue, HEX);
+    if (enableRS485Debug) {
+      Serial.print("Magnet Front - Median: ");
+      Serial.print(medianValue);
+      Serial.print(", Position: 0x");
+      Serial.println(positionValue, HEX);
+    }
     
     updateMagnetData(positionValue, jumlahMagnetFront);
     
@@ -122,15 +154,18 @@ void communicateWithMagnetFront() {
       // Calculate error for front magnet
       errorValue = hitungErrorPosisi(positionValue);
     }
+    
+    debugTiming("Magnet Front Comm", startTime);
   } else {
     deviceOnline[0] = false;
-    Serial.print("Magnet Front Error: 0x");
-    Serial.println(result, HEX);
+    updateMagnetFrontStats(false, (result == 0xE2));
+    debugModbusError(result, "Magnet Front");
   }
 }
 
 void communicateWithMagnetBack() {
   currentDeviceAddress = ADDR_MAGNET_BACK;
+  unsigned long startTime = millis();
   
   // Add small delay before communication
   delay(10);
@@ -140,21 +175,25 @@ void communicateWithMagnetBack() {
   if (result == nodeMagnetBack.ku8MBSuccess) {
     deviceOnline[3] = true;
     lastSuccessfulComm[3] = millis();
+    updateMagnetBackStats(true);
     
     uint16_t medianValue = nodeMagnetBack.getResponseBuffer(0);
     uint16_t positionValue = nodeMagnetBack.getResponseBuffer(1);
     
     // Debug output (comment out in production)
-    Serial.print("Magnet Back - Median: ");
-    Serial.print(medianValue);
-    Serial.print(", Position: 0x");
-    Serial.println(positionValue, HEX);
+    if (enableRS485Debug) {
+      Serial.print("Magnet Back - Median: ");
+      Serial.print(medianValue);
+      Serial.print(", Position: 0x");
+      Serial.println(positionValue, HEX);
+    }
     
     updateMagnetData(positionValue, jumlahMagnetBack);
+    debugTiming("Magnet Back Comm", startTime);
   } else {
     deviceOnline[3] = false;
-    Serial.print("Magnet Back Error: 0x");
-    Serial.println(result, HEX);
+    updateMagnetBackStats(false, (result == 0xE2));
+    debugModbusError(result, "Magnet Back");
   }
 }
 
@@ -198,6 +237,9 @@ void processUltrasonicData() {
 }
 
 void parseUltrasonicPacket() {
+  // Debug packet data
+  debugPacketData(dataPacket, PACKET_LENGTH, "RX");
+  
   // Verify packet header
   if (dataPacket[0] == currentDeviceAddress && dataPacket[1] == 0x03) {
     
@@ -217,29 +259,74 @@ void parseUltrasonicPacket() {
       if (currentDeviceAddress == ADDR_ULTRASONIC_FRONT) {
         deviceOnline[1] = true;
         lastSuccessfulComm[1] = millis();
+        updateUltrasonicFrontStats(true);
+        
         ultrasonicDistancesFront[0] = dist1;
         ultrasonicDistancesFront[1] = dist2;
         ultrasonicDistancesFront[2] = dist3;
         ultrasonicDistancesFront[3] = dist4;
         ultrasonicDistancesFront[4] = dist5;
+        
+        if (enableDetailedDebug) {
+          Serial.print("Ultrasonic Front: ");
+          Serial.print(dist1); Serial.print(", ");
+          Serial.print(dist2); Serial.print(", ");
+          Serial.print(dist3); Serial.print(", ");
+          Serial.print(dist4); Serial.print(", ");
+          Serial.println(dist5);
+        }
+        
         checkObstaclesFront();
       } else if (currentDeviceAddress == ADDR_ULTRASONIC_BACK) {
         deviceOnline[2] = true;
         lastSuccessfulComm[2] = millis();
+        updateUltrasonicBackStats(true);
+        
         ultrasonicDistancesBack[0] = dist1;
         ultrasonicDistancesBack[1] = dist2;
         ultrasonicDistancesBack[2] = dist3;
         ultrasonicDistancesBack[3] = dist4;
         ultrasonicDistancesBack[4] = dist5;
+        
+        if (enableDetailedDebug) {
+          Serial.print("Ultrasonic Back: ");
+          Serial.print(dist1); Serial.print(", ");
+          Serial.print(dist2); Serial.print(", ");
+          Serial.print(dist3); Serial.print(", ");
+          Serial.print(dist4); Serial.print(", ");
+          Serial.println(dist5);
+        }
+        
         checkObstaclesBack();
       }
     } else {
+      // CRC Error
+      if (currentDeviceAddress == ADDR_ULTRASONIC_FRONT) {
+        updateUltrasonicFrontStats(false, true);
+      } else if (currentDeviceAddress == ADDR_ULTRASONIC_BACK) {
+        updateUltrasonicBackStats(false, true);
+      }
+      
+      if (enableRS485Debug) {
+        Serial.print("[CRC ERROR] Expected: 0x");
+        Serial.print(calculated_crc, HEX);
+        Serial.print(", Received: 0x");
+        Serial.println(received_crc, HEX);
+      }
+      
       error(ERROR_ULTRASONIC_COMMUNICATION, "CRC Checksum tidak cocok");
+    }
+  } else {
+    if (enableRS485Debug) {
+      Serial.print("[PACKET ERROR] Invalid header: ");
+      Serial.print(dataPacket[0], HEX);
+      Serial.print(" ");
+      Serial.println(dataPacket[1], HEX);
     }
   }
 }
 
-void updateMagnetData(uint16_t bitmask, int* magnetArray) {
+void updateMagnetData(uint16_t bitmask, uint8_t* magnetArray) {
   for (int i = 0; i < 16; i++) {
     magnetArray[i] = !((bitmask >> i) & 0x01) ? 1 : 0;
   }
@@ -275,38 +362,65 @@ void checkObstaclesBack() {
   }
 }
 
+// Get next device based on priority
+int getNextPriorityDevice() {
+  // Find highest priority device that needs communication
+  int nextDevice = (currentDeviceIndex + 1) % totalDevices;
+  int bestPriority = 999;
+  int bestDevice = nextDevice;
+  
+  for (int i = 0; i < totalDevices; i++) {
+    int deviceIndex = (currentDeviceIndex + 1 + i) % totalDevices;
+    if (devicePriority[deviceIndex] < bestPriority) {
+      bestPriority = devicePriority[deviceIndex];
+      bestDevice = deviceIndex;
+    }
+  }
+  
+  return bestDevice;
+}
+
 void checkDeviceTimeouts() {
   unsigned long currentMillis = millis();
   
   for (int i = 0; i < 4; i++) {
-    if (deviceOnline[i] && (currentMillis - lastSuccessfulComm[i] > commTimeoutMs)) {
+    if (deviceOnline[i] && (currentMillis - lastSuccessfulComm[i] > deviceTimeout[i])) {
       deviceOnline[i] = false;
-      // Handle device timeout
-      switch (i) {
-        case 0:
-          error(ERROR_SENSOR_COMMUNICATION, "Magnet Front timeout");
-          break;
-        case 1:
-          error(ERROR_ULTRASONIC_COMMUNICATION, "Ultrasonic Front timeout");
-          break;
-        case 2:
-          error(ERROR_ULTRASONIC_COMMUNICATION, "Ultrasonic Back timeout");
-          break;
-        case 3:
-          error(ERROR_SENSOR_COMMUNICATION, "Magnet Back timeout");
-          break;
+      commFailureCount[i]++;
+      
+      // Only log error for critical devices or first few failures
+      if (devicePriority[i] <= 1 || commFailureCount[i] <= 2) {
+        switch (i) {
+          case 0:
+            logError(ERROR_SENSOR_COMMUNICATION, "Magnet Front timeout");
+            break;
+          case 1:
+            logError(ERROR_ULTRASONIC_COMMUNICATION, "Ultrasonic Front timeout");
+            break;
+          case 2:
+            logError(ERROR_ULTRASONIC_COMMUNICATION, "Ultrasonic Back timeout");
+            break;
+          case 3:
+            logError(ERROR_SENSOR_COMMUNICATION, "Magnet Back timeout");
+            break;
+        }
       }
+    }
+    
+    // Reset failure count on successful communication
+    if (deviceOnline[i] && commFailureCount[i] > 0) {
+      commFailureCount[i] = max(0, commFailureCount[i] - 1);
     }
   }
 }
 
 // Get current magnet data for line following (uses front magnet by default)
-int* getCurrentMagnetData() {
+uint8_t* getCurrentMagnetData() {
   return jumlahMagnetFront;
 }
 
 // Get magnet data for specific position
-int* getMagnetData(bool useFront) {
+uint8_t* getMagnetData(bool useFront) {
   return useFront ? jumlahMagnetFront : jumlahMagnetBack;
 }
 
