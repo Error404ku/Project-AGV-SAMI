@@ -14,11 +14,7 @@ void displaySensorData() {
   lcd.setCursor(0, 0);
   lcd.print("Sensor:");
   lcd.setCursor(0, 1);
-  for (int i = 0; i < 8; i++) {
-    lcd.print(jumlahMagnet[i] ? "1" : "0");
-  }
-  lcd.setCursor(8, 1);
-  for (int i = 8; i < 16; i++) {
+  for (int i = 0; i < 16; i++) {
     lcd.print(jumlahMagnet[i] ? "1" : "0");
   }
   
