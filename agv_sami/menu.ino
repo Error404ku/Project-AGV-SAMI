@@ -1456,9 +1456,10 @@ void displayWifiSettings() {
         } else {
           lcd.print(ssidStr);
           for (int i = ssidStr.length(); i < 10; i++) {
-            lcd.print("       ");
+            lcd.print(" ");
           }
         }
+        lcd.print("    ");
       } else {
         lcd.setCursor(0, 1);
         lcd.print("Status: Terputus    ");

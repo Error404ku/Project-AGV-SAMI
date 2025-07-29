@@ -298,6 +298,7 @@ bool loadWifiConfig();
 void updateIPAddressesFromStrings();
 void handleWifiConfig();
 void handleSaveWifi();
+void handleWifiScan();
 void handleRoot();
 
 // ===== PERFORMANCE OPTIMIZATION FUNCTIONS =====
