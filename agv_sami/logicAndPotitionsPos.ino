@@ -12,8 +12,14 @@ int targetStationFromKomputer[] = { 1, 2, 4, 5 };
 const int totalTarget = sizeof(targetStation) / sizeof(targetStation[0]);
 int indexTarget = 0;
 
+// ― Warehouse dan Ujung RFID IDs ―
+String warehouseRfidId = "";
+String ujungRfidId = "";
+bool stationListReceived = false;  // Flag untuk menandai apakah stationList sudah diterima
+bool waitingForStart = true;       // Flag untuk menunggu tombol start
+
 // ― Modes (hanya SATU TRUE sekaligus) ―
-bool modeTerminal = false;  // mulai di terminal & diam
+bool modeTerminal = true;   // mulai di terminal & diam
 bool modeWarehouse = false;
 bool modeStation = false;
 
@@ -158,6 +164,29 @@ void changeStateMode(String mode) {
  *  MODE HANDLERS                                         *
  ***********************************************************/
 void pembacaanTerminal() {
+  // AGV menunggu di terminal sampai stationList diterima dan tombol start ditekan
+  if (!stationListReceived) {
+    // Cek apakah stationList sudah diterima dari server/komputer
+    if (stationsList.size() > 0) {
+      stationListReceived = true;
+      Serial.println("StationList received! Ready to start journey.");
+      Serial.print("Stations to visit: ");
+      for (size_t i = 0; i < stationsList.size(); i++) {
+        Serial.print(stationsList[i]);
+        if (i < stationsList.size() - 1) Serial.print(", ");
+      }
+      Serial.println();
+    }
+  }
+  
+  if (waitingForStart) {
+    // AGV tetap berhenti di terminal menunggu tombol start
+    modeBerhenti = true;
+    pidLinefollower(errorValue, "STOP");
+    return;
+  }
+  
+  // Logika lama untuk kembali ke terminal (mode mundur)
   if (!sensorkebacasemua) {
     force = false;
   }
@@ -214,102 +243,62 @@ void pembacaanStation() {
   // ― RFID Detection (Priority) - Independent of sensor conditions ―
   if (!sudahDeteksiStasiun) {
     int detectedStationId = getStationFromLastRfid();
-    if (detectedStationId > 0) {
-      // Use RFID station ID directly
-      station = detectedStationId;
-      Serial.print("RFID detected - Station ID: ");
-      Serial.println(detectedStationId);
-
+    String currentRfid = String(lastScannedRfidOptimized);
+    
+    if (detectedStationId > 0 || currentRfid.length() > 0) {
       errorValue = 0;
       sudahDeteksiStasiun = true;
-
-      // Check if current station is in stationsList (from preferences)
-      bool isTargetStation = false;
-      for (size_t i = 0; i < stationsList.size(); i++) {
-        if (stationsList[i] == station) {
-          Serial.println("Target station reached via RFID!");
-
-          // Check if this is the last station
-          if (indexTarget >= stationsList.size() - 1) {
-            Serial.println("Last station reached - calling ujungStation!");
-            ujungStation();
-          } else {
-            inStation();
-            indexTarget++;
-          }
-
-          isTargetStation = true;
-          break;
+      
+      // Check if this is warehouse RFID
+      if (currentRfid.equals(warehouseRfidId) && warehouseRfidId.length() > 0) {
+        Serial.println("Warehouse RFID detected - entering warehouse mode");
+        inWarehouse();
+        return;
+      }
+      
+      // Check if this is ujung RFID
+      if (currentRfid.equals(ujungRfidId) && ujungRfidId.length() > 0) {
+        Serial.println("Ujung RFID detected - returning to warehouse");
+        ujungStation();
+        return;
+      }
+      
+      // Check if this is a target station RFID
+      if (detectedStationId > 0 && indexTarget < stationsList.size()) {
+        if (stationsList[indexTarget] == detectedStationId) {
+          Serial.println("Target station " + String(detectedStationId) + " reached!");
+          station = detectedStationId;
+          inStation();
+          return;
+        } else {
+          Serial.println("Non-target station " + String(detectedStationId) + " detected - continue");
         }
       }
-
-      if (!isTargetStation) {
-        Serial.println("Non-target station detected via RFID - continue");
-        pidLinefollower(errorValue, "MAJU");
-      }
+      
+      // If no specific action needed, continue moving
+      pidLinefollower(errorValue, "MAJU");
       return;
     }
   }
 
-  // ― Ujung station: pindah ke warehouse (mundur) ―
-  if (sensorkebacasemua && modeMaju && !force) {
+  // ― Ujung station: pindah ke warehouse (mundur) jika tidak ada ujung RFID ―
+  if (sensorkebacasemua && modeMaju && !force && indexTarget >= stationsList.size()) {
+    Serial.println("Reached end without ujung RFID - returning to warehouse");
     ujungStation();
     return;
   }
+  
   // ― Keluar station dengan tombol (FORCEMAJU) ―
   if ((kananHilang || kiriHilang) && force) {
     return pidLinefollower(errorValue, "FORCEMAJU");
   }
-
-  // ― Deteksi marker tengah (Fallback) ―
-  // if (tengahAktif && !force && !sudahDeteksiStasiun) {
-  //   bool kanan = (kananHilang && station % 2 == 0);
-  //   bool kiri = (kiriHilang && station % 2 == 1);
-
-  //   if ((kanan || kiri) && !modeBerhenti) {
-  //     // Fallback: increment station if no RFID detected
-  //     station++;
-  //     Serial.print("Fallback sensor detection - Station: ");
-  //     Serial.println(station);
-
-  //     errorValue = 0;
-  //     sudahDeteksiStasiun = true;
-
-  //     // Check if current station is in stationsList (from preferences)
-  //     bool isTargetStation = false;
-  //     for (size_t i = 0; i < stationsList.size(); i++) {
-  //       if (stationsList[i] == station) {
-  //         Serial.println("Target station reached via sensor!");
-
-  //         // Check if this is the last station
-  //         if (indexTarget >= stationsList.size() - 1) {
-  //           Serial.println("Last station reached - calling ujungStation!");
-  //           ujungStation();
-  //         } else {
-  //           inStation();
-  //           indexTarget++;
-  //         }
-
-  //         isTargetStation = true;
-  //         break;
-  //       }
-  //     }
-
-  //     if (!isTargetStation) {
-  //       Serial.println("Non-target station passed via sensor");
-  //     }
-
-  //     pidLinefollower(errorValue, "MAJU");
-  //     return;
-  //   }
-  // }
 
   // ― Reset bila keluar garis ―
   if (!sensorkebacasemua) {
     force = false;
     sudahDeteksiStasiun = false;
   }
-  // Serial.println("Maju tes");
+  
   pidLinefollower(errorValue, "MAJU");
 }
 
@@ -319,17 +308,32 @@ void pembacaanStation() {
 void tombolAgv() {
   unsigned long ms = millis();
 
-  if (START() && (ms - lastXPress >= xDelay) && !modeStation) {
+  if (START() && (ms - lastXPress >= xDelay)) {
     lastXPress = ms;
-    // if (buttonStep == 0) {
-    //   outTerminal();
-    //   buttonStep = 1;
-    // } else {
-    //   buttonStep = 0;
-    // }
-    outWarehouse();
-  } else if (START() && (ms - lastXPress >= xDelay) && modeStation) {
-    outStation();
+    
+    if (modeTerminal && stationListReceived && waitingForStart) {
+      // Mulai perjalanan dari terminal ke station pertama
+      Serial.println("Starting journey from terminal to first station");
+      setModeStation();
+      changeStateMode("maju");
+      force = true;
+      waitingForStart = false;
+      indexTarget = 0;  // Reset ke station pertama
+    } else if (modeStation && modeBerhenti) {
+      // Lanjut ke station berikutnya atau ke ujung
+      indexTarget++;
+      if (indexTarget >= stationsList.size()) {
+        Serial.println("All stations completed - heading to ujung");
+        // Tetap di mode station untuk mencari ujung
+        changeStateMode("maju");
+        force = true;
+      } else {
+        Serial.println("Moving to next station: " + String(stationsList[indexTarget]));
+        changeStateMode("maju");
+        force = true;
+      }
+      sudahStopPelanPelan = false;
+    }
   }
 }
 
@@ -416,4 +420,34 @@ void displayLogicAgv() {
       lcd.print("END");
     }
   }
+}
+
+
+/***********************************************************
+ *  WAREHOUSE & UJUNG RFID FUNCTIONS                     *
+ ***********************************************************/
+void loadWarehouseUjungRfid() {
+  preferences.begin("warehouse-ujung", false);
+  warehouseRfidId = preferences.getString("warehouseRfid", "");
+  ujungRfidId = preferences.getString("ujungRfid", "");
+  preferences.end();
+  
+  Serial.println("Loaded Warehouse RFID: " + warehouseRfidId);
+  Serial.println("Loaded Ujung RFID: " + ujungRfidId);
+}
+
+void saveWarehouseRfid(String rfidId) {
+  preferences.begin("warehouse-ujung", false);
+  preferences.putString("warehouseRfid", rfidId);
+  preferences.end();
+  warehouseRfidId = rfidId;
+  Serial.println("Warehouse RFID saved: " + rfidId);
+}
+
+void saveUjungRfid(String rfidId) {
+  preferences.begin("warehouse-ujung", false);
+  preferences.putString("ujungRfid", rfidId);
+  preferences.end();
+  ujungRfidId = rfidId;
+  Serial.println("Ujung RFID saved: " + rfidId);
 }
