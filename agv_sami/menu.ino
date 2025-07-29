@@ -95,11 +95,15 @@ int motorTestState = 0;  // 0=stop, 1=forward, 2=backward, 3=left, 4=right
 // Hook test variables
 int hookTestState = 0;  // 0=stop, 1=naik, 2=turun
 
-// WiFi settings variables
+// WiFi connection variables
 bool isConnectingWifi = false;
 bool wifiConnectionResult = false;
 unsigned long wifiConnectStartTime = 0;
-const unsigned long WIFI_CONNECT_TIMEOUT = 10000;  // 10 seconds timeout
+const unsigned long WIFI_CONNECT_TIMEOUT = 5000; // 10 seconds
+
+// WiFi scroll variables
+int wifiScrollIndex = 0;
+const int WIFI_MAX_SCROLL = 3; // Maximum scroll positions timeout
 
 // Global display functions
 void displayIndicator(int current, int selected) {
@@ -1404,24 +1408,21 @@ void handleUltrasonicCheck() {
 
 void displayWifiSettings() {
   if (isConnectingWifi) {
-    // Show connecting status at cursor 0,0
+    // Show connecting status
     lcd.setCursor(0, 0);
-    lcd.print("Mencari WiFi        ");  // Clear line
-    
+    lcd.print("Mencari WiFi        ");
     unsigned long elapsed = millis() - wifiConnectStartTime;
     
-    // Show result at cursor 0,2
     lcd.setCursor(0, 2);
     if (WiFi.status() == WL_CONNECTED) {
-      lcd.print("Berhasil!           ");  // Clear line
+      lcd.print("Berhasil!           ");
       isConnectingWifi = false;
       wifiConnectionResult = true;
     } else if (elapsed >= WIFI_CONNECT_TIMEOUT) {
-      lcd.print("Gagal!              ");  // Clear line
+      lcd.print("Gagal!              ");
       isConnectingWifi = false;
       wifiConnectionResult = false;
     } else {
-      // Show progress dots
       int dots = (elapsed / 500) % 4;
       lcd.print("Menunggu");
       for (int i = 0; i < dots; i++) {
@@ -1430,43 +1431,81 @@ void displayWifiSettings() {
       for (int i = dots; i < 3; i++) {
         lcd.print(" ");
       }
-      lcd.print("        ");  // Clear rest of line
+      lcd.print("        ");
     }
     
-    // Clear other lines
     lcd.setCursor(0, 1);
     lcd.print("                    ");
     lcd.setCursor(0, 3);
     lcd.print("                    ");
-  } else {
-    // Show current WiFi status
-    if (WiFi.status() == WL_CONNECTED) {
-      displayMenuHeader("WiFi Settings");
-      lcd.setCursor(0, 1);
-      lcd.print("Status: ");
-      lcd.print("Terhubung   ");
-      lcd.setCursor(0, 2);
-      lcd.print("IP: ");
-      lcd.print(WiFi.localIP().toString().substring(0, 15));
-      lcd.print("         ");
-    } else {
-      // Show AP mode info when client is disconnected
-      lcd.setCursor(0, 0);
-      lcd.print("IP: 192.168.121.14");
-      lcd.setCursor(0, 1);
-      lcd.print("Status: ");
-      lcd.print("AP Mode     ");
-      lcd.setCursor(0, 2);
-      lcd.print("SSID:ESP32-AGV-Cfg");
-      lcd.setCursor(0, 3);
-      lcd.print("Pass:12345678");
-      lcd.print("                    ");
-      return;  // Skip the connect button display
-    }
-    
-    lcd.setCursor(0, 3);
-    lcd.print("A:Connect B:Back    ");
+    return;
   }
+  
+  // Display different info based on scroll index
+  switch (wifiScrollIndex) {
+    case 0: // Status & Connection Info
+      displayMenuHeader("WiFi Settings");
+      if (WiFi.status() == WL_CONNECTED) {
+        lcd.setCursor(0, 1);
+        lcd.print("Status: Terhubung   ");
+        lcd.setCursor(0, 2);
+        lcd.print("SSID: ");
+        String ssidStr = WiFi.SSID();
+        if (ssidStr.length() > 10) {
+          lcd.print(ssidStr.substring(0, 10));
+        } else {
+          lcd.print(ssidStr);
+          for (int i = ssidStr.length(); i < 10; i++) {
+            lcd.print("       ");
+          }
+        }
+      } else {
+        lcd.setCursor(0, 1);
+        lcd.print("Status: Terputus    ");
+        lcd.setCursor(0, 2);
+        lcd.print("Mode: Access Point  ");
+      }
+      break;
+      
+    case 1: // IP Address Info
+      displayMenuHeader("IP Address         ");
+      if (WiFi.status() == WL_CONNECTED) {
+        lcd.setCursor(0, 1);
+        lcd.print("Client IP:           ");
+        lcd.setCursor(0, 2);
+        String clientIP = WiFi.localIP().toString();
+        lcd.print(clientIP);
+        for (int i = clientIP.length(); i < 16; i++) {
+          lcd.print(" ");
+        }
+      } else {
+        lcd.setCursor(0, 1);
+        lcd.print("AP IP: ");
+        lcd.setCursor(0, 2);
+        lcd.print("192.168.121.14         ");
+      }
+      break;
+      
+    case 2: // AP Configuration
+      displayMenuHeader("Access Point        ");
+      lcd.setCursor(0, 1);
+      lcd.print("SSID:ESP32-AGV-Cfg ");
+      lcd.setCursor(0, 2);
+      lcd.print("Pass:12345678       ");
+      break;
+      
+    case 3: // Web Interface
+      displayMenuHeader("Web Interface");
+      lcd.setCursor(0, 1);
+      lcd.print("URL: 192.168.121.14 ");
+      lcd.setCursor(0, 2);
+      lcd.print("Port: 80            ");
+      break;
+  }
+  
+  // Show navigation controls
+  lcd.setCursor(0, 3);
+  lcd.print("^v:Scroll A:Conn B:<");
 }
 
 void handleWifiSettings() {
@@ -1479,7 +1518,21 @@ void handleWifiSettings() {
     return;
   }
   
-  if (START()) {
+  if (UP()) {
+    // Scroll up
+    wifiScrollIndex--;
+    if (wifiScrollIndex < 0) {
+      wifiScrollIndex = WIFI_MAX_SCROLL;
+    }
+    delay(200); // Debounce
+  } else if (DOWN()) {
+    // Scroll down
+    wifiScrollIndex++;
+    if (wifiScrollIndex > WIFI_MAX_SCROLL) {
+      wifiScrollIndex = 0;
+    }
+    delay(200); // Debounce
+  } else if (START()) {
     // Start WiFi connection
     isConnectingWifi = true;
     wifiConnectStartTime = millis();
