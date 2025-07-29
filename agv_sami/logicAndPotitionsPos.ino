@@ -63,34 +63,24 @@ void inTerminal() {
 }
 void outTerminal() {
   setModeWarehouse();
-  // modeMaju = true;
-  changeStateMode("maju");
+  modeMaju = true;
+  // ("maju");
   force = true;
 }
 
-// void inWarehouse() {
-//   if (modeMundur) {
-//     force = true;
-//     if (!modeStation) {
-//       setModeTerminal();  // balik arah, pulang ke terminal
-//     }
-//   } else {
-//     clearMovement();
-//     modeBerhenti = true;
-//   }
-// }
 void inWarehouse() {
   music("komputer");
   clearMovement();
   clearStationsData();
   modeBerhenti = true;
 }
+
 void outWarehouse() {
   setModeStation();
   sortStationsList();
   // modeMundur = false;
-  // modeMaju = true;
-  changeStateMode("maju");
+  modeMaju = true;
+  // ("maju");
   force = true;
   statusMusic = false;
 }
@@ -114,13 +104,54 @@ void outStation() {
   statusMusic = false;
 }
 void ujungStation() {  // ujung station → mundur ke warehouse
-  // modeMaju = false;
+  modeMaju = false;
   // modeMundur = true;
   changeStateMode("mundur");
   force = true;
   pidLinefollower(errorValue, "FORCEMUNDUR");
   // delay(1000);
   setModeWarehouse();
+}
+
+/***********************************************************
+ *  STATE MODE FUNCTIONS                                  *
+ ***********************************************************/
+
+/**
+ * Mengubah state/mode operasional AGV
+ * @param mode String mode yang akan diaktifkan ("maju", "mundur", "berhenti", "forcemaju", "forcemundur")
+ */
+void changeStateMode(String mode) {
+  if (mode == "maju") {
+    modeMaju = true;
+    modeMundur = false;
+    modeBerhenti = false;
+    Serial.println("[INFO] Mode berubah: MAJU");
+  } else if (mode == "mundur") {
+    modeMaju = false;
+    modeMundur = true;
+    modeBerhenti = false;
+    Serial.println("[INFO] Mode berubah: MUNDUR");
+  } else if (mode == "berhenti") {
+    modeMaju = false;
+    modeMundur = false;
+    modeBerhenti = true;
+    Serial.println("[INFO] Mode berubah: BERHENTI");
+  } else if (mode == "forcemaju") {
+    modeMaju = true;
+    modeMundur = false;
+    modeBerhenti = false;
+    force = true;
+    Serial.println("[INFO] Mode berubah: FORCE MAJU");
+  } else if (mode == "forcemundur") {
+    modeMaju = false;
+    modeMundur = true;
+    modeBerhenti = false;
+    force = true;
+    Serial.println("[INFO] Mode berubah: FORCE MUNDUR");
+  } else {
+    Serial.println("[WARNING] Mode tidak dikenal: " + mode);
+  }
 }
 
 /***********************************************************
@@ -354,7 +385,6 @@ void displayLogicAgv() {
     setStatusJalan("BERHENTI");
     modeBerhenti = true;
   }
-
   // Tentukan mode aktif
   if (modeTerminal) {
     setCurrentMode("TERMINAL");
@@ -379,9 +409,7 @@ void displayLogicAgv() {
   if (modeStation) {
     // Clear part of row 3 and show station info
     lcd.setCursor(0, 3);
-    lcd.print(" ST:");
     lcd.print(station);
-    lcd.print(" TG:");
     if (indexTarget < stationsList.size()) {
       lcd.print(stationsList[indexTarget]);
     } else {

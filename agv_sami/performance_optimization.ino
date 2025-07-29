@@ -1,13 +1,13 @@
 /*
   PERFORMANCE OPTIMIZATION SYSTEM FOR AGV SAMI
-  
+
   This system provides:
   1. Non-blocking timer management
   2. Performance monitoring
   3. Memory usage tracking
   4. Loop execution time measurement
   5. Optimized state management
-  
+
   Author: AGV SAMI Team
   Date: 2024
 */
@@ -63,7 +63,7 @@ void stopTimer(Timer* timer) {
 
 bool checkTimer(Timer* timer) {
   if (!timer->active) return false;
-  
+
   unsigned long currentMillis = millis();
   if (currentMillis - timer->previousMillis >= timer->interval) {
     timer->triggered = true;
@@ -92,7 +92,7 @@ void startPerformanceMonitoring() {
 
 void endPerformanceMonitoring() {
   loopExecutionTime = micros() - loopStartTime;
-  
+
   // Update statistics
   if (loopExecutionTime > maxLoopTime) {
     maxLoopTime = loopExecutionTime;
@@ -100,15 +100,15 @@ void endPerformanceMonitoring() {
   if (loopExecutionTime < minLoopTime) {
     minLoopTime = loopExecutionTime;
   }
-  
+
   totalLoops++;
-  
+
   // Update memory statistics
   freeHeapSize = ESP.getFreeHeap();
   if (freeHeapSize < minFreeHeap) {
     minFreeHeap = freeHeapSize;
   }
-  
+
   // Print performance stats periodically
   unsigned long currentMillis = millis();
   if (currentMillis - lastPerformanceUpdate >= performanceUpdateInterval) {
@@ -119,7 +119,7 @@ void endPerformanceMonitoring() {
 
 void printPerformanceStats() {
   if (totalLoops == 0) return;
-  
+
   Serial.println("\n=== PERFORMANCE STATS ===");
   Serial.print("Loop Time (us) - Current: ");
   Serial.print(loopExecutionTime);
@@ -127,21 +127,21 @@ void printPerformanceStats() {
   Serial.print(maxLoopTime);
   Serial.print(", Min: ");
   Serial.println(minLoopTime);
-  
+
   Serial.print("Memory - Free: ");
   Serial.print(freeHeapSize);
   Serial.print(" bytes, Min Free: ");
   Serial.print(minFreeHeap);
   Serial.println(" bytes");
-  
+
   Serial.print("Total Loops: ");
   Serial.println(totalLoops);
-  
+
   // Calculate average loop time
   Serial.print("Loop Frequency: ");
   Serial.print(1000000.0 / loopExecutionTime);
   Serial.println(" Hz");
-  
+
   Serial.println("========================\n");
 }
 
@@ -194,36 +194,36 @@ bool attemptErrorRecovery(int errorCode) {
   if (errorRecoveryAttempts >= maxErrorRecoveryAttempts) {
     return false; // Give up after max attempts
   }
-  
+
   errorRecoveryAttempts++;
   systemInErrorState = true;
-  
+
   Serial.print("Attempting error recovery #");
   Serial.print(errorRecoveryAttempts);
   Serial.print(" for error code: ");
   Serial.println(errorCode);
-  
+
   // Start recovery timer
   startTimer(&errorRecoveryTimer, 5000);
-  
+
   // Attempt recovery based on error type
   switch (errorCode) {
     case 1: // ERROR_SENSOR_COMMUNICATION
       // Reinitialize sensor communication
       return recoverSensorCommunication();
-      
+
     case 2: // ERROR_MOTOR_CONTROL
       // Reset motor controllers
       return recoverMotorControl();
-      
+
     case 3: // ERROR_RFID_COMMUNICATION
       // Reinitialize RFID
       return recoverRfidCommunication();
-      
+
     case 4: // ERROR_WIFI_CONNECTION
       // Attempt WiFi reconnection
       return recoverWifiConnection();
-      
+
     default:
       return false;
   }
@@ -233,7 +233,7 @@ bool recoverSensorCommunication() {
   // Reinitialize ModbusMaster
   node.begin(1, Serial1);
   delay(100); // Small delay for initialization
-  
+
   // Test communication
   uint8_t result = node.readHoldingRegisters(0x0000, 1);
   return (result == node.ku8MBSuccess);
@@ -243,7 +243,7 @@ bool recoverMotorControl() {
   // Stop all motors
   pwmMotor(0, 0);
   delay(100);
-  
+
   // Reinitialize motor pins if needed
   // This would depend on your motor setup
   return true;
@@ -263,14 +263,14 @@ bool recoverWifiConnection() {
   WiFi.disconnect();
   delay(1000);
   WiFi.begin(ssid, password);
-  
+
   // Wait for connection with timeout
   int attempts = 0;
   while (WiFi.status() != WL_CONNECTED && attempts < 10) {
     delay(500);
     attempts++;
   }
-  
+
   return (WiFi.status() == WL_CONNECTED);
 }
 
@@ -286,24 +286,24 @@ void checkErrorRecovery() {
  ***********************************************************/
 void initPerformanceOptimization() {
   Serial.println("Initializing Performance Optimization System...");
-  
+
   // Initialize timers
   stopTimer(&stopPelanPelanTimer);
   stopTimer(&ultrasonicSwitchTimer);
   stopTimer(&buttonDebounceTimer);
   stopTimer(&menuDelayTimer);
   stopTimer(&errorRecoveryTimer);
-  
+
   // Initialize performance monitoring
   resetPerformanceStats();
-  
+
   // Initialize error recovery
   initErrorRecovery();
-  
+
   // Set initial optimized states
   setStatusJalan("BERHENTI");
   setCurrentMode("WAREHOUSE");
-  
+
   Serial.println("Performance Optimization System initialized successfully!");
 }
 
@@ -317,7 +317,7 @@ void updatePerformanceOptimization() {
   checkTimer(&buttonDebounceTimer);
   checkTimer(&menuDelayTimer);
   checkTimer(&errorRecoveryTimer);
-  
+
   // Check error recovery
   checkErrorRecovery();
 }

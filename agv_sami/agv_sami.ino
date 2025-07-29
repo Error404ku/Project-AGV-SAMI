@@ -5,7 +5,7 @@ extern bool modeMundur;
 void setup() {
   Serial.begin(115200);
   setupAll();
-  
+
   // Initialize performance optimization system
   initPerformanceOptimization();
 
@@ -17,37 +17,32 @@ void setup() {
 void loop() {
   // Start performance monitoring
   startPerformanceMonitoring();
-  
   // Update performance optimization timers
   updatePerformanceOptimization();
-  
   // Skip main operations if system is in error state
   if (systemInErrorState) {
     endPerformanceMonitoring();
     return;
   }
-  
   server.handleClient();
-  loopRfid(); // Handle RFID scanning - now controlled internally by conditions
+  loopRfid();  // Handle RFID scanning - now controlled internally by conditions
   // loopUltrasonik(); // Akan dipanggil manual sesuai mode
 
   if (isAgvMode) {
-    // AGV Mode - Run normal AGV operation
-    // pembacaanRpm();
-    // bacaSensorGaris(); // Akan dipanggil manual sesuai mode
-    
+    // AGV Mode - Run normal AGV operation    
+    displayPrint();
+    bacaSensor();
+    loopUltrasonik();
     // --- Pembacaan sensor sesuai mode ---
     if (modeMaju) {
-      bacaSensor(SLAVEID_MAGNET_DEPAN);
-      switchUltrasonicSensor(true);
-      loopUltrasonik();
-    } else if (!modeMaju) {
-      bacaSensor(SLAVEID_MAGNET_BELAKANG);
-      switchUltrasonicSensor(false);
-      loopUltrasonik();
+      setMagnetSlaveId(SLAVEID_MAGNET_DEPAN);
+      setUltrasonicSlaveId(SLAVEID_ULTRASONIK_DEPAN);
+    } else if (modeMundur) {
+      setMagnetSlaveId(SLAVEID_MAGNET_BELAKANG);
+      setUltrasonicSlaveId(SLAVEID_ULTRASONIK_BELAKANG);
     }
-    
-    displayPrint();
+
+    displaySensorData();
     logicAgv();
 
     // Check for B button to exit AGV mode
@@ -61,7 +56,7 @@ void loop() {
     inTerminal();
     handleMenu();
   }
-  
+
   // End performance monitoring
   endPerformanceMonitoring();
   // LCD doesn't need display() call - content shows immediately

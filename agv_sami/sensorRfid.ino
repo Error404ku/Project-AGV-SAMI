@@ -3,7 +3,7 @@ void loopRfid() {
   if (!(currentMenu == MENU_RFID_SETTINGS || modeStation)) {
     return;
   }
-  
+
   noInterrupts();
   wiegand.flush();
   interrupts();
@@ -28,34 +28,34 @@ void receivedData(uint8_t* data, uint8_t bits, const char* message) {
   Serial.print(message);
   Serial.print(bits);
   Serial.print("bits / ");
-  
+
   // Convert RFID data to optimized char array for storage
   char rfidBuffer[32] = "";
   uint8_t bytes = (bits + 7) / 8;
   int bufferIndex = 0;
-  
+
   for (int i = 0; i < bytes && bufferIndex < 30; i++) {
     // Convert to hex with proper formatting
     char hexChar1 = (data[i] >> 4) < 10 ? '0' + (data[i] >> 4) : 'A' + (data[i] >> 4) - 10;
     char hexChar2 = (data[i] & 0xF) < 10 ? '0' + (data[i] & 0xF) : 'A' + (data[i] & 0xF) - 10;
-    
+
     rfidBuffer[bufferIndex++] = hexChar1;
     rfidBuffer[bufferIndex++] = hexChar2;
   }
   rfidBuffer[bufferIndex] = '\0';
-  
+
   // Store the scanned RFID for menu use (optimized)
   strncpy(lastScannedRfidOptimized, rfidBuffer, sizeof(lastScannedRfidOptimized) - 1);
   lastScannedRfidOptimized[sizeof(lastScannedRfidOptimized) - 1] = '\0';
   newRfidScanned = true;
-  
+
   //Print value in HEX
   for (int i = 0; i < bytes; i++) {
     Serial.print(data[i] >> 4, 16);
     Serial.print(data[i] & 0xF, 16);
   }
   Serial.println();
-  
+
   // Different feedback based on current mode (optimized)
   if (currentMenu == MENU_RFID_SETTINGS) {
     Serial.print("RFID Scanned for Settings: ");
@@ -89,36 +89,36 @@ void receivedDataError(Wiegand::DataError error, uint8_t* rawData, uint8_t rawBi
     Serial.print(rawData[i] & 0xF, 16);
   }
   Serial.println();
-  
+
   // Count RFID errors
   static int rfidErrorCount = 0;
   rfidErrorCount++;
-  
+
   // If too many errors, log it
   if (rfidErrorCount >= 10) {
     logError(ERROR_RFID_COMMUNICATION, "RFID error 10x berturut");
-    rfidErrorCount = 0; // Reset counter
+    rfidErrorCount = 0;  // Reset counter
   }
 }
 
 // RFID Station Management Functions
 void loadRfidStations() {
   preferences.begin("rfid-stations", false);
-  
+
   rfidStationCount = preferences.getInt("stationCount", 0);
-  
+
   for (int i = 0; i < rfidStationCount && i < MAX_RFID_STATIONS; i++) {
     char stationKey[20], rfidKey[20];
     sprintf(stationKey, "station%d", i);
     sprintf(rfidKey, "rfid%d", i);
-    
+
     rfidStations[i].stationId = preferences.getInt(stationKey, 0);
     rfidStations[i].rfidId = preferences.getString(rfidKey, "");
     rfidStations[i].isActive = (rfidStations[i].stationId > 0 && rfidStations[i].rfidId.length() > 0);
   }
-  
+
   preferences.end();
-  
+
   Serial.println("Loaded RFID stations:");
   for (int i = 0; i < rfidStationCount; i++) {
     if (rfidStations[i].isActive) {
@@ -132,18 +132,18 @@ void loadRfidStations() {
 
 void saveRfidStations() {
   preferences.begin("rfid-stations", false);
-  
+
   preferences.putInt("stationCount", rfidStationCount);
-  
+
   for (int i = 0; i < rfidStationCount && i < MAX_RFID_STATIONS; i++) {
     char stationKey[20], rfidKey[20];
     sprintf(stationKey, "station%d", i);
     sprintf(rfidKey, "rfid%d", i);
-    
+
     preferences.putInt(stationKey, rfidStations[i].stationId);
     preferences.putString(rfidKey, rfidStations[i].rfidId);
   }
-  
+
   preferences.end();
   Serial.println("RFID stations saved successfully");
 }
@@ -167,7 +167,7 @@ bool addRfidStation(int stationId, String rfidId) {
     saveRfidStations();
     return true;
   }
-  
+
   // Add new station if we have space
   if (rfidStationCount < MAX_RFID_STATIONS) {
     rfidStations[rfidStationCount].stationId = stationId;
@@ -177,8 +177,8 @@ bool addRfidStation(int stationId, String rfidId) {
     saveRfidStations();
     return true;
   }
-  
-  return false; // No space available
+
+  return false;  // No space available
 }
 
 bool deleteRfidStation(int stationId) {
@@ -189,12 +189,12 @@ bool deleteRfidStation(int stationId) {
       rfidStations[i] = rfidStations[i + 1];
     }
     rfidStationCount--;
-    
+
     // Clear the last station
     rfidStations[rfidStationCount].stationId = 0;
     rfidStations[rfidStationCount].rfidId = "";
     rfidStations[rfidStationCount].isActive = false;
-    
+
     saveRfidStations();
     return true;
   }
@@ -213,30 +213,30 @@ void clearAllRfidStations() {
   preferences.begin("rfid-stations", false);
   preferences.clear();
   preferences.end();
-  
+
   for (int i = 0; i < MAX_RFID_STATIONS; i++) {
     rfidStations[i].stationId = 0;
     rfidStations[i].rfidId = "";
     rfidStations[i].isActive = false;
   }
   rfidStationCount = 0;
-  
+
   Serial.println("All RFID stations cleared");
 }
 
 // Function to check if current RFID matches a station and return station ID (optimized)
 int getStationFromLastRfid() {
   if (strlen(lastScannedRfidOptimized) == 0 || !newRfidScanned) {
-    return -1; // No RFID scanned
+    return -1;  // No RFID scanned
   }
-  
+
   for (int i = 0; i < rfidStationCount; i++) {
     if (rfidStations[i].isActive && rfidStations[i].rfidId.equals(lastScannedRfidOptimized)) {
-      newRfidScanned = false; // Reset flag to prevent repeated processing
+      newRfidScanned = false;  // Reset flag to prevent repeated processing
       return rfidStations[i].stationId;
     }
   }
-  
-  newRfidScanned = false; // Reset flag even if no match found
-  return 0; // RFID scanned but no matching station found
+
+  newRfidScanned = false;  // Reset flag even if no match found
+  return 0;                // RFID scanned but no matching station found
 }

@@ -18,29 +18,8 @@ unsigned long lastLeftPress = 0;
 unsigned long lastRightPress = 0;
 unsigned long lastStartPress = 0;
 unsigned long lastStopPress = 0;
-const unsigned long debounceDelay = 300; // 200ms debounce
+const unsigned long debounceDelay = 300;  // 200ms debounce
 
-void setupTombol() {
-  // pinMode(BOOT_PIN, INPUT_PULLUP);
-  
-  // Setup manual assigned button pins for ACTIVE HIGH with internal pull-down
-  pinMode(upPin, INPUT_PULLDOWN);     // UP - active HIGH
-  pinMode(downPin, INPUT_PULLDOWN);   // DOWN - active HIGH
-  pinMode(leftPin, INPUT_PULLDOWN);   // LEFT - active HIGH
-  pinMode(rightPin, INPUT_PULLDOWN);  // RIGHT - active HIGH
-  pinMode(startPin, INPUT_PULLDOWN);  // START - active HIGH
-  pinMode(stopPin, INPUT_PULLDOWN);   // STOP - active HIGH
-  
-  Serial.println("SETUP TOMBOL MANUAL (ACTIVE HIGH + PULLDOWN):");
-  Serial.println("UP=39, DOWN=40, LEFT=41, RIGHT=42, START=2, STOP=1");
-  Serial.println("Tekan = HIGH, Tidak tekan = LOW (pulldown)");
-  
-  // Display setup complete message
-  lcd.setCursor(0, 0);
-  lcd.print("TOMBOL PULLDOWN");
-  startTimer(&menuDelayTimer, 1500); // Non-blocking delay
-  // LCD will be cleared when timer expires in main loop
-}
 
 // Optimized button functions using efficient debounce system
 bool UP() {
@@ -113,32 +92,26 @@ void uji_tombol() {
   // Show button press on LCD at position (13,2) - right side
   // NOTE: No debounce in test function for real-time feedback
   lcd.setCursor(13, 2);
-  
+
   if (digitalRead(upPin) == HIGH) {
     lcd.print("UP ");
     Serial.println("Tombol UP ditekan");
-  }
-  else if (digitalRead(leftPin) == HIGH) {
+  } else if (digitalRead(leftPin) == HIGH) {
     lcd.print("LF ");
     Serial.println("Tombol LEFT ditekan");
-  }
-  else if (digitalRead(rightPin) == HIGH) {
+  } else if (digitalRead(rightPin) == HIGH) {
     lcd.print("RT ");
     Serial.println("Tombol RIGHT ditekan");
-  }
-  else if (digitalRead(downPin) == HIGH) {
+  } else if (digitalRead(downPin) == HIGH) {
     lcd.print("DN ");
     Serial.println("Tombol DOWN ditekan");
-  }
-  else if (digitalRead(startPin) == HIGH) {
+  } else if (digitalRead(startPin) == HIGH) {
     lcd.print("Start  ");
     Serial.println("Tombol START ditekan");
-  }
-  else if (digitalRead(stopPin) == HIGH) {
+  } else if (digitalRead(stopPin) == HIGH) {
     lcd.print("Stop  ");
     Serial.println("Tombol STOP ditekan");
-  }
-  else {
-    lcd.print("       "); // Clear if no button pressed
+  } else {
+    lcd.print("       ");  // Clear if no button pressed
   }
 }

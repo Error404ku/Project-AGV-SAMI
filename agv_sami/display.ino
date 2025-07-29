@@ -1,7 +1,5 @@
 void displayPrint() {
   // lcd.clear();
-  displaySensorData();
-  // uji_tombol();
   displayLogicAgv();
   Serial.println("Display Print");
   // displayEncoderValue();
@@ -12,34 +10,26 @@ void displayPrint() {
 void displaySensorData() {
   // Display sensor data on LCD (16 sensors in 2 rows)
   lcd.setCursor(0, 0);
-  lcd.print("Sensor:");
-  lcd.setCursor(0, 1);
-  for (int i = 0; i < 8; i++) {
-    lcd.print(jumlahMagnet[i] ? "1" : "0");
+  lcd.print("Sensor Magnet ");
+  if (getCurrentMagnetSlaveId() == SLAVEID_MAGNET_DEPAN) {
+    lcd.print("F");
+  } else {
+    lcd.print("B");
   }
-  // lcd.setCursor(8, 1);
-  // for (int i = 8; i < 16; i++) {
-  //   lcd.print(jumlahMagnet[i] ? "1" : "0");
-  // }
-  
+
+  // Display magnet sensor status: 1 = detected, 0 = not detected
+  lcd.setCursor(0, 1);
+  // Menampilkan dari kanan ke kiri (sensor 15, 14, 13, ... 0)
+  for (int i = 15; i >= 0; i--) {
+    if (jumlahMagnet[i] == 1) {
+      lcd.print("1");
+    } else {
+      lcd.print("0");
+    }
+  }
+
   // Show error value
   lcd.setCursor(0, 2);
   lcd.print("Error: ");
   lcd.print(errorValue);
 }
-
-// void displayRpm(){
-//   lcd.setCursor(0, 3);
-//   lcd.print("RPM R:");
-//   lcd.print(rpmKanan);
-//   lcd.print(" L:");
-//   lcd.print(rpmKiri);
-// }
-
-// void displayEncoderValue(){
-//   lcd.setCursor(0, 3);
-//   lcd.print("Enc R:");
-//   lcd.print(encKananAVal);
-//   lcd.print(" L:");
-//   lcd.print(encKiriAVal);
-// }

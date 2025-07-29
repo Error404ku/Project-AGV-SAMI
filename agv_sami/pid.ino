@@ -4,13 +4,13 @@ double computePID(int index, double setpoint, double input, double Kp, double Ki
     logError(ERROR_PID_CALCULATION, "PID index tidak valid");
     return 0.0;
   }
-  
+
   // Check for invalid values (NaN or infinity)
   if (isnan(setpoint) || isnan(input) || isinf(setpoint) || isinf(input)) {
     logError(ERROR_PID_CALCULATION, "PID input NaN/Inf");
     return 0.0;
   }
-  
+
   // Hitung error
   pidData[index].error = setpoint - input;
   // Hitung integral dan derivatif

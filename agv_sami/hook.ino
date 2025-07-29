@@ -1,7 +1,7 @@
 // hook mode : naik dan turun
 void hook(String mode) {
   // Apply hook inversion if enabled
-  
+
   String actualMode = mode;
   if (invertHook) {
     if (mode == "naik") {
@@ -10,7 +10,7 @@ void hook(String mode) {
       actualMode = "naik";
     }
   }
-  
+
   if (actualMode == "naik") {
     digitalWrite(pinMotorHook, LOW);
     if (digitalRead(pinHook1) == HIGH) {

@@ -21,12 +21,13 @@
 // --- Deklarasi Global ---
 WebServer server(80);
 Preferences preferences;
-Preferences stationsPreferences; // Objek Preferences untuk station yang ditemukan
-std::vector<int> stationsList; // Array di RAM untuk menyimpan station yang ditemukan
+Preferences stationsPreferences;  // Objek Preferences untuk station yang ditemukan
+std::vector<int> stationsList;    // Array di RAM untuk menyimpan station yang ditemukan
 
 int BAUDRATE = 9600;
-void setupSensorMagnet(int slaveId, int baudrate);
-void setupUltrasonikWithParams(int slaveId, int baudrate);
+void setupSensorMagnet(int slaveId);
+void setupUltrasonikWithParams(int slaveId);
+void setupRS485(int baudrate);
 
 // ### DEFINE ###
 // # TOMBOL
@@ -35,14 +36,14 @@ void setupUltrasonikWithParams(int slaveId, int baudrate);
 
 // Individual button pins (manual assignment)
 #define PIN_UP 10     // UP button
-#define PIN_LEFT 42   // LEFT button  
+#define PIN_LEFT 42   // LEFT button
 #define PIN_RIGHT 39  // RIGHT button
 #define PIN_DOWN 40   // DOWN button
 #define PIN_START 9   // START button
-#define PIN_STOP 41    // STOP button
+#define PIN_STOP 41   // STOP button
 
 // Available pins for button calibration (not used with manual assignment)
-const int availablePins[] = {39, 40, 41, 42, 2, 1};
+const int availablePins[] = { 39, 40, 41, 42, 2, 1 };
 const int availablePinsCount = 6;
 
 // Current button pin assignments (manual fixed values)
@@ -53,20 +54,22 @@ extern int currentPinDown;
 extern int currentPinStart;
 extern int currentPinStop;
 
+#define sdaPin 3
+#define sclPin 8
 // LCD I2C
 #define LCD_COLUMNS 16    // Jumlah kolom LCD
-#define LCD_ROWS 4      // Jumlah baris LCD
-#define LCD_ADDRESS 0x27 // Alamat I2C LCD (biasanya 0x27 atau 0x3F)
+#define LCD_ROWS 4        // Jumlah baris LCD
+#define LCD_ADDRESS 0x27  // Alamat I2C LCD (biasanya 0x27 atau 0x3F)
 LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 // #Interrupt
-// #define interruptPin 47
+#define lampPin 47
 
 // #Inisialisasi Pin Motor L298N
-#define IN1 48    // Motor kanan direction 1
-#define IN2 45    // Motor kanan direction 2  
+#define IN1 48  // Motor kanan direction 1
+#define IN2 45  // Motor kanan direction 2
 #define IN3 4   // Motor kiri direction 1
 #define IN4 5   // Motor kiri direction 2
-#define ENA 35   // Motor kanan enable/PWM
+#define ENA 35  // Motor kanan enable/PWM
 #define ENB 6   // Motor kiri enable/PWM
 
 // // #Inisialisasi Pin Encoder
@@ -83,10 +86,10 @@ LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 #define RS485_TX 17
 
 // Mapping Slave ID ke Sensor
-#define SLAVEID_MAGNET_DEPAN      1
-#define SLAVEID_ULTRASONIK_DEPAN  2
+#define SLAVEID_MAGNET_DEPAN 1
+#define SLAVEID_ULTRASONIK_DEPAN 2
 #define SLAVEID_ULTRASONIK_BELAKANG 3
-#define SLAVEID_MAGNET_BELAKANG   4
+#define SLAVEID_MAGNET_BELAKANG 4
 
 // Hapus/abaikan pin RX/TX sensor lain (semua pakai RS485_RX dan RS485_TX)
 // #define RX_MAGNET_FRONT 11//3
@@ -123,10 +126,10 @@ const char* password = "kalolaparmakan";
 IPAddress staticIP(192, 168, 121, 14);
 IPAddress gateway(192, 168, 121, 99);
 IPAddress subnet(255, 255, 255, 0);
-IPAddress dns(192, 168, 121, 99); // Gunakan gateway sebagai DNS
+IPAddress dns(192, 168, 121, 99);  // Gunakan gateway sebagai DNS
 
 const char* PREFERENCES_NAMESPACE = "device_data";
-const char* STATIONS_NAMESPACE = "stations"; // Namespace untuk menyimpan station yang ditemukan
+const char* STATIONS_NAMESPACE = "stations";  // Namespace untuk menyimpan station yang ditemukan
 
 // // # Variable Nilai Encoder
 
@@ -198,7 +201,7 @@ int buttonStep = 0;  // Track button state for sequential actions
 
 int baseSpeed = 1000;
 
-// RFID 
+// RFID
 #define PIN_D0 12
 #define PIN_D1 13
 
@@ -219,7 +222,7 @@ int rfidStationCount = 0;
 bool isScanning = false;
 int currentScanStation = 0;
 // String lastScannedRfid = ""; // Replaced with optimized char array
-extern char lastScannedRfidOptimized[32]; // Optimized RFID storage
+extern char lastScannedRfidOptimized[32];  // Optimized RFID storage
 bool newRfidScanned = false;
 
 // Obstacle detection variables
@@ -240,17 +243,17 @@ bool statusMusic = false;
 #define pinMotorHook 21
 
 // Motor inversion settings
-bool invertMotorY = false;  // Invers maju-mundur (forward/backward)
-bool invertMotorX = false;  // Invers kiri-kanan (left/right)
+bool invertMotorY = false;      // Invers maju-mundur (forward/backward)
+bool invertMotorX = false;      // Invers kiri-kanan (left/right)
 bool invertMotorKanan = false;  // Invers motor kanan individual
 bool invertMotorKiri = false;   // Invers motor kiri individual
 bool invertHook = false;        // Invers hook naik-turun
 
 // Music pin mapping settings (0=pinMusic1, 1=pinMusic2, 2=pinMusic3, 3=pinMusic4)
-int musicStationPin = 0;    // Default: pinMusic1 untuk station
-int musicErrorPin = 1;      // Default: pinMusic2 untuk error  
-int musicDetectPin = 2;     // Default: pinMusic3 untuk detect
-int musicKomputerPin = 3;   // Default: pinMusic4 untuk komputer
+int musicStationPin = 0;   // Default: pinMusic1 untuk station
+int musicErrorPin = 1;     // Default: pinMusic2 untuk error
+int musicDetectPin = 2;    // Default: pinMusic3 untuk detect
+int musicKomputerPin = 3;  // Default: pinMusic4 untuk komputer
 
 // Error codes definition
 #define ERROR_SENSOR_COMMUNICATION 1
@@ -276,8 +279,11 @@ void preTransmissionUltrasonic();
 void postTransmissionUltrasonic();
 
 // ===== MAGNET SENSOR FUNCTIONS =====
+void bacaSensor();
+void bacaSensor(int slaveId);
 void switchMagnetSensor(bool useFrontSensor);
 int getCurrentMagnetSlaveId();
+void setMagnetSlaveId(int slaveId);
 
 // ===== PERFORMANCE OPTIMIZATION FUNCTIONS =====
 // Timer system

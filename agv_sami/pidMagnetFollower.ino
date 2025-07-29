@@ -15,21 +15,20 @@ void pidLinefollower(int errorPosisi, String mode) {
     Serial.println("MOTOR STOPPED - Obstacle detected!");
     // buzzerError();
     music("error");
-    return; // Exit function early
+    return;  // Exit function early
   }
 
   pidError = errorPosisi;
-  
+
   // Apply X-axis inversion (kiri-kanan) if enabled
   if (invertMotorX) {
     pidError = -pidError;
   }
-  
+
   integral += pidError;
   derivative = pidError - lastError;
 
-  float koreksi = kpLinefollower * pidError + kiLinefollower * integral +
-                  kdLinefollower * derivative;
+  float koreksi = kpLinefollower * pidError + kiLinefollower * integral + kdLinefollower * derivative;
 
   int motorKiri = baseSpeed - koreksi;
   int motorKanan = baseSpeed + koreksi;
