@@ -15,9 +15,10 @@
 #define MENU_RESET 11
 #define MENU_MAGNET_CHECK 12
 #define MENU_ULTRASONIC_CHECK 13
+#define MENU_WIFI_SETTINGS 14
 
 int selectedItem = 0;
-int maxItems = 13;
+int maxItems = 14;
 int menuStartIndex = 0;        // For scrolling menu
 const int maxMenuDisplay = 3;  // Max items shown at once (row 1-3, row 0 for header)
 bool isAgvMode = false;
@@ -94,6 +95,12 @@ int motorTestState = 0;  // 0=stop, 1=forward, 2=backward, 3=left, 4=right
 // Hook test variables
 int hookTestState = 0;  // 0=stop, 1=naik, 2=turun
 
+// WiFi settings variables
+bool isConnectingWifi = false;
+bool wifiConnectionResult = false;
+unsigned long wifiConnectStartTime = 0;
+const unsigned long WIFI_CONNECT_TIMEOUT = 10000;  // 10 seconds timeout
+
 // Global display functions
 void displayIndicator(int current, int selected) {
   if (current == selected) {
@@ -165,7 +172,7 @@ void saveSettings() {
 
 void displayMainMenu() {
   // Menu items array
-  String menuItems[13] = {
+  String menuItems[14] = {
     "AGV Mode",
     "Motor Test",
     "PID Settings",
@@ -178,7 +185,8 @@ void displayMainMenu() {
     "Hook Test",
     "Reset Settings",
     "Magnet Check",
-    "Ultrasonic Check"
+    "Ultrasonic Check",
+    "WiFi Settings"
   };
 
   // Update scroll position if needed
@@ -880,6 +888,9 @@ void handleMenu() {
           } else if (selectedItem == 12) {  // Ultrasonic Check (item 13)
             currentMenu = MENU_ULTRASONIC_CHECK;
             menuNeedsRefresh = true;
+          } else if (selectedItem == 13) {  // WiFi Settings (item 14)
+            currentMenu = MENU_WIFI_SETTINGS;
+            menuNeedsRefresh = true;
           } else {
             currentMenu = selectedItem + 1;
             menuNeedsRefresh = true;
@@ -1168,12 +1179,22 @@ void handleMenu() {
         }
       }
       break;
-
+ 
     case MENU_ULTRASONIC_CHECK:
       displayUltrasonicCheck();
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handleUltrasonicCheck();
         if (STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_WIFI_SETTINGS:
+      displayWifiSettings();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleWifiSettings();
+        if (START() || STOP()) {
           lastButtonPress = currentMillis;
         }
       }
@@ -1379,4 +1400,114 @@ void handleUltrasonicCheck() {
     menuNeedsRefresh = true;
   }
   // Display updates automatically since displayUltrasonicCheck reads current sensor values
+}
+
+void displayWifiSettings() {
+  if (isConnectingWifi) {
+    // Show connecting status at cursor 0,0
+    lcd.setCursor(0, 0);
+    lcd.print("Mencari WiFi        ");  // Clear line
+    
+    unsigned long elapsed = millis() - wifiConnectStartTime;
+    
+    // Show result at cursor 0,2
+    lcd.setCursor(0, 2);
+    if (WiFi.status() == WL_CONNECTED) {
+      lcd.print("Berhasil!           ");  // Clear line
+      isConnectingWifi = false;
+      wifiConnectionResult = true;
+    } else if (elapsed >= WIFI_CONNECT_TIMEOUT) {
+      lcd.print("Gagal!              ");  // Clear line
+      isConnectingWifi = false;
+      wifiConnectionResult = false;
+    } else {
+      // Show progress dots
+      int dots = (elapsed / 500) % 4;
+      lcd.print("Menunggu");
+      for (int i = 0; i < dots; i++) {
+        lcd.print(".");
+      }
+      for (int i = dots; i < 3; i++) {
+        lcd.print(" ");
+      }
+      lcd.print("        ");  // Clear rest of line
+    }
+    
+    // Clear other lines
+    lcd.setCursor(0, 1);
+    lcd.print("                    ");
+    lcd.setCursor(0, 3);
+    lcd.print("                    ");
+  } else {
+    // Show current WiFi status
+    if (WiFi.status() == WL_CONNECTED) {
+      displayMenuHeader("WiFi Settings");
+      lcd.setCursor(0, 1);
+      lcd.print("Status: ");
+      lcd.print("Terhubung   ");
+      lcd.setCursor(0, 2);
+      lcd.print("IP: ");
+      lcd.print(WiFi.localIP().toString().substring(0, 15));
+      lcd.print("         ");
+    } else {
+      // Show AP mode info when client is disconnected
+      lcd.setCursor(0, 0);
+      lcd.print("IP: 192.168.121.14");
+      lcd.setCursor(0, 1);
+      lcd.print("Status: ");
+      lcd.print("AP Mode     ");
+      lcd.setCursor(0, 2);
+      lcd.print("SSID:ESP32-AGV-Cfg");
+      lcd.setCursor(0, 3);
+      lcd.print("Pass:12345678");
+      lcd.print("                    ");
+      return;  // Skip the connect button display
+    }
+    
+    lcd.setCursor(0, 3);
+    lcd.print("A:Connect B:Back    ");
+  }
+}
+
+void handleWifiSettings() {
+  if (isConnectingWifi) {
+    // Check if connection completed
+    unsigned long elapsed = millis() - wifiConnectStartTime;
+    if (WiFi.status() == WL_CONNECTED || elapsed >= WIFI_CONNECT_TIMEOUT) {
+      isConnectingWifi = false;
+    }
+    return;
+  }
+  
+  if (START()) {
+    // Start WiFi connection
+    isConnectingWifi = true;
+    wifiConnectStartTime = millis();
+    
+    // Load WiFi config and attempt connection
+    loadWifiConfig();
+    WiFi.disconnect();
+    delay(100);
+    
+    // Try to connect as client first
+    WiFi.mode(WIFI_AP_STA);  // Enable both AP and STA mode
+    if (strlen(staticIPStr) > 0) {
+      IPAddress staticIP, gateway, subnet, dns;
+      staticIP.fromString(staticIPStr);
+      gateway.fromString(gatewayStr);
+      subnet.fromString(subnetStr);
+      dns.fromString(dnsStr);
+      WiFi.config(staticIP, gateway, subnet, dns);
+    }
+    WiFi.begin(ssid, password);
+    
+    // Ensure AP is still active for web access
+    WiFi.softAP("ESP32-AGV-Config", "12345678");
+    WiFi.softAPConfig(IPAddress(192, 168, 121, 14), IPAddress(192, 168, 121, 14), IPAddress(255, 255, 255, 0));
+    
+  } else if (STOP()) {
+    currentMenu = MENU_MAIN;
+    menuStartIndex = 0;
+    menuNeedsRefresh = true;
+  }
 }

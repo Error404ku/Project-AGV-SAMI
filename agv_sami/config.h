@@ -121,12 +121,19 @@ ModbusMaster node;
 
 // ## VARIABLE ##
 // # variable Web Server
-const char* ssid = "My Phone";
-const char* password = "kalolaparmakan";
+// WiFi configuration variables (can be modified via web interface)
+char ssid[32] = "My Phone";
+char password[64] = "kalolaparmakan";
+char staticIPStr[16] = "192.168.121.14";
+char gatewayStr[16] = "192.168.121.99";
+char subnetStr[16] = "255.255.255.0";
+char dnsStr[16] = "192.168.121.99";
+
+// IP Address objects (will be updated from string values)
 IPAddress staticIP(192, 168, 121, 14);
 IPAddress gateway(192, 168, 121, 99);
 IPAddress subnet(255, 255, 255, 0);
-IPAddress dns(192, 168, 121, 99);  // Gunakan gateway sebagai DNS
+IPAddress dns(192, 168, 121, 99);
 
 const char* PREFERENCES_NAMESPACE = "device_data";
 const char* STATIONS_NAMESPACE = "stations";  // Namespace untuk menyimpan station yang ditemukan
@@ -284,6 +291,14 @@ void bacaSensor(int slaveId);
 void switchMagnetSensor(bool useFrontSensor);
 int getCurrentMagnetSlaveId();
 void setMagnetSlaveId(int slaveId);
+
+// ===== WIFI CONFIGURATION FUNCTIONS =====
+bool saveWifiConfig(const String& ssid, const String& password, const String& staticIP, const String& gateway, const String& subnet, const String& dns);
+bool loadWifiConfig();
+void updateIPAddressesFromStrings();
+void handleWifiConfig();
+void handleSaveWifi();
+void handleRoot();
 
 // ===== PERFORMANCE OPTIMIZATION FUNCTIONS =====
 // Timer system

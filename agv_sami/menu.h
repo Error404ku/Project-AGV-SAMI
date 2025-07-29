@@ -13,6 +13,7 @@
 #define MENU_AGV_MODE 1
 #define MENU_RESET 5
 #define MENU_RFID_SETTINGS 6
+#define MENU_WIFI_SETTINGS 14
 
 // External variables from other files
 extern int targetStation[2];
@@ -37,8 +38,10 @@ void displayMainMenu();
 void displayMotorTest();
 void displayPidSettings();
 void displayTargetSettings();
+void displayWifiSettings();
 void handleMotorTest();
 void handlePidSettings();
 void handleTargetSettings();
+void handleWifiSettings();
 
 #endif

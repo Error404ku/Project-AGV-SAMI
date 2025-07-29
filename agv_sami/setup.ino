@@ -76,45 +76,69 @@ void setupDisplay() {
 void setupWebServer() {
   // Muat daftar stasiun dari Preferences saat startup
   loadStationsListFromPreferences();
+  
+  // Muat konfigurasi WiFi dari Preferences
+  loadWifiConfig();
+  
   lcd.setCursor(0, 0);
   lcd.print("SETUP WIFI");
 
-  // Konfigurasi dan mulai koneksi Wi-Fi
-  WiFi.begin(ssid, password);
-  if (!WiFi.config(staticIP, gateway, subnet, dns)) {
-    Serial.println("Error: Gagal mengkonfigurasi IP Statis");
-    error(ERROR_WIFI_CONNECTION, "Gagal config IP static");
+  // Set WiFi mode to AP+STA first
+  WiFi.mode(WIFI_AP_STA);
+  
+  // Setup Access Point first
+  const char* ap_ssid = "ESP32-AGV-Config";
+  const char* ap_password = "12345678";
+  WiFi.softAP(ap_ssid, ap_password);
+  WiFi.softAPConfig(IPAddress(192, 168, 121, 14), IPAddress(192, 168, 121, 14), IPAddress(255, 255, 255, 0));
+  
+  // Then try to connect as client
+  if (strlen(staticIPStr) > 0) {
+    if (!WiFi.config(staticIP, gateway, subnet, dns)) {
+      Serial.println("Warning: Gagal mengkonfigurasi IP Statis, lanjut tanpa IP statis");
+    }
   }
+  WiFi.begin(ssid, password);
 
   int wifiAttempts = 0;
-  while (WiFi.status() != WL_CONNECTED) {
-    // lcd.clear();
+  bool wifiConnected = false;
+  
+  while (WiFi.status() != WL_CONNECTED && wifiAttempts < 20) {  // Reduced timeout to 10 seconds
     lcd.setCursor(0, 0);
     lcd.print("MENCARI WIFI");
     delay(500);
-
     wifiAttempts++;
-    if (wifiAttempts > 60) {  // 30 seconds timeout
-      error(ERROR_WIFI_CONNECTION, "WiFi timeout 30 detik");
-    }
   }
-  Serial.println("\nKoneksi Wi-Fi berhasil!");
-  Serial.print("Alamat IP: ");
-  Serial.println(WiFi.localIP());
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Wi-Fi Berhasil!");
-  lcd.setCursor(0, 1);
-  lcd.print("IP: ");
-  lcd.print(WiFi.localIP());
+  
+  if (WiFi.status() == WL_CONNECTED) {
+    wifiConnected = true;
+    Serial.println("\nKoneksi Wi-Fi berhasil!");
+    Serial.print("Alamat IP: ");
+    Serial.println(WiFi.localIP());
+    lcd.setCursor(0, 1);
+    lcd.print("Wi-Fi Berhasil!");
+    lcd.setCursor(0, 2);
+    lcd.print("IP: ");
+    lcd.print(WiFi.localIP());
+  } else {
+    lcd.setCursor(0, 1);
+    lcd.print("Wi-Fi Gagal!");
+    Serial.println("\nWiFi gagal terhubung, tetapi Access Point tetap aktif...");
+    
+    // AP info will be shown only in WiFi Settings menu
+    delay(2000);
+   }
+  
   // Registrasi Endpoint HTTP yang diminta
   server.on("/updatestations", HTTP_POST, handleUpdateStations);  // Untuk menyimpan/menimpa daftar stasiun
   server.on("/showstations", HTTP_GET, handleShowStations);       // Untuk menampilkan daftar stasiun
-
-  // Halaman utama server
-  server.on("/", HTTP_GET, []() {
-    server.send(200, "text/html", "Server ESP32 Aktif. <br> Coba: <br> /updatestations (POST)<br> /showstations (GET)");
-  });
+  
+  // WiFi Configuration endpoints
+  server.on("/", HTTP_GET, handleRoot);                          // Halaman utama dengan menu
+  server.on("/wifi", HTTP_GET, handleWifiConfig);                // Halaman konfigurasi WiFi
+  server.on("/wifi-config", HTTP_GET, handleWifiConfig);         // Halaman konfigurasi WiFi (alias)
+  server.on("/savewifi", HTTP_POST, handleSaveWifi);             // Simpan konfigurasi WiFi
+  server.on("/save-wifi", HTTP_POST, handleSaveWifi);            // Simpan konfigurasi WiFi (alias)
 
   // Handler untuk endpoint tidak ditemukan
   server.onNotFound([]() {
@@ -283,9 +307,10 @@ void setupAll() {
   setupSensorMagnet(SLAVEID_MAGNET_DEPAN);
   setupUltrasonikWithParams(SLAVEID_ULTRASONIK_DEPAN);
   setupHook();  // setupBuzzer();
-  // setupWebServer();
+  setupWebServer();
   setupTombol();
   setupRfid();
+  lcd.clear();
   lcd.setCursor(0, 0);
   lcd.println("SETUP ALL SELESAI");
   delay(1000);
