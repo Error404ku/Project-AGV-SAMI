@@ -78,16 +78,28 @@ void agvTerminalDrop() {
 
 void agvTerminalPickup() {
   bool trigger = false;
+  bool triggerHook = false;
   //Save current state
   saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_PICKUP);
 
   agvStop();
-  hook("naik");
-  delay(2000);
-
+  if (!currentStateAGV == AGV_STATE_NULL){
+    hook("naik");
+    delay(2000);
+    if (START()){
+      triggerHook = true;
+    }
+    switch(triggerHook){
+      case true:
+        hook("naik");
+        break;
+    }
+  }
+  
   if (START()){
     trigger = true;
   }
+
   switch(trigger){
     case true:
       pidLinefollower(2, PID_MODE_MAJU);
@@ -98,7 +110,7 @@ void agvTerminalPickup() {
         break;
       }
       break;
-  }
+    }
 }
 
 void agvStop() {
