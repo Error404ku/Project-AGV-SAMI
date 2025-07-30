@@ -33,13 +33,7 @@ void agvWarehouse() {
   bool trigger = false;
   saveCurrentStateAGVToPreferences(AGV_STATE_WAREHOUSE);
   agvStop();
-  lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("Mode: Warehouse");
-  lcd.setCursor(0,1);
-  lcd.print("Tekan Start");
-  lcd.setCursor(0,2);
-  lcd.print("untuk jalan");
+  modeDisplayWarehouse();
   if (START()) {
     trigger = true;
   }

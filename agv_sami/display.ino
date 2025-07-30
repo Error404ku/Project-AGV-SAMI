@@ -7,6 +7,41 @@ void displayPrint() {
 }
 
 
+void scrollText(int row, String message, int delayTime) {
+  unsigned long lastScrollTime = 0;
+  int scrollPos = 0;
+  // Inisialisasi ulang posisi scroll dan waktu jika pesan berubah atau fungsi dipanggil pertama kali
+  static String currentMessage = "";
+  if (message != currentMessage) {
+    currentMessage = message;
+    scrollPos = 0;
+    lastScrollTime = millis();
+  }
+
+  // Tambahkan spasi di awal dan akhir pesan untuk efek scrolling yang mulus
+  String paddedMessage = message;
+  for (int i = 0; i < 16; i++) {
+    paddedMessage = " " + paddedMessage;  
+  } 
+  paddedMessage = paddedMessage + " "; 
+
+  // Lakukan scrolling jika waktu yang ditentukan telah berlalu
+  if (millis() - lastScrollTime > delayTime) {
+    lastScrollTime = millis();
+    lcd.setCursor(0, row);
+    lcd.print(paddedMessage.substring(scrollPos, scrollPos + 16));
+    scrollPos++;
+    if (scrollPos > paddedMessage.length() - 16) {
+      scrollPos = 0;
+    }
+  }
+}
+void modeDisplayWarehouse(){
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Mode: Warehouse");
+  scrollText(1, "Tekan Start untuk jalan", 500, 16);
+}
 void displaySensorData() {
   // Display sensor data on LCD (16 sensors in 2 rows)
   lcd.setCursor(0, 0);
