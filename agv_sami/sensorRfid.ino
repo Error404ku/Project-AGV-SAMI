@@ -4,6 +4,15 @@ void loopRfid() {
     return;
   }
 
+  // Add debouncing to prevent too frequent processing
+  static unsigned long lastRfidProcess = 0;
+  unsigned long currentMillis = millis();
+  
+  if (currentMillis - lastRfidProcess < 50) { // 50ms debounce
+    return;
+  }
+  lastRfidProcess = currentMillis;
+
   noInterrupts();
   wiegand.flush();
   interrupts();
@@ -11,6 +20,16 @@ void loopRfid() {
   // delay(100);
 }
 void pinStateChanged() {
+  // Add interrupt debouncing to prevent excessive interrupt calls
+  static unsigned long lastInterruptTime = 0;
+  unsigned long currentTime = micros();
+  
+  // Debounce interrupts - ignore if too close together (< 100 microseconds)
+  if (currentTime - lastInterruptTime < 100) {
+    return;
+  }
+  lastInterruptTime = currentTime;
+  
   wiegand.setPin0State(digitalRead(PIN_D0));
   wiegand.setPin1State(digitalRead(PIN_D1));
 }
@@ -25,6 +44,16 @@ void stateChanged(bool plugged, const char* message) {
 // Notifies when a card was read.
 // Instead of a message, the seconds parameter can be anything you want -- Whatever you specify on `wiegand.onReceive()`
 void receivedData(uint8_t* data, uint8_t bits, const char* message) {
+  // Add debouncing to prevent rapid successive scans
+  static unsigned long lastScanTime = 0;
+  static char lastRfidBuffer[32] = "";
+  unsigned long currentMillis = millis();
+  
+  // Prevent processing if scan is too soon after last scan (debounce)
+  if (currentMillis - lastScanTime < 200) { // 200ms debounce
+    return;
+  }
+  
   Serial.print(message);
   Serial.print(bits);
   Serial.print("bits / ");
@@ -43,6 +72,16 @@ void receivedData(uint8_t* data, uint8_t bits, const char* message) {
     rfidBuffer[bufferIndex++] = hexChar2;
   }
   rfidBuffer[bufferIndex] = '\0';
+  
+  // Check if this is the same RFID as last scan (prevent duplicate processing)
+  if (strcmp(rfidBuffer, lastRfidBuffer) == 0) {
+    return;
+  }
+  
+  // Update last scan data
+  lastScanTime = currentMillis;
+  strncpy(lastRfidBuffer, rfidBuffer, sizeof(lastRfidBuffer) - 1);
+  lastRfidBuffer[sizeof(lastRfidBuffer) - 1] = '\0';
 
   // Store the scanned RFID for menu use (optimized)
   strncpy(lastScannedRfidOptimized, rfidBuffer, sizeof(lastScannedRfidOptimized) - 1);
@@ -76,28 +115,62 @@ void receivedData(uint8_t* data, uint8_t bits, const char* message) {
 
 // Notifies when an invalid transmission is detected
 void receivedDataError(Wiegand::DataError error, uint8_t* rawData, uint8_t rawBits, const char* message) {
+  // Add debouncing for error handling to prevent spam
+  static unsigned long lastErrorTime = 0;
+  static int consecutiveErrors = 0;
+  unsigned long currentMillis = millis();
+  
+  // If errors are too frequent, ignore some to prevent system overload
+  if (currentMillis - lastErrorTime < 100) { // 100ms debounce for errors
+    consecutiveErrors++;
+    if (consecutiveErrors > 5) {
+      return; // Ignore excessive errors
+    }
+  } else {
+    consecutiveErrors = 0; // Reset if enough time has passed
+  }
+  lastErrorTime = currentMillis;
+  
   Serial.print(message);
   Serial.print(Wiegand::DataErrorStr(error));
   Serial.print(" - Raw data: ");
   Serial.print(rawBits);
   Serial.print("bits / ");
 
-  //Print value in HEX
+  //Print value in HEX (with bounds checking)
   uint8_t bytes = (rawBits + 7) / 8;
-  for (int i = 0; i < bytes; i++) {
-    Serial.print(rawData[i] >> 4, 16);
-    Serial.print(rawData[i] & 0xF, 16);
+  if (bytes > 0 && bytes <= 32) { // Bounds checking
+    for (int i = 0; i < bytes; i++) {
+      Serial.print(rawData[i] >> 4, 16);
+      Serial.print(rawData[i] & 0xF, 16);
+    }
   }
   Serial.println();
 
-  // Count RFID errors
+  // Count RFID errors with reset mechanism
   static int rfidErrorCount = 0;
+  static unsigned long errorResetTime = 0;
+  
   rfidErrorCount++;
+  
+  // Reset error count every 30 seconds
+  if (currentMillis - errorResetTime > 30000) {
+    rfidErrorCount = 0;
+    errorResetTime = currentMillis;
+  }
 
-  // If too many errors, log it
+  // If too many errors in short time, log it and try recovery
   if (rfidErrorCount >= 10) {
+    Serial.println("RFID: Too many errors, attempting recovery...");
     logError(ERROR_RFID_COMMUNICATION, "RFID error 10x berturut");
+    
+    // Attempt RFID recovery
+    if (recoverRfidCommunication()) {
+      Serial.println("RFID recovery successful");
+    }
+    
     rfidErrorCount = 0;  // Reset counter
+    errorResetTime = currentMillis;
   }
 }
 
@@ -158,6 +231,14 @@ int findRfidStation(int stationId) {
 }
 
 bool addRfidStation(int stationId, String rfidId) {
+  // Check if RFID ID already exists (prevent duplicate RFID)
+  for (int i = 0; i < rfidStationCount; i++) {
+    if (rfidStations[i].isActive && rfidStations[i].rfidId.equals(rfidId)) {
+      Serial.println("RFID already exists, not adding duplicate");
+      return false;  // RFID already exists, don't add duplicate
+    }
+  }
+
   // Check if station already exists
   int existingIndex = findRfidStation(stationId);
   if (existingIndex >= 0) {
@@ -239,4 +320,54 @@ int getStationFromLastRfid() {
 
   newRfidScanned = false;  // Reset flag even if no match found
   return 0;                // RFID scanned but no matching station found
+}
+
+// Function to add RFID as new station with auto-increment ID
+bool addRfidStationAuto(String rfidId) {
+  // Check if RFID ID already exists (prevent duplicate RFID)
+  for (int i = 0; i < rfidStationCount; i++) {
+    if (rfidStations[i].isActive && rfidStations[i].rfidId.equals(rfidId)) {
+      Serial.println("RFID already exists, not adding duplicate");
+      return false;  // RFID already exists, don't add duplicate
+    }
+  }
+
+  // Find next available station ID
+  int nextStationId = 1;
+  bool foundId = false;
+  
+  while (!foundId && nextStationId <= 99) {
+    bool idExists = false;
+    for (int i = 0; i < rfidStationCount; i++) {
+      if (rfidStations[i].isActive && rfidStations[i].stationId == nextStationId) {
+        idExists = true;
+        break;
+      }
+    }
+    
+    if (!idExists) {
+      foundId = true;
+    } else {
+      nextStationId++;
+    }
+  }
+
+  if (!foundId) {
+    Serial.println("No available station ID found");
+    return false;
+  }
+
+  // Add new station if we have space
+  if (rfidStationCount < MAX_RFID_STATIONS) {
+    rfidStations[rfidStationCount].stationId = nextStationId;
+    rfidStations[rfidStationCount].rfidId = rfidId;
+    rfidStations[rfidStationCount].isActive = true;
+    rfidStationCount++;
+    saveRfidStations();
+    Serial.print("Added new station ID: ");
+    Serial.println(nextStationId);
+    return true;
+  }
+
+  return false;  // No space available
 }

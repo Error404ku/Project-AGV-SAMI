@@ -1,48 +1,28 @@
 #include "config.h"
-extern bool modeMaju;
-extern bool modeMundur;
 
 void setup() {
   Serial.begin(115200);
   setupAll();
 
-  // Initialize performance optimization system
-  initPerformanceOptimization();
-
   // lcd.clear();
-  changeStateMode("maju");
-  Serial.println("SETUP SELESAI - Performance Optimization Active");
+  // changeStateMode("maju");
 }
 
 void loop() {
-  // Start performance monitoring
-  startPerformanceMonitoring();
-  // Update performance optimization timers
-  updatePerformanceOptimization();
-  // Skip main operations if system is in error state
-  if (systemInErrorState) {
-    endPerformanceMonitoring();
-    return;
-  }
   server.handleClient();
-  loopRfid();  // Handle RFID scanning - now controlled internally by conditions
-  // loopUltrasonik(); // Akan dipanggil manual sesuai mode
-
+  loopRfid(); // Handle RFID scanning - now controlled internally by conditions
+  loopUltrasonik(); // Handle ultrasonic obstacle detection
+  updateHookStatus(); // Update hook status and handle automatic operations
+  
+  // Handle debug commands
+  handleDebugCommands();
+  
+  // delay(1000);
   if (isAgvMode) {
-    // AGV Mode - Run normal AGV operation    
+    // AGV Mode - Run normal AGV operation
+    // pembacaanRpm();
     displayPrint();
-    bacaSensor();
-    loopUltrasonik();
-    // --- Pembacaan sensor sesuai mode ---
-    if (modeMaju) {
-      setMagnetSlaveId(SLAVEID_MAGNET_DEPAN);
-      setUltrasonicSlaveId(SLAVEID_ULTRASONIK_DEPAN);
-    } else if (modeMundur) {
-      setMagnetSlaveId(SLAVEID_MAGNET_BELAKANG);
-      setUltrasonicSlaveId(SLAVEID_ULTRASONIK_BELAKANG);
-    }
-
-    displaySensorData();
+    bacaSensorGaris();
     logicAgv();
 
     // Check for B button to exit AGV mode
@@ -56,8 +36,20 @@ void loop() {
     inTerminal();
     handleMenu();
   }
-
-  // End performance monitoring
-  endPerformanceMonitoring();
   // LCD doesn't need display() call - content shows immediately
+}
+
+// Function to handle debug commands from Serial
+void handleDebugCommands() {
+  if (Serial.available()) {
+    char command = Serial.read();
+    
+    // Clear any remaining characters in buffer
+    while (Serial.available()) {
+      Serial.read();
+    }
+    
+    // Process debug command
+    toggleDebugMode(command);
+  }
 }

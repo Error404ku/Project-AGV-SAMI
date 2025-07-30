@@ -4,7 +4,6 @@
 #include <Wire.h>
 #include <Arduino.h>
 #include <math.h>
-#include <Wire.h>
 #include <LiquidCrystal_I2C.h>  // ESP32 LCD I2C Library
 #include <ModbusMaster.h>
 #include <WiFi.h>
@@ -21,13 +20,75 @@
 // --- Deklarasi Global ---
 WebServer server(80);
 Preferences preferences;
-Preferences stationsPreferences;  // Objek Preferences untuk station yang ditemukan
-std::vector<int> stationsList;    // Array di RAM untuk menyimpan station yang ditemukan
+Preferences stationsPreferences; // Objek Preferences untuk station yang ditemukan
+std::vector<int> stationsList; // Array di RAM untuk menyimpan station yang ditemukan
 
-int BAUDRATE = 9600;
-void setupSensorMagnet(int slaveId);
-void setupUltrasonikWithParams(int slaveId);
-void setupRS485(int baudrate);
+// Unified RS485 configuration
+int BAUDRATE_RS485 = 9600;
+
+// Device addresses for unified RS485 communication
+#define ADDR_MAGNET_FRONT 1
+#define ADDR_ULTRASONIC_FRONT 2  
+#define ADDR_ULTRASONIC_BACK 3
+#define ADDR_MAGNET_BACK 4
+
+// Legacy slave ID definitions for compatibility
+#define SLAVEID_MAGNET_DEPAN ADDR_MAGNET_FRONT
+#define SLAVEID_MAGNET_BELAKANG ADDR_MAGNET_BACK
+#define SLAVEID_ULTRASONIK_DEPAN ADDR_ULTRASONIC_FRONT
+#define SLAVEID_ULTRASONIK_BELAKANG ADDR_ULTRASONIC_BACK
+#define BAUDRATE BAUDRATE_RS485
+
+// Function declarations for unified RS485 system
+void setupUnifiedRS485();
+void loopUnifiedRS485();
+int getNextPriorityDevice();
+void setupUltrasonikWithParams(int rx, int tx, int baudrate);
+void setupSensorMagnet(int slaveId, int rx, int tx, int baudrate);
+void music(String mode);
+void receivedData(uint8_t* data, uint8_t bits, const char* message);
+void error(int code, String text);
+void logError(int code, String text);
+int hitungErrorPosisi(uint16_t bitmask);
+void pwmMotor(int motor1, int motor2);
+void forceDisplayRefresh();
+
+// Deklarasi fungsi debug RS485
+void setupRS485Debug();
+void debugRS485Loop();
+void debugModbusError(uint8_t result, const char* deviceName);
+void debugPacketData(byte* packet, int length, const char* direction);
+void debugTiming(const char* operation, unsigned long startTime);
+void updateMagnetFrontStats(bool success, bool timeout = false);
+void updateMagnetBackStats(bool success, bool timeout = false);
+void updateUltrasonicFrontStats(bool success, bool crcError = false);
+void updateUltrasonicBackStats(bool success, bool crcError = false);
+void diagnoseCommonIssues();
+void toggleDebugMode(char mode);
+void handleDebugCommands();
+
+// Debug flags (extern karena didefinisikan di debug_rs485.ino)
+extern bool enableRS485Debug;
+extern bool enableDetailedDebug;
+extern bool enablePacketDebug;
+extern bool enableTimingDebug;
+uint8_t* getCurrentMagnetData();
+uint8_t* getMagnetData(bool useFront);
+uint16_t* getUltrasonicData(bool useFront);
+bool isDeviceOnline(int deviceIndex);
+String getDeviceStatusString();
+void updateMagnetData(uint16_t bitmask, uint8_t* magnetArray);
+void checkObstaclesFront();
+void checkObstaclesBack();
+bool hasObstacle(bool checkFront);
+uint16_t calculate_crc(byte* buffer, int len);
+
+// External variables from unified_rs485.ino
+extern const unsigned long deviceSwitchInterval[4];
+extern const unsigned long deviceTimeout[4];
+extern bool deviceOnline[4];
+extern unsigned long lastCommAttempt[4];
+extern int commFailureCount[4];
 
 // ### DEFINE ###
 // # TOMBOL
@@ -35,15 +96,15 @@ void setupRS485(int baudrate);
 #define BOOT_PIN 0
 
 // Individual button pins (manual assignment)
-#define PIN_UP 10     // UP button
-#define PIN_LEFT 42   // LEFT button
-#define PIN_RIGHT 39  // RIGHT button
+#define PIN_UP 39     // UP button
+#define PIN_LEFT 41   // LEFT button  
+#define PIN_RIGHT 42  // RIGHT button
 #define PIN_DOWN 40   // DOWN button
-#define PIN_START 9   // START button
-#define PIN_STOP 41   // STOP button
+#define PIN_START 2   // START button
+#define PIN_STOP 1    // STOP button
 
 // Available pins for button calibration (not used with manual assignment)
-const int availablePins[] = { 39, 40, 41, 42, 2, 1 };
+const int availablePins[] = {39, 40, 41, 42, 2, 1};
 const int availablePinsCount = 6;
 
 // Current button pin assignments (manual fixed values)
@@ -54,22 +115,20 @@ extern int currentPinDown;
 extern int currentPinStart;
 extern int currentPinStop;
 
-#define sdaPin 3
-#define sclPin 8
 // LCD I2C
 #define LCD_COLUMNS 16    // Jumlah kolom LCD
-#define LCD_ROWS 4        // Jumlah baris LCD
-#define LCD_ADDRESS 0x27  // Alamat I2C LCD (biasanya 0x27 atau 0x3F)
+#define LCD_ROWS 4      // Jumlah baris LCD
+#define LCD_ADDRESS 0x27 // Alamat I2C LCD (biasanya 0x27 atau 0x3F)
 LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 // #Interrupt
-#define lampPin 47
+// #define interruptPin 47
 
 // #Inisialisasi Pin Motor L298N
-#define IN1 48  // Motor kanan direction 1
-#define IN2 45  // Motor kanan direction 2
+#define IN1 48    // Motor kanan direction 1
+#define IN2 45    // Motor kanan direction 2  
 #define IN3 4   // Motor kiri direction 1
 #define IN4 5   // Motor kiri direction 2
-#define ENA 35  // Motor kanan enable/PWM
+#define ENA 35   // Motor kanan enable/PWM
 #define ENB 6   // Motor kiri enable/PWM
 
 // // #Inisialisasi Pin Encoder
@@ -78,77 +137,51 @@ LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 // #define encKiriA 39
 // #define encKiriB 48
 
-// #Inisialisasi Sensor Magnet dan ultrasonik
+// #Inisialisasi Pin Sensor - Unified RS485
 #define MAX485_DE 36
 #define MAX485_RE 36
-// RS485 Serial Pins (shared for all sensors)
-#define RS485_RX 18
-#define RS485_TX 17
+// Unified RS485 pins for all sensors
+#define RX_RS485 18
+#define TX_RS485 17
 
-// Mapping Slave ID ke Sensor
-#define SLAVEID_MAGNET_DEPAN 1
-#define SLAVEID_ULTRASONIK_DEPAN 2
-#define SLAVEID_ULTRASONIK_BELAKANG 3
-#define SLAVEID_MAGNET_BELAKANG 4
-
-// Hapus/abaikan pin RX/TX sensor lain (semua pakai RS485_RX dan RS485_TX)
-// #define RX_MAGNET_FRONT 11//3
-// #define TX_MAGNET_FRONT 10//8
-// #define RX_ULTRASONIK_FRONT 18
-// #define TX_ULTRASONIK_FRONT 17
-// #define RX_MAGNET_BACK 3//11
-// #define TX_MAGNET_BACK 8//10
-// #define RX_ULTRASONIK_BACK 9
-// #define TX_ULTRASONIK_BACK 46
-
-// #Inisialisasi Pin Hook Motor
-#define MOTOR_DI1_PIN 20
-#define MOTOR_DI2_PIN 19
-#define MOTOR_PWM_PIN 21
-#define HOOK_PWM_CHANNEL 2
+// #Inisialisasi Pin Hook Motor dengan SSR Relay
+#define HOOK_RELAY_PIN 21        // Pin untuk relay SSR-40 DA
+#define LIMIT_SWITCH_UP_PIN 20   // Pin untuk limit switch atas
+#define LIMIT_SWITCH_DOWN_PIN 19 // Pin untuk limit switch bawah
 
 
-// Alamat slave sensor yang diharapkan
-const byte SENSOR_ADDRESS = 0x01;
+// Unified RS485 communication variables
 const int PACKET_LENGTH = 15;
 byte dataPacket[PACKET_LENGTH];
 int byteCounter = 0;
 bool inPacket = false;
 
-int jumlahMagnet[16];
+// Current active device address
+byte currentDeviceAddress = ADDR_MAGNET_FRONT;
 
-ModbusMaster node;
+// Sensor data arrays - optimized memory usage
+uint8_t jumlahMagnetFront[16];  // Changed from int to uint8_t (saves 75% memory)
+uint8_t jumlahMagnetBack[16];   // Changed from int to uint8_t (saves 75% memory)
+uint16_t ultrasonicDistancesFront[5] = {0};
+uint16_t ultrasonicDistancesBack[5] = {0};
+
+// Modbus master instances
+ModbusMaster nodeMagnetFront;
+ModbusMaster nodeMagnetBack;
 
 // ## VARIABLE ##
 // # variable Web Server
-// WiFi configuration variables (can be modified via web interface)
-char ssid[32] = "My Phone";
-char password[64] = "kalolaparmakan";
-char staticIPStr[16] = "192.168.121.14";
-char gatewayStr[16] = "192.168.121.99";
-char subnetStr[16] = "255.255.255.0";
-char dnsStr[16] = "192.168.121.99";
-
-// IP Address objects (will be updated from string values)
+const char* ssid = "My Phone";
+const char* password = "kalolaparmakan";
 IPAddress staticIP(192, 168, 121, 14);
 IPAddress gateway(192, 168, 121, 99);
 IPAddress subnet(255, 255, 255, 0);
-IPAddress dns(192, 168, 121, 99);
+IPAddress dns(192, 168, 121, 99); // Gunakan gateway sebagai DNS
 
 const char* PREFERENCES_NAMESPACE = "device_data";
-const char* STATIONS_NAMESPACE = "stations";  // Namespace untuk menyimpan station yang ditemukan
+const char* STATIONS_NAMESPACE = "stations"; // Namespace untuk menyimpan station yang ditemukan
 
-// // # Variable Nilai Encoder
-
-// int encKananAVal = 0;
-// int encKananBVal = 0;
-// int encKiriAVal = 0;
-// int encKiriBVal = 0;
-
-// // # Variable RPM
-// int rpmKanan = 0;
-// int rpmKiri = 0;
-// int rpm1, rpm2;
+// Encoder and RPM variables removed - not used in current implementation
 
 // # Pin Channel PWM
 const int channelKanan = 0;
@@ -208,7 +241,7 @@ int buttonStep = 0;  // Track button state for sequential actions
 
 int baseSpeed = 1000;
 
-// RFID
+// RFID 
 #define PIN_D0 12
 #define PIN_D1 13
 
@@ -228,13 +261,21 @@ int rfidStationCount = 0;
 // RFID scanning variables
 bool isScanning = false;
 int currentScanStation = 0;
-// String lastScannedRfid = ""; // Replaced with optimized char array
-extern char lastScannedRfidOptimized[32];  // Optimized RFID storage
+String lastScannedRfid = "";
 bool newRfidScanned = false;
 
 // Obstacle detection variables
 extern bool obstacleDetected;
-extern uint16_t ultrasonicDistances[5];
+const uint16_t minSafeDistance = 300; // Minimum safe distance in mm for obstacle detection
+
+// RS485 communication variables (declared in debug_rs485.ino and unified_rs485.ino)
+extern unsigned long lastSuccessfulComm[4]; // [0]=MagnetFront, [1]=UltrasonicFront, [2]=UltrasonicBack, [3]=MagnetBack
+extern bool deviceOnline[4];
+extern unsigned long lastCommAttempt[4];
+extern int commFailureCount[4];
+
+// PID Linefollower variables (declared in pid_linefollower.ino)
+extern bool sudahStopPelanPelan;
 
 // Pin Relay music 7, 15, 16, 14
 #define pinMusic1 7
@@ -244,23 +285,23 @@ extern uint16_t ultrasonicDistances[5];
 
 bool statusMusic = false;
 
-// pin hook 20 dan 19, menggunakan relay
-#define pinHook1 20
-#define pinHook2 19
-#define pinMotorHook 21
+// pin hook dengan SSR relay dan limit switches
+#define pinHookRelay 21          // Pin relay SSR untuk kontrol hook motor
+#define pinLimitUp 20            // Pin limit switch atas
+#define pinLimitDown 19          // Pin limit switch bawah
 
 // Motor inversion settings
-bool invertMotorY = false;      // Invers maju-mundur (forward/backward)
-bool invertMotorX = false;      // Invers kiri-kanan (left/right)
+bool invertMotorY = false;  // Invers maju-mundur (forward/backward)
+bool invertMotorX = false;  // Invers kiri-kanan (left/right)
 bool invertMotorKanan = false;  // Invers motor kanan individual
 bool invertMotorKiri = false;   // Invers motor kiri individual
 bool invertHook = false;        // Invers hook naik-turun
 
 // Music pin mapping settings (0=pinMusic1, 1=pinMusic2, 2=pinMusic3, 3=pinMusic4)
-int musicStationPin = 0;   // Default: pinMusic1 untuk station
-int musicErrorPin = 1;     // Default: pinMusic2 untuk error
-int musicDetectPin = 2;    // Default: pinMusic3 untuk detect
-int musicKomputerPin = 3;  // Default: pinMusic4 untuk komputer
+int musicStationPin = 0;    // Default: pinMusic1 untuk station
+int musicErrorPin = 1;      // Default: pinMusic2 untuk error  
+int musicDetectPin = 2;     // Default: pinMusic3 untuk detect
+int musicKomputerPin = 3;   // Default: pinMusic4 untuk komputer
 
 // Error codes definition
 #define ERROR_SENSOR_COMMUNICATION 1
@@ -274,72 +315,5 @@ int musicKomputerPin = 3;  // Default: pinMusic4 untuk komputer
 #define ERROR_MEMORY_ALLOCATION 9
 #define ERROR_INVALID_CONFIGURATION 10
 #define ERROR_ULTRASONIC_COMMUNICATION 11
-
-// ===== ULTRASONIC SENSOR FUNCTIONS =====
-void setUltrasonicSlaveId(int slaveId);
-void initUltrasonicSensor(int slaveId);
-void switchUltrasonicSensor(bool useFrontSensor);
-int getCurrentUltrasonicSlaveId();
-void loopUltrasonik();
-void checkObstacles();
-void preTransmissionUltrasonic();
-void postTransmissionUltrasonic();
-
-// ===== MAGNET SENSOR FUNCTIONS =====
-void bacaSensor();
-void bacaSensor(int slaveId);
-void switchMagnetSensor(bool useFrontSensor);
-int getCurrentMagnetSlaveId();
-void setMagnetSlaveId(int slaveId);
-
-// ===== WIFI CONFIGURATION FUNCTIONS =====
-bool saveWifiConfig(const String& ssid, const String& password, const String& staticIP, const String& gateway, const String& subnet, const String& dns);
-bool loadWifiConfig();
-void updateIPAddressesFromStrings();
-void handleWifiConfig();
-void handleSaveWifi();
-void handleWifiScan();
-void handleRoot();
-
-// ===== PERFORMANCE OPTIMIZATION FUNCTIONS =====
-// Timer system
-struct Timer;
-extern Timer stopPelanPelanTimer;
-extern Timer ultrasonicSwitchTimer;
-extern Timer magnetSwitchTimer;
-extern Timer buttonDebounceTimer;
-extern Timer menuDelayTimer;
-extern Timer errorRecoveryTimer;
-extern Timer performanceTimer;
-
-void startTimer(Timer* timer, unsigned long interval);
-void stopTimer(Timer* timer);
-bool checkTimer(Timer* timer);
-bool isTimerActive(Timer* timer);
-bool wasTimerTriggered(Timer* timer);
-
-// Performance monitoring
-void startPerformanceMonitoring();
-void endPerformanceMonitoring();
-void printPerformanceStats();
-void resetPerformanceStats();
-void initPerformanceOptimization();
-void updatePerformanceOptimization();
-
-// Optimized state management
-void setStatusJalan(const char* status);
-void setCurrentMode(const char* mode);
-const char* getStatusJalan();
-const char* getCurrentMode();
-
-// Error recovery system
-extern bool systemInErrorState;
-bool attemptErrorRecovery(int errorCode);
-bool recoverSensorCommunication();
-bool recoverMotorControl();
-bool recoverRfidCommunication();
-bool recoverWifiConnection();
-void checkErrorRecovery();
-void initErrorRecovery();
 
 #endif

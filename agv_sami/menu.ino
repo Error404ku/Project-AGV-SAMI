@@ -15,12 +15,11 @@
 #define MENU_RESET 11
 #define MENU_MAGNET_CHECK 12
 #define MENU_ULTRASONIC_CHECK 13
-#define MENU_WIFI_SETTINGS 14
 
 int selectedItem = 0;
-int maxItems = 14;
-int menuStartIndex = 0;        // For scrolling menu
-const int maxMenuDisplay = 3;  // Max items shown at once (row 1-3, row 0 for header)
+int maxItems = 13;
+int menuStartIndex = 0; // For scrolling menu
+const int maxMenuDisplay = 3; // Max items shown at once (row 1-3, row 0 for header)
 bool isAgvMode = false;
 
 // Menu refresh flags - to prevent flickering
@@ -61,11 +60,11 @@ int selectedRfidItem = 0;
 int selectedStationId = 1;
 bool isWaitingForRfid = false;
 unsigned long rfidScanTimeout = 0;
-const unsigned long RFID_SCAN_TIMEOUT = 10000;  // 10 seconds timeout
+const unsigned long RFID_SCAN_TIMEOUT = 10000; // 10 seconds timeout
 
 // Target settings variables
 unsigned long xButtonHoldStart = 0;
-const unsigned long X_HOLD_DURATION = 3000;  // 3 seconds hold
+const unsigned long X_HOLD_DURATION = 3000; // 3 seconds hold
 bool isClearingStations = false;
 
 // Motor invert settings
@@ -95,16 +94,6 @@ int motorTestState = 0;  // 0=stop, 1=forward, 2=backward, 3=left, 4=right
 // Hook test variables
 int hookTestState = 0;  // 0=stop, 1=naik, 2=turun
 
-// WiFi connection variables
-bool isConnectingWifi = false;
-bool wifiConnectionResult = false;
-unsigned long wifiConnectStartTime = 0;
-const unsigned long WIFI_CONNECT_TIMEOUT = 5000; // 10 seconds
-
-// WiFi scroll variables
-int wifiScrollIndex = 0;
-const int WIFI_MAX_SCROLL = 3; // Maximum scroll positions timeout
-
 // Global display functions
 void displayIndicator(int current, int selected) {
   if (current == selected) {
@@ -125,6 +114,63 @@ void displayMenuFooter(const char* text) {
   lcd.print(text);
 }
 
+void setupMenu() {
+  preferences.begin("agv-settings", false);
+  
+  // Load PID settings
+  tempKp = preferences.getDouble("kpLinefollower", 70.0);
+  tempKi = preferences.getDouble("kiLinefollower", 0.0);
+  tempKd = preferences.getDouble("kdLinefollower", 0.0);
+  
+  // Load Motor settings
+  tempBaseSpeed = preferences.getInt("baseSpeed", 1000);
+  
+  // Load Motor invert settings
+  tempInvertY = preferences.getBool("invertY", false);
+  tempInvertX = preferences.getBool("invertX", false);
+  tempInvertKanan = preferences.getBool("invertKanan", false);
+  tempInvertKiri = preferences.getBool("invertKiri", false);
+  tempInvertHook = preferences.getBool("invertHook", false);
+  
+  // Load Music mapping settings
+  tempMusicStationPin = preferences.getInt("musicStation", 0);
+  tempMusicErrorPin = preferences.getInt("musicError", 1);
+  tempMusicDetectPin = preferences.getInt("musicDetect", 2);
+  tempMusicKomputerPin = preferences.getInt("musicKomputer", 3);
+  
+  // Apply PID values
+  kpLinefollower = tempKp;
+  kiLinefollower = tempKi;
+  kdLinefollower = tempKd;
+  
+  // Apply Motor values
+  baseSpeed = tempBaseSpeed;
+  
+  // Apply Motor invert values
+  invertMotorY = tempInvertY;
+  invertMotorX = tempInvertX;
+  invertMotorKanan = tempInvertKanan;
+  invertMotorKiri = tempInvertKiri;
+  invertHook = tempInvertHook;
+  
+  // Apply Music mapping values
+  musicStationPin = tempMusicStationPin;
+  musicErrorPin = tempMusicErrorPin;
+  musicDetectPin = tempMusicDetectPin;
+  musicKomputerPin = tempMusicKomputerPin;
+  
+  preferences.end();
+  
+  // Load RFID stations
+  loadRfidStations();
+  
+  // Load stations list from HTTP preferences
+  loadStationsListFromPreferences();
+  
+  // Serial.print("Loaded stationsList size: ");
+  // Serial.println(stationsList.size());
+}
+
 void saveSettings() {
   preferences.begin("agv-settings", false);
   delay(50);
@@ -132,53 +178,53 @@ void saveSettings() {
   preferences.putDouble("kpLinefollower", tempKp);
   preferences.putDouble("kiLinefollower", tempKi);
   preferences.putDouble("kdLinefollower", tempKd);
-
+  
   // Save Motor values
   preferences.putInt("baseSpeed", tempBaseSpeed);
-
+  
   // Save Motor invert values
   preferences.putBool("invertY", tempInvertY);
   preferences.putBool("invertX", tempInvertX);
   preferences.putBool("invertKanan", tempInvertKanan);
   preferences.putBool("invertKiri", tempInvertKiri);
   preferences.putBool("invertHook", tempInvertHook);
-
+  
   // Save Music mapping values
   preferences.putInt("musicStation", tempMusicStationPin);
   preferences.putInt("musicError", tempMusicErrorPin);
   preferences.putInt("musicDetect", tempMusicDetectPin);
   preferences.putInt("musicKomputer", tempMusicKomputerPin);
-
+  
   // Apply PID values
   kpLinefollower = tempKp;
   kiLinefollower = tempKi;
   kdLinefollower = tempKd;
-
+  
   // Apply Motor values
   baseSpeed = tempBaseSpeed;
-
+  
   // Apply Motor invert values
   invertMotorY = tempInvertY;
   invertMotorX = tempInvertX;
   invertMotorKanan = tempInvertKanan;
   invertMotorKiri = tempInvertKiri;
   invertHook = tempInvertHook;
-
+  
   // Apply Music mapping values
   musicStationPin = tempMusicStationPin;
   musicErrorPin = tempMusicErrorPin;
   musicDetectPin = tempMusicDetectPin;
   musicKomputerPin = tempMusicKomputerPin;
-
+  
   // End preferences session
   preferences.end();
 }
 
 void displayMainMenu() {
   // Menu items array
-  String menuItems[14] = {
+  String menuItems[13] = {
     "AGV Mode",
-    "Motor Test",
+    "Motor Test", 
     "PID Settings",
     "Target Settings",
     "RFID Settings",
@@ -189,8 +235,7 @@ void displayMainMenu() {
     "Hook Test",
     "Reset Settings",
     "Magnet Check",
-    "Ultrasonic Check",
-    "WiFi Settings"
+    "Ultrasonic Check"
   };
 
   // Update scroll position if needed
@@ -204,28 +249,28 @@ void displayMainMenu() {
 
   // Check if we need to refresh the entire display
   if (menuNeedsRefresh || selectedItem != lastSelectedItem || menuStartIndex != lastMenuStartIndex) {
-    lcd.clear();  // Only clear when really needed
+    lcd.clear(); // Only clear when really needed
     displayMenuHeader("AGV Menu:");
-
+    
     // Display menu items (3 items max)
     for (int i = 0; i < maxMenuDisplay && (menuStartIndex + i) < maxItems; i++) {
       int menuIndex = menuStartIndex + i;
       lcd.setCursor(0, i + 1);
-
+      
       // Show cursor for selected item
       if (menuIndex == selectedItem) {
         lcd.print("> ");
       } else {
         lcd.print("  ");
       }
-
+      
       // Print menu item (max 16 chars to fit cursor)
       String item = menuItems[menuIndex];
       if (item.length() > 16) {
         item = item.substring(0, 16);
       }
       lcd.print(item);
-
+      
       // Show item number
       lcd.setCursor(18, i + 1);
       lcd.print(menuIndex + 1);
@@ -234,18 +279,18 @@ void displayMainMenu() {
     // Show scroll indicators
     lcd.setCursor(19, 1);
     if (menuStartIndex > 0) {
-      lcd.print("^");  // Up arrow if can scroll up
+      lcd.print("^"); // Up arrow if can scroll up
     } else {
       lcd.print(" ");
     }
-
+    
     lcd.setCursor(19, 3);
     if (menuStartIndex + maxMenuDisplay < maxItems) {
-      lcd.print("v");  // Down arrow if can scroll down
+      lcd.print("v"); // Down arrow if can scroll down
     } else {
       lcd.print(" ");
     }
-
+    
     // Update last states
     lastSelectedItem = selectedItem;
     lastMenuStartIndex = menuStartIndex;
@@ -255,7 +300,7 @@ void displayMainMenu() {
     for (int i = 0; i < maxMenuDisplay && (menuStartIndex + i) < maxItems; i++) {
       int menuIndex = menuStartIndex + i;
       lcd.setCursor(0, i + 1);
-
+      
       if (menuIndex == selectedItem) {
         lcd.print(">");
       } else {
@@ -267,22 +312,22 @@ void displayMainMenu() {
 
 void displayMotorTest() {
   displayMenuHeader("Motor Test");
-
+  
   lcd.setCursor(0, 1);
   lcd.print("UP:Maju DOWN:Mundur");
   lcd.setCursor(0, 2);
   lcd.print("LF:Kiri RT:Kanan");
   lcd.setCursor(0, 3);
-
+  
   // Show current motor state
-  switch (motorTestState) {
+  switch(motorTestState) {
     case 0: lcd.print("Status: STOP    "); break;
     case 1: lcd.print("Status: MAJU    "); break;
     case 2: lcd.print("Status: MUNDUR  "); break;
     case 3: lcd.print("Status: KIRI    "); break;
     case 4: lcd.print("Status: KANAN   "); break;
   }
-
+  
   lcd.setCursor(15, 3);
   lcd.print("B:OK");
 }
@@ -297,20 +342,20 @@ void displayPidSettings() {
   lcd.print("Kp: ");
   lcd.print(tempKp);
 
-  // Display Ki
+  // Display Ki  
   lcd.setCursor(0, 2);
   if (selectedParam == 1) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Ki: ");
   lcd.print(tempKi);
-
+  
   // Display Kd
   lcd.setCursor(0, 3);
   if (selectedParam == 2) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Kd: ");
   lcd.print(tempKd);
-
+  
   // Show controls
   lcd.setCursor(12, 3);
   lcd.print("B:OK");
@@ -322,17 +367,17 @@ void displayTargetSettings() {
   if (isClearingStations) {
     lcd.setCursor(0, 1);
     lcd.print("Clearing...");
-
+    
     // Show progress bar
     unsigned long elapsed = millis() - xButtonHoldStart;
     int progress = (elapsed * 100) / X_HOLD_DURATION;
     progress = min(progress, 100);
-
+    
     lcd.setCursor(0, 2);
     lcd.print("Progress: ");
     lcd.print(progress);
     lcd.print("%");
-
+    
     lcd.setCursor(0, 3);
     lcd.print("Release X=cancel");
     return;
@@ -340,7 +385,7 @@ void displayTargetSettings() {
 
   lcd.setCursor(0, 1);
   lcd.print("HTTP Stations:");
-
+  
   if (stationsList.empty()) {
     lcd.setCursor(0, 2);
     lcd.print("No stations");
@@ -350,7 +395,7 @@ void displayTargetSettings() {
     lcd.setCursor(0, 2);
     lcd.print("Total:");
     lcd.print(stationsList.size());
-
+    
     lcd.setCursor(0, 3);
     for (size_t i = 0; i < stationsList.size() && i < 3; i++) {
       lcd.print(stationsList[i]);
@@ -373,16 +418,16 @@ void displayRfidSettings() {
     lcd.setCursor(0, 1);
     lcd.print("Scan Station ");
     lcd.print(selectedStationId);
-
+    
     lcd.setCursor(0, 2);
     lcd.print("Tap RFID card");
-
+    
     lcd.setCursor(0, 3);
     int remainingTime = (RFID_SCAN_TIMEOUT - (millis() - rfidScanTimeout)) / 1000;
     lcd.print("Timeout:");
     lcd.print(remainingTime);
     lcd.print("s B:Cancel");
-
+    
     return;
   }
 
@@ -391,32 +436,32 @@ void displayRfidSettings() {
     "Station: " + String(selectedStationId),
     "Scan RFID",
     "View All",
-    "Delete Station",
+    "Delete Station", 
     "Clear All"
   };
-
+  
   // Simple display - show items with scrolling if needed
   int startIdx = max(0, min(selectedRfidItem - 1, 5 - 3));
-
+  
   for (int i = 0; i < 3 && (startIdx + i) < 5; i++) {
     int itemIndex = startIdx + i;
     lcd.setCursor(0, i + 1);
-    lcd.print("                ");  // Clear line
+    lcd.print("                "); // Clear line
     lcd.setCursor(0, i + 1);
-
+    
     if (itemIndex == selectedRfidItem) {
       lcd.print("> ");
     } else {
       lcd.print("  ");
     }
-
+    
     String item = rfidMenuItems[itemIndex];
     if (item.length() > 13) {
       item = item.substring(0, 13);
     }
     lcd.print(item);
   }
-
+  
   // Show navigation hint
   lcd.setCursor(12, 3);
   lcd.print("A:OK");
@@ -427,15 +472,15 @@ void displayMotorSettings() {
 
   lcd.setCursor(0, 1);
   lcd.print("Base Speed (PWM):");
-
+  
   lcd.setCursor(0, 2);
   lcd.print("> ");
   lcd.print(tempBaseSpeed);
-
+  
   // Show range indicator
   lcd.setCursor(0, 3);
   lcd.print("Range: 100-4000");
-
+  
   // Show controls on last row corner
   lcd.setCursor(12, 3);
   lcd.print("B:OK");
@@ -443,7 +488,7 @@ void displayMotorSettings() {
 
 void displayResetMenu() {
   displayMenuHeader("Reset Settings");
-
+  
   lcd.setCursor(0, 1);
   lcd.print("Reset ALL settings:");
   lcd.setCursor(0, 2);
@@ -469,23 +514,23 @@ void handleMotorTest() {
     menuNeedsRefresh = true;
     return;
   }
-
+  
   // Execute continuous motor movement based on state
-  switch (motorTestState) {
-    case 0:  // STOP
+  switch(motorTestState) {
+    case 0: // STOP
       pwmMotor(0, 0);
       break;
-    case 1:  // FORWARD
-      pwmMotor(-baseSpeed, baseSpeed);
-      break;
-    case 2:  // BACKWARD
+    case 1: // FORWARD
       pwmMotor(baseSpeed, -baseSpeed);
       break;
-    case 3:  // LEFT
-      pwmMotor(baseSpeed, baseSpeed);
+    case 2: // BACKWARD
+      pwmMotor(-baseSpeed, baseSpeed);
       break;
-    case 4:  // RIGHT
+    case 3: // LEFT
       pwmMotor(-baseSpeed, -baseSpeed);
+      break;
+    case 4: // RIGHT
+      pwmMotor(baseSpeed, baseSpeed);
       break;
   }
 }
@@ -543,14 +588,14 @@ void handlePidSettings() {
     kdLinefollower = tempKd;
     saveSettings();
     currentMenu = MENU_MAIN;
-    menuStartIndex = 0;  // Reset scroll position
+    menuStartIndex = 0; // Reset scroll position
     menuNeedsRefresh = true;
-  }
+  } 
 }
 
 void handleTargetSettings() {
   unsigned long currentMillis = millis();
-
+  
   if (START()) {
     if (!isClearingStations) {
       // Start X button hold detection
@@ -563,14 +608,14 @@ void handleTargetSettings() {
         lcd.clear();
         lcd.setCursor(0, 1);
         lcd.print("Clearing stations...");
-
+        
         clearStationsData();
-
+        
         lcd.clear();
         lcd.setCursor(0, 1);
         lcd.print("Stations cleared!");
         delay(1500);
-
+        
         // Reset state
         isClearingStations = false;
         xButtonHoldStart = 0;
@@ -583,14 +628,14 @@ void handleTargetSettings() {
       xButtonHoldStart = 0;
     }
   }
-
+  
   if (STOP()) {
     // Load latest stations from preferences
     loadStationsListFromPreferences();
     isClearingStations = false;
     xButtonHoldStart = 0;
     currentMenu = MENU_MAIN;
-    menuStartIndex = 0;  // Reset scroll position
+    menuStartIndex = 0; // Reset scroll position
     menuNeedsRefresh = true;
   }
 }
@@ -602,7 +647,7 @@ void handleRfidSettings() {
     // Check if new RFID was scanned
     if (newRfidScanned) {
       // RFID card detected, save it
-      if (addRfidStation(selectedStationId, String(lastScannedRfidOptimized))) {
+      if (addRfidStation(selectedStationId, lastScannedRfid)) {
         lcd.clear();
         lcd.setCursor(0, 1);
         lcd.print("Station ");
@@ -610,11 +655,7 @@ void handleRfidSettings() {
         lcd.print(" saved!");
         lcd.setCursor(0, 2);
         lcd.print("RFID: ");
-        // Display first 8 characters of RFID (optimized)
-        char rfidDisplay[9];  // 8 chars + null terminator
-        strncpy(rfidDisplay, lastScannedRfidOptimized, 8);
-        rfidDisplay[8] = '\0';
-        lcd.print(rfidDisplay);
+        lcd.print(lastScannedRfid.substring(0, 8));
         lcd.print("...");
         delay(2000);
       } else {
@@ -623,19 +664,19 @@ void handleRfidSettings() {
         lcd.print("Error saving!");
         delay(2000);
       }
-
+      
       // Reset scanning state
       isWaitingForRfid = false;
       newRfidScanned = false;
-      selectedRfidItem = 1;  // Stay on scan option for next scan
+      selectedRfidItem = 1; // Stay on scan option for next scan
     }
-
+    
     // Check for timeout or cancel
     if ((currentMillis - rfidScanTimeout > RFID_SCAN_TIMEOUT) || STOP()) {
       isWaitingForRfid = false;
       newRfidScanned = false;
     }
-
+    
     return;
   }
 
@@ -655,18 +696,18 @@ void handleRfidSettings() {
     }
   } else if (START()) {
     switch (selectedRfidItem) {
-      case 1:  // Scan RFID
+      case 1: // Scan RFID
         isWaitingForRfid = true;
         rfidScanTimeout = currentMillis;
-        newRfidScanned = false;  // Reset flag
+        newRfidScanned = false; // Reset flag
         break;
-
-      case 2:  // View All
+        
+      case 2: // View All
         {
           lcd.clear();
           lcd.setCursor(0, 0);
           lcd.print("RFID Stations:");
-
+          
           int displayRow = 1;
           bool hasData = false;
           for (int i = 0; i < rfidStationCount && displayRow < 4; i++) {
@@ -681,17 +722,17 @@ void handleRfidSettings() {
               hasData = true;
             }
           }
-
+          
           if (!hasData) {
             lcd.setCursor(0, 1);
             lcd.print("No stations set");
           }
-
+          
           if (hasData && rfidStationCount > 3) {
             lcd.setCursor(13, 3);
             lcd.print("...");
           }
-
+          
           // Wait for any button press
           while (true) {
             if (START()) {
@@ -702,8 +743,8 @@ void handleRfidSettings() {
           }
         }
         break;
-
-      case 3:  // Delete Station
+        
+      case 3: // Delete Station
         {
           if (deleteRfidStation(selectedStationId)) {
             lcd.clear();
@@ -720,15 +761,15 @@ void handleRfidSettings() {
           }
         }
         break;
-
-      case 4:  // Clear All
+        
+      case 4: // Clear All
         {
           lcd.clear();
           lcd.setCursor(0, 1);
           lcd.print("Clear all RFID?");
           lcd.setCursor(0, 2);
           lcd.print("A: Yes  B: No");
-
+          
           // Wait for confirmation
           while (true) {
             if (START()) {
@@ -751,7 +792,7 @@ void handleRfidSettings() {
   } else if (STOP()) {
     currentMenu = MENU_MAIN;
     selectedRfidItem = 0;
-    menuStartIndex = 0;  // Reset scroll position
+    menuStartIndex = 0; // Reset scroll position
     menuNeedsRefresh = true;
   }
 }
@@ -760,15 +801,15 @@ void handleMotorSettings() {
   if (LEFT()) {
     tempBaseSpeed = max(100, tempBaseSpeed - 50);  // Minimum 100, decrease by 50
   } else if (RIGHT()) {
-    tempBaseSpeed = min(4000, tempBaseSpeed + 50);  // Maximum 4000, increase by 50
+    tempBaseSpeed = min(4000, tempBaseSpeed + 50); // Maximum 4000, increase by 50
   } else if (STOP()) {
     // Save motor settings
     baseSpeed = tempBaseSpeed;
     saveSettings();
     currentMenu = MENU_MAIN;
-    menuStartIndex = 0;  // Reset scroll position
+    menuStartIndex = 0; // Reset scroll position
     menuNeedsRefresh = true;
-  }
+  } 
   // else if (X()) {
   //   // Cancel changes
   //   tempBaseSpeed = baseSpeed;
@@ -790,47 +831,47 @@ void handleResetMenu() {
     tempKp = 70.0;
     tempKi = 0.0;
     tempKd = 0.0;
-
-    // Reset Motor values to defaults
+    
+    // Reset Motor values to defaults  
     tempBaseSpeed = 1000;
-
+    
     // Reset Motor invert values to defaults
     tempInvertY = false;
     tempInvertX = false;
     tempInvertKanan = false;
     tempInvertKiri = false;
     tempInvertHook = false;
-
+    
     // Reset Music mapping values to defaults
-    tempMusicStationPin = 0;   // pinMusic1
-    tempMusicErrorPin = 1;     // pinMusic2
-    tempMusicDetectPin = 2;    // pinMusic3
-    tempMusicKomputerPin = 3;  // pinMusic4
+    tempMusicStationPin = 0;    // pinMusic1
+    tempMusicErrorPin = 1;      // pinMusic2
+    tempMusicDetectPin = 2;     // pinMusic3
+    tempMusicKomputerPin = 3;   // pinMusic4
 
     // Save default values
     saveSettings();
 
     // Clear RFID stations too
     clearAllRfidStations();
-
+    
     // Clear stations list from HTTP preferences
     stationsPreferences.begin(STATIONS_NAMESPACE, false);
     stationsPreferences.clear();
     stationsPreferences.end();
-
+    
     // Clear stationsList in memory
     stationsList.clear();
 
     // End preferences session
     preferences.end();
     currentMenu = MENU_MAIN;
-    menuStartIndex = 0;  // Reset scroll position
+    menuStartIndex = 0; // Reset scroll position
     menuNeedsRefresh = true;
     tombolBoot = true;
     setup();  // Return to main menu
   } else if (STOP()) {
     currentMenu = MENU_MAIN;
-    menuStartIndex = 0;  // Reset scroll position
+    menuStartIndex = 0; // Reset scroll position
     menuNeedsRefresh = true;
   }
 }
@@ -863,7 +904,7 @@ void handleMenu() {
         } else if (START()) {
           if (selectedItem == 0) {  // AGV Mode
             isAgvMode = true;
-            menuStartIndex = 0;  // Reset scroll position
+            menuStartIndex = 0; // Reset scroll position
             menuNeedsRefresh = true;
           } else if (selectedItem == 4) {  // RFID Settings (item 5)
             currentMenu = MENU_RFID_SETTINGS;
@@ -891,9 +932,6 @@ void handleMenu() {
             menuNeedsRefresh = true;
           } else if (selectedItem == 12) {  // Ultrasonic Check (item 13)
             currentMenu = MENU_ULTRASONIC_CHECK;
-            menuNeedsRefresh = true;
-          } else if (selectedItem == 13) {  // WiFi Settings (item 14)
-            currentMenu = MENU_WIFI_SETTINGS;
             menuNeedsRefresh = true;
           } else {
             currentMenu = selectedItem + 1;
@@ -923,7 +961,7 @@ void handleMenu() {
       displayTargetSettings();
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handleTargetSettings();
-        if (LEFT() || RIGHT() || UP() || DOWN() || STOP()) {
+        if (LEFT() || RIGHT() || UP() || DOWN()  || STOP()) {
           lastButtonPress = currentMillis;
         }
       }
@@ -950,199 +988,199 @@ void handleMenu() {
       break;
 
     case MENU_MOTOR_INVERT:
-      {
-        displayMenuHeader("Motor Invert");
-
-        // Calculate what items to show (3 items max, with scrolling)
-        int startIdx = max(0, min(selectedInvertItem - 1, maxInvertItems - 3));
-
-        String invertLabels[5] = { "Y-Axis", "X-Axis", "M-Kanan", "M-Kiri", "Hook" };
-        bool* invertValues[5] = { &tempInvertY, &tempInvertX, &tempInvertKanan, &tempInvertKiri, &tempInvertHook };
-
-        for (int i = 0; i < 3 && (startIdx + i) < maxInvertItems; i++) {
-          int itemIndex = startIdx + i;
-          lcd.setCursor(0, i + 1);
-
-          // Clear line first
-          lcd.print("                    ");
-          lcd.setCursor(0, i + 1);
-
-          // Show cursor for selected item
-          if (itemIndex == selectedInvertItem) {
-            lcd.print("> ");
-          } else {
-            lcd.print("  ");
-          }
-
-          // Show label and value
-          lcd.print(invertLabels[itemIndex]);
-          lcd.print(": ");
-          lcd.print(*invertValues[itemIndex] ? "Yes" : "No");
-
-          // Show controls on the right
-          if (i == 0) {
-            lcd.setCursor(12, i + 1);
-            lcd.print("UP/DN:Nav");
-          } else if (i == 1) {
-            lcd.setCursor(12, i + 1);
-            lcd.print("LF/RT:Set");
-          } else if (i == 2) {
-            lcd.setCursor(12, i + 1);
-            lcd.print("A:OK B:Back");
-          }
+    {
+      displayMenuHeader("Motor Invert");
+      
+      // Calculate what items to show (3 items max, with scrolling)
+      int startIdx = max(0, min(selectedInvertItem - 1, maxInvertItems - 3));
+      
+      String invertLabels[5] = {"Y-Axis", "X-Axis", "M-Kanan", "M-Kiri", "Hook"};
+      bool* invertValues[5] = {&tempInvertY, &tempInvertX, &tempInvertKanan, &tempInvertKiri, &tempInvertHook};
+      
+      for (int i = 0; i < 3 && (startIdx + i) < maxInvertItems; i++) {
+        int itemIndex = startIdx + i;
+        lcd.setCursor(0, i + 1);
+        
+        // Clear line first
+        lcd.print("                    ");
+        lcd.setCursor(0, i + 1);
+        
+        // Show cursor for selected item
+        if (itemIndex == selectedInvertItem) {
+          lcd.print("> ");
+        } else {
+          lcd.print("  ");
         }
-
-        if (currentMillis - lastButtonPress >= buttonDelay) {
-          if (UP()) {
-            selectedInvertItem = (selectedInvertItem - 1 + maxInvertItems) % maxInvertItems;
-            lastButtonPress = currentMillis;
-          } else if (DOWN()) {
-            selectedInvertItem = (selectedInvertItem + 1) % maxInvertItems;
-            lastButtonPress = currentMillis;
-          } else if (LEFT() || RIGHT()) {
-            // Toggle selected item
-            switch (selectedInvertItem) {
-              case 0: tempInvertY = !tempInvertY; break;
-              case 1: tempInvertX = !tempInvertX; break;
-              case 2: tempInvertKanan = !tempInvertKanan; break;
-              case 3: tempInvertKiri = !tempInvertKiri; break;
-              case 4: tempInvertHook = !tempInvertHook; break;
-            }
-            lastButtonPress = currentMillis;
-          } else if (START()) {
-            // Save all settings
-            invertMotorY = tempInvertY;
-            invertMotorX = tempInvertX;
-            invertMotorKanan = tempInvertKanan;
-            invertMotorKiri = tempInvertKiri;
-            invertHook = tempInvertHook;
-            saveSettings();
-            currentMenu = MENU_MAIN;
-            selectedInvertItem = 0;
-            menuStartIndex = 0;
-            menuNeedsRefresh = true;
-            lastButtonPress = currentMillis;
-          } else if (STOP()) {
-            // Cancel changes
-            tempInvertY = invertMotorY;
-            tempInvertX = invertMotorX;
-            tempInvertKanan = invertMotorKanan;
-            tempInvertKiri = invertMotorKiri;
-            tempInvertHook = invertHook;
-            currentMenu = MENU_MAIN;
-            selectedInvertItem = 0;
-            menuStartIndex = 0;
-            menuNeedsRefresh = true;
-            lastButtonPress = currentMillis;
-          }
-        }
-      }
-      break;
-
-    case MENU_MUSIC_SETTINGS:
-      {
-        displayMenuHeader("Music Settings");
-
-        // Music mode labels and their assigned pins
-        String musicModes[4] = { "Station", "Error", "Detect", "Komputer" };
-        int* musicPins[4] = { &tempMusicStationPin, &tempMusicErrorPin, &tempMusicDetectPin, &tempMusicKomputerPin };
-
-        for (int i = 0; i < 3 && i < maxMusicItems; i++) {
-          lcd.setCursor(0, i + 1);
-
-          // Clear line first
-          lcd.print("                    ");
-          lcd.setCursor(0, i + 1);
-
-          // Show cursor for selected item
-          if (i == selectedMusicItem) {
-            lcd.print("> ");
-          } else {
-            lcd.print("  ");
-          }
-
-          // Show mode and pin assignment
-          lcd.print(musicModes[i]);
-          lcd.print(":");
-          lcd.print("Pin");
-          lcd.print(*musicPins[i] + 1);  // +1 to show 1-4 instead of 0-3
-
-          // Show controls on the right
-          if (i == 0) {
-            lcd.setCursor(12, i + 1);
-            lcd.print("UP/DN:Nav");
-          } else if (i == 1) {
-            lcd.setCursor(12, i + 1);
-            lcd.print("LF/RT:Set");
-          } else if (i == 2) {
-            lcd.setCursor(12, i + 1);
-            lcd.print("A:OK B:Back");
-          }
-        }
-
-        // Show 4th item (Komputer) if selected
-        if (selectedMusicItem == 3) {
-          lcd.setCursor(0, 3);
-          lcd.print("                    ");
-          lcd.setCursor(0, 3);
-          lcd.print("> Komputer:Pin");
-          lcd.print(tempMusicKomputerPin + 1);
-          lcd.setCursor(12, 3);
+        
+        // Show label and value
+        lcd.print(invertLabels[itemIndex]);
+        lcd.print(": ");
+        lcd.print(*invertValues[itemIndex] ? "Yes" : "No");
+        
+        // Show controls on the right
+        if (i == 0) {
+          lcd.setCursor(12, i + 1);
+          lcd.print("UP/DN:Nav");
+        } else if (i == 1) {
+          lcd.setCursor(12, i + 1);
+          lcd.print("LF/RT:Set");
+        } else if (i == 2) {
+          lcd.setCursor(12, i + 1);
           lcd.print("A:OK B:Back");
         }
+      }
 
-        if (currentMillis - lastButtonPress >= buttonDelay) {
-          if (UP()) {
-            selectedMusicItem = (selectedMusicItem - 1 + maxMusicItems) % maxMusicItems;
-            lastButtonPress = currentMillis;
-          } else if (DOWN()) {
-            selectedMusicItem = (selectedMusicItem + 1) % maxMusicItems;
-            lastButtonPress = currentMillis;
-          } else if (LEFT()) {
-            // Decrease pin assignment (cycle 0-3)
-            switch (selectedMusicItem) {
-              case 0: tempMusicStationPin = (tempMusicStationPin - 1 + 4) % 4; break;
-              case 1: tempMusicErrorPin = (tempMusicErrorPin - 1 + 4) % 4; break;
-              case 2: tempMusicDetectPin = (tempMusicDetectPin - 1 + 4) % 4; break;
-              case 3: tempMusicKomputerPin = (tempMusicKomputerPin - 1 + 4) % 4; break;
-            }
-            lastButtonPress = currentMillis;
-          } else if (RIGHT()) {
-            // Increase pin assignment (cycle 0-3)
-            switch (selectedMusicItem) {
-              case 0: tempMusicStationPin = (tempMusicStationPin + 1) % 4; break;
-              case 1: tempMusicErrorPin = (tempMusicErrorPin + 1) % 4; break;
-              case 2: tempMusicDetectPin = (tempMusicDetectPin + 1) % 4; break;
-              case 3: tempMusicKomputerPin = (tempMusicKomputerPin + 1) % 4; break;
-            }
-            lastButtonPress = currentMillis;
-          } else if (START()) {
-            // Save all music settings
-            musicStationPin = tempMusicStationPin;
-            musicErrorPin = tempMusicErrorPin;
-            musicDetectPin = tempMusicDetectPin;
-            musicKomputerPin = tempMusicKomputerPin;
-            saveSettings();
-            currentMenu = MENU_MAIN;
-            selectedMusicItem = 0;
-            menuStartIndex = 0;
-            menuNeedsRefresh = true;
-            lastButtonPress = currentMillis;
-          } else if (STOP()) {
-            // Cancel changes
-            tempMusicStationPin = musicStationPin;
-            tempMusicErrorPin = musicErrorPin;
-            tempMusicDetectPin = musicDetectPin;
-            tempMusicKomputerPin = musicKomputerPin;
-            currentMenu = MENU_MAIN;
-            selectedMusicItem = 0;
-            menuStartIndex = 0;
-            menuNeedsRefresh = true;
-            lastButtonPress = currentMillis;
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        if (UP()) {
+          selectedInvertItem = (selectedInvertItem - 1 + maxInvertItems) % maxInvertItems;
+          lastButtonPress = currentMillis;
+        } else if (DOWN()) {
+          selectedInvertItem = (selectedInvertItem + 1) % maxInvertItems;
+          lastButtonPress = currentMillis;
+        } else if (LEFT() || RIGHT()) {
+          // Toggle selected item
+          switch(selectedInvertItem) {
+            case 0: tempInvertY = !tempInvertY; break;
+            case 1: tempInvertX = !tempInvertX; break;
+            case 2: tempInvertKanan = !tempInvertKanan; break;
+            case 3: tempInvertKiri = !tempInvertKiri; break;
+            case 4: tempInvertHook = !tempInvertHook; break;
           }
+          lastButtonPress = currentMillis;
+        } else if (START()) {
+          // Save all settings
+          invertMotorY = tempInvertY;
+          invertMotorX = tempInvertX;
+          invertMotorKanan = tempInvertKanan;
+          invertMotorKiri = tempInvertKiri;
+          invertHook = tempInvertHook;
+          saveSettings();
+          currentMenu = MENU_MAIN;
+          selectedInvertItem = 0;
+          menuStartIndex = 0;
+          menuNeedsRefresh = true;
+          lastButtonPress = currentMillis;
+        } else if (STOP()) {
+          // Cancel changes
+          tempInvertY = invertMotorY;
+          tempInvertX = invertMotorX;
+          tempInvertKanan = invertMotorKanan;
+          tempInvertKiri = invertMotorKiri;
+          tempInvertHook = invertHook;
+          currentMenu = MENU_MAIN;
+          selectedInvertItem = 0;
+          menuStartIndex = 0;
+          menuNeedsRefresh = true;
+          lastButtonPress = currentMillis;
         }
       }
-      break;
+    }
+    break;
+
+    case MENU_MUSIC_SETTINGS:
+    {
+      displayMenuHeader("Music Settings");
+      
+      // Music mode labels and their assigned pins
+      String musicModes[4] = {"Station", "Error", "Detect", "Komputer"};
+      int* musicPins[4] = {&tempMusicStationPin, &tempMusicErrorPin, &tempMusicDetectPin, &tempMusicKomputerPin};
+      
+      for (int i = 0; i < 3 && i < maxMusicItems; i++) {
+        lcd.setCursor(0, i + 1);
+        
+        // Clear line first
+        lcd.print("                    ");
+        lcd.setCursor(0, i + 1);
+        
+        // Show cursor for selected item
+        if (i == selectedMusicItem) {
+          lcd.print("> ");
+        } else {
+          lcd.print("  ");
+        }
+        
+        // Show mode and pin assignment
+        lcd.print(musicModes[i]);
+        lcd.print(":");
+        lcd.print("Pin");
+        lcd.print(*musicPins[i] + 1); // +1 to show 1-4 instead of 0-3
+        
+        // Show controls on the right
+        if (i == 0) {
+          lcd.setCursor(12, i + 1);
+          lcd.print("UP/DN:Nav");
+        } else if (i == 1) {
+          lcd.setCursor(12, i + 1);
+          lcd.print("LF/RT:Set");
+        } else if (i == 2) {
+          lcd.setCursor(12, i + 1);
+          lcd.print("A:OK B:Back");
+        }
+      }
+      
+      // Show 4th item (Komputer) if selected
+      if (selectedMusicItem == 3) {
+        lcd.setCursor(0, 3);
+        lcd.print("                    ");
+        lcd.setCursor(0, 3);
+        lcd.print("> Komputer:Pin");
+        lcd.print(tempMusicKomputerPin + 1);
+        lcd.setCursor(12, 3);
+        lcd.print("A:OK B:Back");
+      }
+
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        if (UP()) {
+          selectedMusicItem = (selectedMusicItem - 1 + maxMusicItems) % maxMusicItems;
+          lastButtonPress = currentMillis;
+        } else if (DOWN()) {
+          selectedMusicItem = (selectedMusicItem + 1) % maxMusicItems;
+          lastButtonPress = currentMillis;
+        } else if (LEFT()) {
+          // Decrease pin assignment (cycle 0-3)
+          switch(selectedMusicItem) {
+            case 0: tempMusicStationPin = (tempMusicStationPin - 1 + 4) % 4; break;
+            case 1: tempMusicErrorPin = (tempMusicErrorPin - 1 + 4) % 4; break;
+            case 2: tempMusicDetectPin = (tempMusicDetectPin - 1 + 4) % 4; break;
+            case 3: tempMusicKomputerPin = (tempMusicKomputerPin - 1 + 4) % 4; break;
+          }
+          lastButtonPress = currentMillis;
+        } else if (RIGHT()) {
+          // Increase pin assignment (cycle 0-3)
+          switch(selectedMusicItem) {
+            case 0: tempMusicStationPin = (tempMusicStationPin + 1) % 4; break;
+            case 1: tempMusicErrorPin = (tempMusicErrorPin + 1) % 4; break;
+            case 2: tempMusicDetectPin = (tempMusicDetectPin + 1) % 4; break;
+            case 3: tempMusicKomputerPin = (tempMusicKomputerPin + 1) % 4; break;
+          }
+          lastButtonPress = currentMillis;
+        } else if (START()) {
+          // Save all music settings
+          musicStationPin = tempMusicStationPin;
+          musicErrorPin = tempMusicErrorPin;
+          musicDetectPin = tempMusicDetectPin;
+          musicKomputerPin = tempMusicKomputerPin;
+          saveSettings();
+          currentMenu = MENU_MAIN;
+          selectedMusicItem = 0;
+          menuStartIndex = 0;
+          menuNeedsRefresh = true;
+          lastButtonPress = currentMillis;
+        } else if (STOP()) {
+          // Cancel changes
+          tempMusicStationPin = musicStationPin;
+          tempMusicErrorPin = musicErrorPin;
+          tempMusicDetectPin = musicDetectPin;
+          tempMusicKomputerPin = musicKomputerPin;
+          currentMenu = MENU_MAIN;
+          selectedMusicItem = 0;
+          menuStartIndex = 0;
+          menuNeedsRefresh = true;
+          lastButtonPress = currentMillis;
+        }
+      }
+    }
+    break;
 
     case MENU_MUSIC_TEST:
       displayMusicTest();
@@ -1183,7 +1221,7 @@ void handleMenu() {
         }
       }
       break;
- 
+
     case MENU_ULTRASONIC_CHECK:
       displayUltrasonicCheck();
       if (currentMillis - lastButtonPress >= buttonDelay) {
@@ -1193,22 +1231,12 @@ void handleMenu() {
         }
       }
       break;
-
-    case MENU_WIFI_SETTINGS:
-      displayWifiSettings();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleWifiSettings();
-        if (START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
-      break;
   }
 }
 
 void displayMusicTest() {
   displayMenuHeader("Music Test");
-
+  
   lcd.setCursor(0, 1);
   lcd.print("UP   : Station");
   lcd.setCursor(0, 2);
@@ -1248,91 +1276,87 @@ void handleMusicTest() {
 
 void displayHookTest() {
   displayMenuHeader("Hook Test");
-
+  
   lcd.setCursor(0, 1);
   lcd.print("UP   : Hook Naik");
   lcd.setCursor(0, 2);
   lcd.print("DOWN : Hook Turun");
   lcd.setCursor(0, 3);
-
-  // Show current hook state
-  switch (hookTestState) {
-    case 0: lcd.print("Status: STOP    "); break;
-    case 1: lcd.print("Status: NAIK    "); break;
-    case 2: lcd.print("Status: TURUN   "); break;
+  
+  // Show current hook position using the new function
+  String position = getHookPosition();
+  lcd.print("Pos: ");
+  lcd.print(position);
+  // Clear remaining characters
+  for(int i = position.length() + 5; i < 15; i++) {
+    lcd.print(" ");
   }
-
+  
   lcd.setCursor(15, 3);
   lcd.print("B:OK");
 }
 
 void displayMagnetCheck() {
-  displayMenuHeader("Magnet Check");
-
+  displayMenuHeader("Magnet Sensor Check");
+  
   lcd.setCursor(0, 1);
-  lcd.print("Err:");
-  lcd.print(errorValue);
-  lcd.print(" Act:");
-  lcd.print(totalSensorAktif);
-  lcd.print("    ");  // Clear remaining characters
-
+  lcd.print("UP:ReadFront");
+  
   lcd.setCursor(0, 2);
-  lcd.print("Segments:");
+  lcd.print("DN:ReadBack");
+  
+  lcd.setCursor(0, 3);
+  lcd.print("LF:Front RT:Back B:Exit");
+  
+  // Show current magnet data
+  uint8_t* currentMagnetData = getCurrentMagnetData();
+  
+  // Display active segments on line 1 (right side)
+  lcd.setCursor(13, 1);
   if (totalSensorAktif > 0) {
     for (int i = 0; i < 16; i++) {
-      if (jumlahMagnet[i]) {
-        lcd.print(i + 1);
-        lcd.print(",");
-        break;  // Show only first few due to space
+      if (currentMagnetData[i]) {
+        lcd.print(i+1);
+        break; // Show first active segment
       }
     }
   } else {
-    lcd.print("None");
+    lcd.print("---");
   }
-  lcd.print("        ");  // Clear remaining characters
-
-  lcd.setCursor(0, 3);
-  // Show current sensor (Front/Back) and controls
-  if (getCurrentMagnetSlaveId() == SLAVEID_MAGNET_DEPAN) {
-    lcd.print("F");
-  } else {
-    lcd.print("B");
-  }
-  lcd.print(" LR:Switch B:Back");
+  
+  // Display error value on line 2 (right side)
+  lcd.setCursor(13, 2);
+  lcd.print("E:");
+  lcd.print(errorValue);
 }
 
 void displayUltrasonicCheck() {
   displayMenuHeader("Ultrasonic Check");
-
+  
+  // Get current ultrasonic data (front sensors by default)
+  uint16_t* frontDistances = getUltrasonicData(true);
+  
   lcd.setCursor(0, 1);
-  lcd.print("P1:");
-  lcd.print(ultrasonicDistances[0]);
+  lcd.print("F-P1:");
+  lcd.print(frontDistances[0]);
   lcd.print(" P2:");
-  lcd.print(ultrasonicDistances[1]);
-
+  lcd.print(frontDistances[1]);
+  
   lcd.setCursor(0, 2);
   lcd.print("P3:");
-  lcd.print(ultrasonicDistances[2]);
+  lcd.print(frontDistances[2]);
   lcd.print(" P4:");
-  lcd.print(ultrasonicDistances[3]);
+  lcd.print(frontDistances[3]);
   lcd.print(" P5:");
-  lcd.print(ultrasonicDistances[4]);
-
+  lcd.print(frontDistances[4]);
+  
   lcd.setCursor(0, 3);
-  if (obstacleDetected) {
+  if (hasObstacle(true)) {
     lcd.print("OBSTACLE! ");
   } else {
     lcd.print("Clear ");
   }
-
-  // Show current sensor (Front/Back) and controls
-  lcd.setCursor(10, 3);
-  if (getCurrentUltrasonicSlaveId() == SLAVEID_ULTRASONIK_DEPAN) {
-    lcd.print("F");
-  } else {
-    lcd.print("B");
-  }
-  lcd.print(" LR:Switch");
+  lcd.print("B:Back");
 }
 
 void handleHookTest() {
@@ -1344,20 +1368,20 @@ void handleHookTest() {
     hook("turun");
   } else if (STOP()) {
     hookTestState = 0;  // Stop
-    hook("stop");       // Stop hook movement
+    hook("stop");  // Stop hook movement
     currentMenu = MENU_MAIN;
     menuStartIndex = 0;
     menuNeedsRefresh = true;
   } else {
     // Continue current state
-    switch (hookTestState) {
-      case 1:  // Continue naik
+    switch(hookTestState) {
+      case 1: // Continue naik
         hook("naik");
         break;
-      case 2:  // Continue turun
+      case 2: // Continue turun
         hook("turun");
         break;
-      case 0:  // Stopped
+      case 0: // Stopped
       default:
         hook("stop");
         break;
@@ -1366,17 +1390,24 @@ void handleHookTest() {
 }
 
 void handleMagnetCheck() {
-  // Selalu baca sensor saat menu ini aktif
-  bacaSensor();
-
-  if (LEFT()) {
-    // Switch to front magnet sensor
-    switchMagnetSensor(true);
-    startTimer(&magnetSwitchTimer, 100);  // Non-blocking delay to prevent multiple triggers
+  if (UP()) {
+    // Force read magnet front sensor
+    communicateWithMagnetFront();
+    lcd.setCursor(15, 1);
+    lcd.print("READ");
+  } else if (DOWN()) {
+    // Force read magnet back sensor
+    communicateWithMagnetBack();
+    lcd.setCursor(15, 2);
+    lcd.print("READ");
+  } else if (LEFT()) {
+    // Switch to front magnet data display
+    lcd.setCursor(0, 3);
+    lcd.print("Showing: FRONT      ");
   } else if (RIGHT()) {
-    // Switch to back magnet sensor
-    switchMagnetSensor(false);
-    startTimer(&magnetSwitchTimer, 100);  // Non-blocking delay to prevent multiple triggers
+    // Switch to back magnet data display
+    lcd.setCursor(0, 3);
+    lcd.print("Showing: BACK       ");
   } else if (STOP()) {
     currentMenu = MENU_MAIN;
     menuStartIndex = 0;
@@ -1386,182 +1417,10 @@ void handleMagnetCheck() {
 }
 
 void handleUltrasonicCheck() {
-  loopUltrasonik();
-
-  if (LEFT() && !isTimerActive(&ultrasonicSwitchTimer)) {
-    Serial.println("[INFO] Switching to FRONT ultrasonic sensor");
-    // Switch to front ultrasonic sensor
-    switchUltrasonicSensor(true);
-    startTimer(&ultrasonicSwitchTimer, 100);  // Non-blocking delay to prevent multiple triggers
-  } else if (RIGHT() && !isTimerActive(&ultrasonicSwitchTimer)) {
-    Serial.println("[INFO] Switching to BACK ultrasonic sensor");
-    // Switch to back ultrasonic sensor
-    switchUltrasonicSensor(false);
-    startTimer(&ultrasonicSwitchTimer, 100);  // Non-blocking delay to prevent multiple triggers
-  } else if (STOP()) {
+  if (STOP()) {
     currentMenu = MENU_MAIN;
     menuStartIndex = 0;
     menuNeedsRefresh = true;
   }
   // Display updates automatically since displayUltrasonicCheck reads current sensor values
-}
-
-void displayWifiSettings() {
-  if (isConnectingWifi) {
-    // Show connecting status
-    lcd.setCursor(0, 0);
-    lcd.print("Mencari WiFi        ");
-    unsigned long elapsed = millis() - wifiConnectStartTime;
-    
-    lcd.setCursor(0, 2);
-    if (WiFi.status() == WL_CONNECTED) {
-      lcd.print("Berhasil!           ");
-      isConnectingWifi = false;
-      wifiConnectionResult = true;
-    } else if (elapsed >= WIFI_CONNECT_TIMEOUT) {
-      lcd.print("Gagal!              ");
-      isConnectingWifi = false;
-      wifiConnectionResult = false;
-    } else {
-      int dots = (elapsed / 500) % 4;
-      lcd.print("Menunggu");
-      for (int i = 0; i < dots; i++) {
-        lcd.print(".");
-      }
-      for (int i = dots; i < 3; i++) {
-        lcd.print(" ");
-      }
-      lcd.print("        ");
-    }
-    
-    lcd.setCursor(0, 1);
-    lcd.print("                    ");
-    lcd.setCursor(0, 3);
-    lcd.print("                    ");
-    return;
-  }
-  
-  // Display different info based on scroll index
-  switch (wifiScrollIndex) {
-    case 0: // Status & Connection Info
-      displayMenuHeader("WiFi Settings");
-      if (WiFi.status() == WL_CONNECTED) {
-        lcd.setCursor(0, 1);
-        lcd.print("Status: Terhubung   ");
-        lcd.setCursor(0, 2);
-        lcd.print("SSID: ");
-        String ssidStr = WiFi.SSID();
-        if (ssidStr.length() > 10) {
-          lcd.print(ssidStr.substring(0, 10));
-        } else {
-          lcd.print(ssidStr);
-          for (int i = ssidStr.length(); i < 10; i++) {
-            lcd.print(" ");
-          }
-        }
-        lcd.print("    ");
-      } else {
-        lcd.setCursor(0, 1);
-        lcd.print("Status: Terputus    ");
-        lcd.setCursor(0, 2);
-        lcd.print("Mode: Access Point  ");
-      }
-      break;
-      
-    case 1: // IP Address Info
-      displayMenuHeader("IP Address         ");
-      if (WiFi.status() == WL_CONNECTED) {
-        lcd.setCursor(0, 1);
-        lcd.print("Client IP:           ");
-        lcd.setCursor(0, 2);
-        String clientIP = WiFi.localIP().toString();
-        lcd.print(clientIP);
-        for (int i = clientIP.length(); i < 16; i++) {
-          lcd.print(" ");
-        }
-      } else {
-        lcd.setCursor(0, 1);
-        lcd.print("AP IP: ");
-        lcd.setCursor(0, 2);
-        lcd.print("192.168.121.14         ");
-      }
-      break;
-      
-    case 2: // AP Configuration
-      displayMenuHeader("Access Point        ");
-      lcd.setCursor(0, 1);
-      lcd.print("SSID:ESP32-AGV-Cfg ");
-      lcd.setCursor(0, 2);
-      lcd.print("Pass:12345678       ");
-      break;
-      
-    case 3: // Web Interface
-      displayMenuHeader("Web Interface");
-      lcd.setCursor(0, 1);
-      lcd.print("URL: 192.168.121.14 ");
-      lcd.setCursor(0, 2);
-      lcd.print("Port: 80            ");
-      break;
-  }
-  
-  // Show navigation controls
-  lcd.setCursor(0, 3);
-  lcd.print("^v:Scroll A:Conn B:<");
-}
-
-void handleWifiSettings() {
-  if (isConnectingWifi) {
-    // Check if connection completed
-    unsigned long elapsed = millis() - wifiConnectStartTime;
-    if (WiFi.status() == WL_CONNECTED || elapsed >= WIFI_CONNECT_TIMEOUT) {
-      isConnectingWifi = false;
-    }
-    return;
-  }
-  
-  if (UP()) {
-    // Scroll up
-    wifiScrollIndex--;
-    if (wifiScrollIndex < 0) {
-      wifiScrollIndex = WIFI_MAX_SCROLL;
-    }
-    delay(200); // Debounce
-  } else if (DOWN()) {
-    // Scroll down
-    wifiScrollIndex++;
-    if (wifiScrollIndex > WIFI_MAX_SCROLL) {
-      wifiScrollIndex = 0;
-    }
-    delay(200); // Debounce
-  } else if (START()) {
-    // Start WiFi connection
-    isConnectingWifi = true;
-    wifiConnectStartTime = millis();
-    
-    // Load WiFi config and attempt connection
-    loadWifiConfig();
-    WiFi.disconnect();
-    delay(100);
-    
-    // Try to connect as client first
-    WiFi.mode(WIFI_AP_STA);  // Enable both AP and STA mode
-    if (strlen(staticIPStr) > 0) {
-      IPAddress staticIP, gateway, subnet, dns;
-      staticIP.fromString(staticIPStr);
-      gateway.fromString(gatewayStr);
-      subnet.fromString(subnetStr);
-      dns.fromString(dnsStr);
-      WiFi.config(staticIP, gateway, subnet, dns);
-    }
-    WiFi.begin(ssid, password);
-    
-    // Ensure AP is still active for web access
-    WiFi.softAP("ESP32-AGV-Config", "12345678");
-    WiFi.softAPConfig(IPAddress(192, 168, 121, 14), IPAddress(192, 168, 121, 14), IPAddress(255, 255, 255, 0));
-    
-  } else if (STOP()) {
-    currentMenu = MENU_MAIN;
-    menuStartIndex = 0;
-    menuNeedsRefresh = true;
-  }
 }

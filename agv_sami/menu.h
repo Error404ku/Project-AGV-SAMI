@@ -5,23 +5,11 @@
 #include <Preferences.h>
 #include <Adafruit_SSD1306.h>
 
-// Menu states
-#define MENU_MAIN 0
-#define MENU_MOTOR_TEST 2
-#define MENU_PID_SETTINGS 3
-#define MENU_TARGET_SETTINGS 4
-#define MENU_AGV_MODE 1
-#define MENU_RESET 5
-#define MENU_RFID_SETTINGS 6
-#define MENU_WIFI_SETTINGS 14
+// Menu states are now defined as enum in menu.ino for better type safety
 
 // External variables from other files
 extern int targetStation[2];
 extern int targetStationFromKomputer[];
-extern bool modeStation;
-extern bool modeMaju;
-extern bool modeBerhenti;
-extern bool force;
 extern double kp, ki, kd;
 extern int baseSpeed;
 extern bool tombolBoot;

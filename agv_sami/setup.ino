@@ -215,7 +215,12 @@ void setupSensorMagnet(int slaveId) {
 
 
 void setupRfid() {
-
+  // Enable watchdog timer for RFID operations
+  esp_task_wdt_init(30, true); // 30 second timeout
+  esp_task_wdt_add(NULL);
+  
+  Serial.println("Setting up RFID with enhanced stability...");
+  
   //Install listeners and initialize Wiegand reader
   wiegand.onReceive(receivedData, "Card readed: ");
   wiegand.onReceiveError(receivedDataError, "Card read error: ");
@@ -223,13 +228,20 @@ void setupRfid() {
   wiegand.begin(Wiegand::LENGTH_ANY, true);
 
   //initialize pins as INPUT and attaches interruptions
-  pinMode(PIN_D0, INPUT);
-  pinMode(PIN_D1, INPUT);
+  pinMode(PIN_D0, INPUT_PULLUP); // Use pullup for better stability
+  pinMode(PIN_D1, INPUT_PULLUP); // Use pullup for better stability
+  
+  // Add small delay before attaching interrupts
+  delay(100);
+  
   attachInterrupt(digitalPinToInterrupt(PIN_D0), pinStateChanged, CHANGE);
   attachInterrupt(digitalPinToInterrupt(PIN_D1), pinStateChanged, CHANGE);
 
   //Sends the initial pin state to the Wiegand library
+  delay(50); // Small delay before initial state
   pinStateChanged();
+  
+  Serial.println("RFID setup completed with enhanced stability");
 }
 
 void setupMenu() {
@@ -281,6 +293,9 @@ void setupMenu() {
 
   // Load RFID stations
   loadRfidStations();
+
+  // Load warehouse and ujung RFID IDs
+  loadWarehouseUjungRfid();
 
   // Load stations list from HTTP preferences
   loadStationsListFromPreferences();
