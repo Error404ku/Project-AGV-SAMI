@@ -37,10 +37,9 @@ void agvWarehouse() {
   if (START()) {
     trigger = true;
   }
-  switch(trigger){
-    case true:
-      agvMode(AGV_STATE_MOVE_FORWARD);
-      break;
+  if (trigger)
+  {
+    agvMode(AGV_STATE_MOVE_FORWARD);
   }
 }
 
@@ -52,14 +51,13 @@ void agvStation() {
   if (START()) {
     trigger = true;
   }
-  switch(trigger){
-    case true:
-      if (lastStateAgv == AGV_STATE_MOVE_FORWARD) {
-        agvMode(AGV_STATE_MOVE_FORWARD);
-      }else if (lastStateAgv == AGV_STATE_MOVE_BACKWARD) {
-        agvMode(AGV_STATE_MOVE_BACKWARD);
-      }
-      break;
+  if (trigger) {
+    if (lastStateAgv == AGV_STATE_MOVE_FORWARD) {
+      agvMode(AGV_STATE_MOVE_FORWARD);
+    }else if (lastStateAgv == AGV_STATE_MOVE_BACKWARD) {
+      agvMode(AGV_STATE_MOVE_BACKWARD);
+    }
+    return;
   }
 }
 
@@ -73,19 +71,11 @@ void agvTerminalDrop() {
   hook("turun");
   delay(2000);
 
-  if (START()){
-    trigger = true;
-  }
-  switch(trigger){
-    case true:
-      pidLinefollower(2, PID_MODE_MAJU);
-      //Scan terminal pickup rfid
-      String currentRfid = String(lastScannedRfidOptimized);
-      if (currentRfid.length() > 0 && currentRfid.equals(terminalPickUpRfidId) && terminalPickUpRfidId.length() > 0) {
-        agvMode(AGV_STATE_TERMINAL_PICKUP);
-        break;
-      }
-      break;
+  pidLinefollower(2, PID_MODE_MAJU);
+  //Scan terminal pickup rfid
+  String currentRfid = String(lastScannedRfidOptimized);
+  if (currentRfid.length() > 0 && currentRfid.equals(terminalPickUpRfidId) && terminalPickUpRfidId.length() > 0) {
+    agvMode(AGV_STATE_TERMINAL_PICKUP);
   }
 }
 
@@ -106,30 +96,25 @@ void agvTerminalPickup() {
     if (START()){
       triggerHook = true;
     }
-    switch(triggerHook){
-      case true:
-        hook("naik");
-        delay(2000);
-        trigger = false;
-        break;
+    if (triggerHook){
+      hook("naik");
+      delay(2000);
+      trigger = false;
     }
   }
 
   if (START()){
     trigger = true;
   }
-
-  switch(trigger){
-    case true:
-      pidLinefollower(2, PID_MODE_MAJU);
-      //Scan warehouse rfid
-      String currentRfid = String(lastScannedRfidOptimized);
-      if (currentRfid.length() > 0 && currentRfid.equals(terminalDropRfidId) && terminalDropRfidId.length() > 0) {
-        agvMode(AGV_STATE_WAREHOUSE);
-        break;
-      }
-      break;
+  if (trigger){
+    pidLinefollower(2, PID_MODE_MAJU);
+    //Scan warehouse rfid
+    String currentRfid = String(lastScannedRfidOptimized);
+    if (currentRfid.length() > 0 && currentRfid.equals(terminalDropRfidId) && terminalDropRfidId.length() > 0) {
+      agvMode(AGV_STATE_WAREHOUSE);
     }
+    return;
+  }
 }
 
 // Fungsi ini menghentikan pergerakan AGV.
@@ -146,36 +131,35 @@ void agvMoveForward() {
   if (START()){
     trigger = true;
   }
-  switch(trigger){
-    case true:
-      // Cek apakah ada RFID yang terbaca
-      int currentStation = getStationFromLastRfid();
+  if(trigger){
+    // Cek apakah ada RFID yang terbaca
+    int currentStation = getStationFromLastRfid();
 
-      // Jika ada stasiun yang terdeteksi, cek apakah ada di target list
-      if (currentStation != -1) {
-        // Cari apakah stasiun ini ada di targetStationsList
-        for (int i = 0; i < targetStationsList.size(); i++) {
-          if (targetStationsList[i] == currentStation) {
-            removeTargetStationById(currentStation);
-            lastStateAGV(AGV_STATE_MOVE_FORWARD);
-            agvMode(AGV_STATE_STATION);
-            break;
-          }
+    // Jika ada stasiun yang terdeteksi, cek apakah ada di target list
+    if (currentStation != -1) {
+      // Cari apakah stasiun ini ada di targetStationsList
+      for (int i = 0; i < targetStationsList.size(); i++) {
+        if (targetStationsList[i] == currentStation) {
+          removeTargetStationById(currentStation);
+          lastStateAGV(AGV_STATE_MOVE_FORWARD);
+          agvMode(AGV_STATE_STATION);
+          return;
         }
       }
+    }
 
-      // Cek apakah RFID ujung terdeteksi
-      String currentRfid = String(lastScannedRfidOptimized);
-      if (currentRfid.length() > 0 && currentRfid.equals(ujungRfidId) && ujungRfidId.length() > 0) {
-        agvMode(AGV_STATE_MOVE_BACKWARD);
-        break;
-      }
+    // Cek apakah RFID ujung terdeteksi
+    String currentRfid = String(lastScannedRfidOptimized);
+    if (currentRfid.length() > 0 && currentRfid.equals(ujungRfidId) && ujungRfidId.length() > 0) {
+      agvMode(AGV_STATE_MOVE_BACKWARD);
+      return;
+    }
 
-      // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
-      if (!obstacleDetected) {
-        pidLinefollower(2, PID_MODE_MAJU);
-      }
-      break;
+    // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
+    if (!obstacleDetected) {
+      pidLinefollower(2, PID_MODE_MAJU);
+      return;
+    }
   }
 }
 
@@ -187,41 +171,39 @@ void agvMoveBackward() {
   if (START()){
     trigger = true;
   }
-  switch(trigger){
-    case true:
-      if (targetStationsList.size() != 0) {
-        // Cek apakah ada RFID yang terbaca
-        int currentStation = getStationFromLastRfid();
+  if (trigger){
+    if (targetStationsList.size() != 0) {
+      // Cek apakah ada RFID yang terbaca
+      int currentStation = getStationFromLastRfid();
 
-        // Jika ada stasiun yang terdeteksi, cek apakah ada di target list
-        if (currentStation != -1) {
-          // Cari apakah stasiun ini ada di targetStationsList
-          for (int i = 0; i < targetStationsList.size(); i++) {
-            if (targetStationsList[i] == currentStation) {
-              removeTargetStationById(currentStation);
-              lastStateAGV(AGV_STATE_MOVE_BACKWARD);
-              agvMode(AGV_STATE_STATION);
-              break;
-            }
+      // Jika ada stasiun yang terdeteksi, cek apakah ada di target list
+      if (currentStation != -1) {
+        // Cari apakah stasiun ini ada di targetStationsList
+        for (int i = 0; i < targetStationsList.size(); i++) {
+          if (targetStationsList[i] == currentStation) {
+            removeTargetStationById(currentStation);
+            lastStateAGV(AGV_STATE_MOVE_BACKWARD);
+            agvMode(AGV_STATE_STATION);
+            return;
           }
         }
       }
+    }
 
-      // Cek apakah RFID terminal terdeteksi
-      String currentRfid = String(lastScannedRfidOptimized);
-      if (currentRfid.length() > 0 && currentRfid.equals(terminalDropRfidId) && terminalDropRfidId.length() > 0) {
-        agvMode(AGV_STATE_TERMINAL_DROP);
-        lastStateAGV(AGV_STATE_MOVE_BACKWARD);
-        break;
-      }
-      // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
-      if (!obstacleDetected) {
-        pidLinefollower(2, PID_MODE_MUNDUR);
-      }
-      break;
+    // Cek apakah RFID terminal terdeteksi
+    String currentRfid = String(lastScannedRfidOptimized);
+    if (currentRfid.length() > 0 && currentRfid.equals(terminalDropRfidId) && terminalDropRfidId.length() > 0) {
+      agvMode(AGV_STATE_TERMINAL_DROP);
+      lastStateAGV(AGV_STATE_MOVE_BACKWARD);
+      return;
+    }
+    // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
+    if (!obstacleDetected) {
+      pidLinefollower(2, PID_MODE_MUNDUR);
+    }
+    return;
   }
 }
-
 
 // Fungsi ini menyimpan status terakhir AGV (maju atau mundur).
 void lastStateAGV(AgvState lastState){
@@ -230,6 +212,36 @@ void lastStateAGV(AgvState lastState){
     } else if (lastState == AGV_STATE_MOVE_BACKWARD) {
         lastStateAgv = AGV_STATE_MOVE_BACKWARD;
     }
+    
+    // Simpan lastStateAgv ke preferences
+    saveLastStateAGVToPreferences(lastStateAgv);
+}
+
+// Fungsi untuk menyimpan lastStateAgv ke Preferences
+void saveLastStateAGVToPreferences(AgvState lastState) {
+    // Konversi state ke string
+    String stateString = agvStateToString(lastState);
+    
+    // Simpan ke Preferences
+    preferences.begin("agv-state", false);
+    preferences.clear(); // Hapus data lama
+    preferences.putString("last_state", stateString);
+    preferences.end();
+    
+    Serial.println("Last AGV State saved to Preferences: " + stateString);
+}
+
+// Fungsi untuk memuat lastStateAgv dari Preferences
+AgvState loadLastStateAGVFromPreferences() {
+    preferences.begin("agv-state", true);
+    String stateString = preferences.getString("last_state", "MOVE_FORWARD");
+    preferences.end();
+    
+    AgvState loadedState = stringToAgvState(stateString);
+    lastStateAgv = loadedState;
+    
+    Serial.println("Last AGV State loaded from Preferences: " + stateString);
+    return loadedState;
 }
 
 // Fungsi untuk mengkonversi AgvState ke string
@@ -265,6 +277,7 @@ void saveCurrentStateAGVToPreferences(AgvState currentState) {
     
     // Simpan ke Preferences
     preferences.begin("agv-state", false);
+    preferences.clear(); // Hapus data lama
     preferences.putString("current_state", stateString);
     preferences.end();
     
