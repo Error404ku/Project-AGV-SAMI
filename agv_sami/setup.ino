@@ -137,7 +137,6 @@ void setupWebServer() {
   server.on("/", HTTP_GET, handleRoot);                          // Halaman utama dengan menu
   server.on("/wifi", HTTP_GET, handleWifiConfig);                // Halaman konfigurasi WiFi
   server.on("/wifi-config", HTTP_GET, handleWifiConfig);         // Halaman konfigurasi WiFi (alias)
-  server.on("/wifi-scan", HTTP_GET, handleWifiScan);             // API untuk scan WiFi networks
   server.on("/savewifi", HTTP_POST, handleSaveWifi);             // Simpan konfigurasi WiFi
   server.on("/save-wifi", HTTP_POST, handleSaveWifi);            // Simpan konfigurasi WiFi (alias)
 
@@ -311,6 +310,12 @@ void setupAll() {
   setupWebServer();
   setupTombol();
   setupRfid();
+  
+  // Load RFID data from preferences
+  loadRfidUjungFromPreferences();
+  loadRfidWarehouseFromPreferences();
+  loadAutoStationsFromPreferences();
+  
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.println("SETUP ALL SELESAI");
