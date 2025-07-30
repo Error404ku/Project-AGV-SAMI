@@ -1666,38 +1666,24 @@ void handleRfidUjung() {
       if (newRfidScanned) {
         String rfidData = String(lastScannedRfidOptimized);
         newRfidScanned = false;
+
         
-        // Check if already exists
-        bool exists = false;
-        for (int i = 0; i < rfidUjungCount; i++) {
-          if (rfidUjungList[i].rfidId == rfidData) {
-            exists = true;
-            break;
-          }
-        }
+        // Hanya simpan 1 data - ganti data lama jika ada
+        rfidUjungList[0].ujungId = 1;
+        rfidUjungList[0].rfidId = rfidData;
+        rfidUjungList[0].isActive = true;
+        rfidUjungCount = 1;  // Selalu 1 data saja
+        saveRfidUjungToPreferences();
         
-        if (!exists && rfidUjungCount < MAX_RFID_UJUNG) {
-          rfidUjungList[rfidUjungCount].ujungId = rfidUjungCount + 1;
-          rfidUjungList[rfidUjungCount].rfidId = rfidData;
-          rfidUjungList[rfidUjungCount].isActive = true;
-          rfidUjungCount++;
-          saveRfidUjungToPreferences();
-          
-          lcd.setCursor(0, 1);
-          lcd.print("RFID Saved!         ");
-          lcd.setCursor(0, 2);
-          lcd.print(rfidData.substring(0, 16));
-          lcd.print("    ");
-          delay(2000);
-        } else if (exists) {
-          lcd.setCursor(0, 1);
-          lcd.print("RFID Already Exists!");
-          delay(2000);
-        } else {
-          lcd.setCursor(0, 1);
-          lcd.print("Storage Full!       ");
-          delay(2000);
-        }
+        // Sinkronisasi dengan ujungRfidId untuk logika AGV
+        saveUjungRfid(rfidData);
+        
+        lcd.setCursor(0, 1);
+        lcd.print("RFID Saved!         ");
+        lcd.setCursor(0, 2);
+        lcd.print(rfidData.substring(0, 16));
+        lcd.print("    ");
+        delay(2000);
         
         displayRfidUjung();
         return;
@@ -1761,6 +1747,10 @@ void handleRfidUjung() {
       if (START()) {
         rfidUjungCount = 0;
         saveRfidUjungToPreferences();
+        
+        // Hapus juga ujungRfidId dari logika AGV
+        saveUjungRfid("");
+        
         lcd.setCursor(0, 1);
         lcd.print("All Data Deleted!   ");
         delay(2000);
@@ -1854,37 +1844,22 @@ void handleRfidWarehouse() {
         String rfidData = String(lastScannedRfidOptimized);
         newRfidScanned = false;
         
-        // Check if already exists
-        bool exists = false;
-        for (int i = 0; i < rfidWarehouseCount; i++) {
-          if (rfidWarehouseList[i].rfidId == rfidData) {
-            exists = true;
-            break;
-          }
-        }
+        // Hanya simpan 1 data - ganti data lama jika ada
+        rfidWarehouseList[0].warehouseId = 1;
+        rfidWarehouseList[0].rfidId = rfidData;
+        rfidWarehouseList[0].isActive = true;
+        rfidWarehouseCount = 1;  // Selalu 1 data saja
+        saveRfidWarehouseToPreferences();
         
-        if (!exists && rfidWarehouseCount < MAX_RFID_WAREHOUSE) {
-          rfidWarehouseList[rfidWarehouseCount].warehouseId = rfidWarehouseCount + 1;
-          rfidWarehouseList[rfidWarehouseCount].rfidId = rfidData;
-          rfidWarehouseList[rfidWarehouseCount].isActive = true;
-          rfidWarehouseCount++;
-          saveRfidWarehouseToPreferences();
-          
-          lcd.setCursor(0, 1);
-          lcd.print("RFID Saved!         ");
-          lcd.setCursor(0, 2);
-          lcd.print(rfidData.substring(0, 16));
-          lcd.print("    ");
-          delay(2000);
-        } else if (exists) {
-          lcd.setCursor(0, 1);
-          lcd.print("RFID Already Exists!");
-          delay(2000);
-        } else {
-          lcd.setCursor(0, 1);
-          lcd.print("Storage Full!       ");
-          delay(2000);
-        }
+        // Sinkronisasi dengan warehouseRfidId untuk logika AGV
+        saveWarehouseRfid(rfidData);
+        
+        lcd.setCursor(0, 1);
+        lcd.print("RFID Saved!         ");
+        lcd.setCursor(0, 2);
+        lcd.print(rfidData.substring(0, 16));
+        lcd.print("    ");
+        delay(2000);
         
         displayRfidWarehouse();
         return;
@@ -1948,6 +1923,10 @@ void handleRfidWarehouse() {
       if (START()) {
         rfidWarehouseCount = 0;
         saveRfidWarehouseToPreferences();
+        
+        // Hapus juga warehouseRfidId dari logika AGV
+        saveWarehouseRfid("");
+        
         lcd.setCursor(0, 1);
         lcd.print("All Data Deleted!   ");
         delay(2000);

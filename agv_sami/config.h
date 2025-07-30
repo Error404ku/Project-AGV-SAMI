@@ -309,6 +309,11 @@ enum AgvState {
   AGV_STATE_WAREHOUSE,
   AGV_STATE_STATION
 }
+
+enum LastStateAGV {
+  AGV_STATE_MOVE_FORWARD,
+  AGV_STATE_MOVE_BACKWARD,
+}
 // Error codes definition
 #define ERROR_SENSOR_COMMUNICATION 1
 #define ERROR_MOTOR_CONTROL 2
@@ -365,6 +370,21 @@ void displayRfidWarehouse();
 void handleRfidWarehouse();
 void saveRfidWarehouseToPreferences();
 void loadRfidWarehouseFromPreferences();
+
+// Warehouse & Ujung RFID sync functions
+void loadWarehouseUjungRfid();
+void saveWarehouseRfid(String rfidId);
+void saveUjungRfid(String rfidId);
+
+// AGV Movement functions
+void agvMode(AgvState state);
+void agvMoveForward();
+void agvMoveBackward();
+void agvWarehouse();
+void agvStation();
+void agvTerminal();
+void agvStop();
+String lastStateAGV(AgvState lastState);
 
 // Auto Input Station functions
 void displayAutoInputStation();

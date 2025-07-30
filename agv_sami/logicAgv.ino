@@ -1,56 +1,89 @@
-void agvMode(AgvState state){
-    if(state == AGV_STATE_MOVE_FORWARD){
-        agvMoveForward();
-    }
-    else if(state == AGV_STATE_MOVE_BACKWARD){
-        agvMoveBackward();
-    }
-    else if(state == AGV_STATE_STOP){
-        agvStop();
-    }
-    else if(state == AGV_STATE_TERMINAL){
-        agvTerminal();
-    }
-    else if(state == AGV_STATE_WAREHOUSE){
-        agvWarehouse();
-    }
-    else if(state == AGV_STATE_STATION){
-        agvStation();
-    } else{
-        agvStop();
-    }
-}
-
-void agvWarehouse(){
+void agvMode(AgvState state) {
+  if (state == AGV_STATE_MOVE_FORWARD) {
+    agvMoveForward();
+  } else if (state == AGV_STATE_MOVE_BACKWARD) {
+    agvMoveBackward();
+  } else if (state == AGV_STATE_STOP) {
     agvStop();
-    if (START()){
-        agvMode(AGV_STATE_MOVE_FORWARD);
-    }
-}
-
-void agvStation(){
+  } else if (state == AGV_STATE_TERMINAL) {
+    agvTerminal();
+  } else if (state == AGV_STATE_WAREHOUSE) {
+    agvWarehouse();
+  } else if (state == AGV_STATE_STATION) {
+    agvStation();
+  } else {
     agvStop();
-    if (START()){
-        agvMode(AGV_STATE_MOVE_FORWARD);
-    }
+  }
 }
 
-void agvTerminal(){
-    agvStop();
-    if (START()){
-        agvMode(AGV_STATE_MOVE_FORWARD);
-    }
+void agvWarehouse() {
+  agvStop();
+  if (START()) {
+    agvMode(AGV_STATE_MOVE_FORWARD);
+  }
 }
 
-void agvStop(){
-    pidLinefollower(2,PID_MODE_STOPPELANPELAN);
-}       
-
-void agvMoveForward(){
-    if (!obstacleDetected){
-        pidLinefollower(2,PID_MODE_MAJU);
+void agvStation() {
+  if (START()) {
+    if (lastStateAGV(AGV_STATE_MOVE_FORWARD) == "MOVE_FORWARD") {
+      agvMode(AGV_STATE_MOVE_BACKWARD);
+    }else if (lastStateAGV(AGV_STATE_MOVE_BACKWARD) == "MOVE_BACKWARD") {
+      agvMode(AGV_STATE_MOVE_FORWARD);
     }
-    else{
-        agvStop();
+  }
+}
+
+void agvTerminal() {
+  agvStop();
+
+}
+
+void agvStop() {
+  pidLinefollower(2, PID_MODE_STOPPELANPELAN);
+}
+
+void agvMoveForward() {
+  // Cek apakah ada RFID yang terbaca
+  int currentStation = getStationFromLastRfid();
+
+  // Jika ada stasiun yang terdeteksi, cek apakah ada di target list
+  if (currentStation != -1) {
+    // Cari apakah stasiun ini ada di targetStationsList
+    for (int i = 0; i < targetStationsList.size(); i++) {
+      if (targetStationsList[i] == currentStation) {
+        agvMode(AGV_STATE_STATION);
+        lastStateAGV(AGV_STATE_MOVE_FORWARD);
+      }
+    }
+  }
+
+  // Cek apakah RFID ujung terdeteksi
+  String currentRfid = String(lastScannedRfidOptimized);
+  if (currentRfid.length() > 0 && currentRfid.equals(ujungRfidId) && ujungRfidId.length() > 0) {
+    agvMode(AGV_STATE_MOVE_BACKWARD);
+    return;
+  }
+
+  // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
+  if (!obstacleDetected) {
+    pidLinefollower(2, PID_MODE_MAJU);
+  }
+}
+
+String lastStateAGV(AgvState lastState){
+    if (lastState == AGV_STATE_MOVE_FORWARD) {
+        return "MOVE_FORWARD";
+    } else if (lastState == AGV_STATE_MOVE_BACKWARD) {
+        return "MOVE_BACKWARD";
+    } else if (lastState == AGV_STATE_STOP) {
+        return "STOP";
+    } else if (lastState == AGV_STATE_TERMINAL) {
+        return "TERMINAL";
+    } else if (lastState == AGV_STATE_WAREHOUSE) {
+        return "WAREHOUSE";
+    } else if (lastState == AGV_STATE_STATION) {
+        return "STATION";
+    } else {
+        return "UNKNOWN";
     }
 }

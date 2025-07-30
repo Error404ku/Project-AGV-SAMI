@@ -432,6 +432,17 @@ void loadWarehouseUjungRfid() {
   ujungRfidId = preferences.getString("ujungRfid", "");
   preferences.end();
   
+  // Sinkronisasi dengan data dari rfidWarehouseList dan rfidUjungList
+  if (warehouseRfidId.length() == 0 && rfidWarehouseCount > 0 && rfidWarehouseList[0].isActive) {
+    warehouseRfidId = rfidWarehouseList[0].rfidId;
+    saveWarehouseRfid(warehouseRfidId);
+  }
+  
+  if (ujungRfidId.length() == 0 && rfidUjungCount > 0 && rfidUjungList[0].isActive) {
+    ujungRfidId = rfidUjungList[0].rfidId;
+    saveUjungRfid(ujungRfidId);
+  }
+  
   Serial.println("Loaded Warehouse RFID: " + warehouseRfidId);
   Serial.println("Loaded Ujung RFID: " + ujungRfidId);
 }

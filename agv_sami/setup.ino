@@ -280,6 +280,11 @@ void setupMenu() {
 
   // Load RFID stations
   loadRfidStations();
+  
+  // Load RFID Ujung and Warehouse data
+  loadRfidUjungFromPreferences();
+  loadRfidWarehouseFromPreferences();
+  loadWarehouseUjungRfid();
 
   // Load stations list from HTTP preferences
   loadTargetStationsListFromPreferences();
