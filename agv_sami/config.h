@@ -308,12 +308,12 @@ enum AgvState {
   AGV_STATE_TERMINAL,
   AGV_STATE_WAREHOUSE,
   AGV_STATE_STATION
-}
+};
 
 enum LastStateAGV {
-  AGV_STATE_MOVE_FORWARD,
-  AGV_STATE_MOVE_BACKWARD,
-}
+  LAST_STATE_MOVE_FORWARD,
+  LAST_STATE_MOVE_BACKWARD
+};
 // Error codes definition
 #define ERROR_SENSOR_COMMUNICATION 1
 #define ERROR_MOTOR_CONTROL 2
@@ -385,6 +385,7 @@ void agvStation();
 void agvTerminal();
 void agvStop();
 String lastStateAGV(AgvState lastState);
+void changeStateMode(StateMode mode);
 
 // Auto Input Station functions
 void displayAutoInputStation();
@@ -435,6 +436,21 @@ void checkErrorRecovery();
 void initErrorRecovery();
 
 // Enum for PID modes
+enum StateMode {
+  STATE_MODE_MAJU,
+  STATE_MODE_MUNDUR,
+  STATE_MODE_BERHENTI,
+  STATE_MODE_FORCEMAJU,
+  STATE_MODE_FORCEMUNDUR
+};
+
+// Global StateMode variable
+extern StateMode currentStateMode;
+
+// Global AGV state tracking variables
+extern AgvState lastStateAgv;
+extern String ujungRfidId;
+
 enum PidMode {
   PID_MODE_MAJU,
   PID_MODE_MUNDUR,
