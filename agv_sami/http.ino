@@ -1,4 +1,4 @@
-bool saveStationsListToPreferences() {
+bool saveTargetStationsListToPreferences() {
   stationsPreferences.begin(STATIONS_NAMESPACE, false);  // Buka untuk menulis
   stationsPreferences.clear();                           // Hapus semua data lama di namespace ini
 
@@ -7,7 +7,7 @@ bool saveStationsListToPreferences() {
   // 1024 byte sudah sangat cukup untuk banyak integer.
   DynamicJsonDocument doc(1024);
   JsonArray array = doc.to<JsonArray>();
-  for (int id : stationsList) {
+  for (int id : targetStationsList) {
     array.add(id);
   }
 
@@ -34,10 +34,10 @@ bool saveStationsListToPreferences() {
     return false;
   }
 }
-// Memuat stationsList dari Preferences (Flash) ke RAM
-bool loadStationsListFromPreferences() {
+// Memuat targetStationsList dari Preferences (Flash) ke RAM
+bool loadTargetStationsListFromPreferences() {
   stationsPreferences.begin(STATIONS_NAMESPACE, true);  // Buka untuk membaca
-  stationsList.clear();                                 // Kosongkan daftar di RAM sebelum memuat
+  targetStationsList.clear();                                 // Kosongkan daftar di RAM sebelum memuat
 
   Serial.println("Memuat daftar stasiun dari Preferences ke RAM...");
   String storedStations = stationsPreferences.getString("stations_array", "[]");  // Ambil string JSON
@@ -52,9 +52,9 @@ bool loadStationsListFromPreferences() {
     JsonArray array = doc.as<JsonArray>();
     if (array) {  // Pastikan itu adalah JsonArray yang valid
       for (JsonVariant v : array) {
-        stationsList.push_back(v.as<int>());
+        targetStationsList.push_back(v.as<int>());
       }
-      Serial.println("Berhasil memuat daftar stasiun ke RAM. Jumlah stasiun: " + String(stationsList.size()));
+      Serial.println("Berhasil memuat daftar stasiun ke RAM. Jumlah stasiun: " + String(targetStationsList.size()));
     } else {
       Serial.println("Data dari Preferences bukan format array JSON yang diharapkan.");
     }
@@ -66,7 +66,7 @@ bool loadStationsListFromPreferences() {
 }
 // --- HANDLER ENDPOINT HTTP ---
 // Handler untuk memperbarui daftar stasiun
-void handleUpdateStations() {
+void handleUpdateTargetStations() {
   if (!server.hasArg("plain")) {
     server.send(400, "text/plain", "Error: Body JSON tidak ada.");
     return;
@@ -87,24 +87,24 @@ void handleUpdateStations() {
     return;
   }
 
-  stationsList.clear();  // Kosongkan daftar stasiun yang lama di RAM
+  targetStationsList.clear();  // Kosongkan daftar stasiun yang lama di RAM
   JsonArray receivedStations = doc["stations"].as<JsonArray>();
   for (JsonVariant v : receivedStations) {
-    stationsList.push_back(v.as<int>());
+    targetStationsList.push_back(v.as<int>());
   }
-  Serial.println("Variabel RAM 'stationsList' telah diperbarui dengan " + String(stationsList.size()) + " elemen.");
+  Serial.println("Variabel RAM 'targetStationsList' telah diperbarui dengan " + String(targetStationsList.size()) + " elemen.");
 
-  if (saveStationsListToPreferences()) {  // Simpan ke Preferences
+  if (saveTargetStationsListToPreferences()) {  // Simpan ke Preferences
     server.send(200, "application/json", "{\"status\":\"ok\", \"message\":\"Daftar stasiun berhasil diperbarui di RAM dan flash.\" }");
   } else {
     server.send(500, "application/json", "{\"status\":\"error\", \"message\":\"Gagal menyimpan data ke penyimpanan.\" }");
   }
 }
-// Handler untuk menampilkan daftar stasiun yang ditemukan (stationsList)
-void handleShowStations() {
+// Handler untuk menampilkan daftar stasiun yang ditemukan (targetStationsList)
+void handleShowTargetStations() {
   DynamicJsonDocument doc(1024);  // Ukuran buffer untuk respons JSON (bisa disesuaikan)
   JsonArray array = doc.to<JsonArray>();
-  for (int id : stationsList) {
+  for (int id : targetStationsList) {
     array.add(id);
   }
   String output;
@@ -114,9 +114,9 @@ void handleShowStations() {
   server.send(200, "application/json", output);
 }
 // --- FUNGSI UNTUK MENGOSONGKAN DAFTAR STATION ---
-void clearStationsData() {
+void clearTargetStationsData() {
   // 1. Kosongkan std::vector di RAM
-  stationsList.clear();
+  targetStationsList.clear();
   Serial.println("Daftar station di RAM telah dikosongkan.");
 
   // 2. Kosongkan data di Preferences
@@ -127,16 +127,16 @@ void clearStationsData() {
 }
 
 // --- FUNGSI UNTUK MENGURUTKAN DAFTAR STATION ---
-void sortStationsList() {
-  if (stationsList.size() > 1) {
-    std::sort(stationsList.begin(), stationsList.end());
+void sortTargetStationsList() {
+  if (targetStationsList.size() > 1) {
+    std::sort(targetStationsList.begin(), targetStationsList.end());
     Serial.println("Daftar station telah diurutkan.");
 
     // Print sorted list for debugging
     Serial.print("Sorted stations: ");
-    for (size_t i = 0; i < stationsList.size(); i++) {
-      Serial.print(stationsList[i]);
-      if (i < stationsList.size() - 1) Serial.print(", ");
+    for (size_t i = 0; i < targetStationsList.size(); i++) {
+      Serial.print(targetStationsList[i]);
+      if (i < targetStationsList.size() - 1) Serial.print(", ");
     }
     Serial.println();
   } else {

@@ -118,16 +118,6 @@ void loadRfidStations() {
   }
 
   preferences.end();
-
-  Serial.println("Loaded RFID stations:");
-  for (int i = 0; i < rfidStationCount; i++) {
-    if (rfidStations[i].isActive) {
-      Serial.print("Station ");
-      Serial.print(rfidStations[i].stationId);
-      Serial.print(": ");
-      Serial.println(rfidStations[i].rfidId);
-    }
-  }
 }
 
 void saveRfidStations() {
@@ -145,7 +135,6 @@ void saveRfidStations() {
   }
 
   preferences.end();
-  Serial.println("RFID stations saved successfully");
 }
 
 int findRfidStation(int stationId) {

@@ -346,7 +346,7 @@ void displayTargetSettings() {
   lcd.setCursor(0, 1);
   lcd.print("HTTP Stations:");
 
-  if (stationsList.empty()) {
+  if (targetStationsList.empty()) {
     lcd.setCursor(0, 2);
     lcd.print("No stations");
     lcd.setCursor(0, 3);
@@ -354,14 +354,14 @@ void displayTargetSettings() {
   } else {
     lcd.setCursor(0, 2);
     lcd.print("Total:");
-    lcd.print(stationsList.size());
+    lcd.print(targetStationsList.size());
 
     lcd.setCursor(0, 3);
-    for (size_t i = 0; i < stationsList.size() && i < 3; i++) {
-      lcd.print(stationsList[i]);
-      if (i < stationsList.size() - 1 && i < 2) lcd.print(",");
+    for (size_t i = 0; i < targetStationsList.size() && i < 3; i++) {
+      lcd.print(targetStationsList[i]);
+      if (i < targetStationsList.size() - 1 && i < 2) lcd.print(",");
     }
-    if (stationsList.size() > 3) {
+    if (targetStationsList.size() > 3) {
       lcd.print("..");
     }
   }
@@ -567,12 +567,12 @@ void handleTargetSettings() {
     } else {
       // Check if held for 3 seconds
       if (currentMillis - xButtonHoldStart >= X_HOLD_DURATION) {
-        // Call clearStationsData after 3 seconds
+        // Call clearTargetStationsData after 3 seconds
         lcd.clear();
         lcd.setCursor(0, 1);
         lcd.print("Clearing stations...");
 
-        clearStationsData();
+        clearTargetStationsData();
 
         lcd.clear();
         lcd.setCursor(0, 1);
@@ -594,7 +594,7 @@ void handleTargetSettings() {
 
   if (STOP()) {
     // Load latest stations from preferences
-    loadStationsListFromPreferences();
+    loadTargetStationsListFromPreferences();
     isClearingStations = false;
     xButtonHoldStart = 0;
     currentMenu = MENU_MAIN;
@@ -841,8 +841,8 @@ void handleResetMenu() {
     stationsPreferences.clear();
     stationsPreferences.end();
 
-    // Clear stationsList in memory
-    stationsList.clear();
+    // Clear targetStationsList in memory
+    targetStationsList.clear();
 
     // End preferences session
     preferences.end();

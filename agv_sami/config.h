@@ -22,7 +22,7 @@
 WebServer server(80);
 Preferences preferences;
 Preferences stationsPreferences;  // Objek Preferences untuk station yang ditemukan
-std::vector<int> stationsList;    // Array di RAM untuk menyimpan station yang ditemukan
+std::vector<int> targetStationsList;    // Array di RAM untuk menyimpan station yang ditemukan
 
 int BAUDRATE = 9600;
 void setupSensorMagnet(int slaveId);
@@ -216,7 +216,7 @@ int baseSpeed = 2000;
 Wiegand wiegand;
 
 // RFID Station Management
-const int MAX_RFID_STATIONS = 10;
+const int MAX_RFID_STATIONS = 100;
 struct RfidStation {
   int stationId;
   String rfidId;
@@ -346,12 +346,12 @@ void updateIPAddressesFromStrings();
 void handleWifiConfig();
 void handleSaveWifi();
 void handleRoot();
-void handleUpdateStations();
-void handleShowStations();
-bool saveStationsListToPreferences();
-bool loadStationsListFromPreferences();
-void clearStationsData();
-void sortStationsList();
+void handleUpdateTargetStations();
+void handleShowTargetStations();
+bool saveTargetStationsListToPreferences();
+bool loadTargetStationsListFromPreferences();
+void clearTargetStationsData();
+void sortTargetStationsList();
 
 // RFID Ujung functions
 void displayRfidUjung();

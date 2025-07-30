@@ -77,13 +77,13 @@ void outTerminal() {
 void inWarehouse() {
   music(MUSIC_MODE_KOMPUTER);
   clearMovement();
-  clearStationsData();
+  clearTargetStationsData();
   modeBerhenti = true;
 }
 
 void outWarehouse() {
   setModeStation();
-  sortStationsList();
+  sortTargetStationsList();
   // modeMundur = false;
   modeMaju = true;
   // ("maju");
@@ -98,7 +98,7 @@ void inStation() {
 }
 void outStation() {
   // Check if this is the last station in the list
-  if (indexTarget >= stationsList.size()) {
+  if (indexTarget >= targetStationsList.size()) {
     Serial.println("Last station reached via outStation - calling ujungStation!");
     ujungStation();
   } else {
@@ -167,13 +167,13 @@ void pembacaanTerminal() {
   // AGV menunggu di terminal sampai stationList diterima dan tombol start ditekan
   if (!stationListReceived) {
     // Cek apakah stationList sudah diterima dari server/komputer
-    if (stationsList.size() > 0) {
+    if (targetStationsList.size() > 0) {
       stationListReceived = true;
       Serial.println("StationList received! Ready to start journey.");
       Serial.print("Stations to visit: ");
-      for (size_t i = 0; i < stationsList.size(); i++) {
-        Serial.print(stationsList[i]);
-        if (i < stationsList.size() - 1) Serial.print(", ");
+      for (size_t i = 0; i < targetStationsList.size(); i++) {
+        Serial.print(targetStationsList[i]);
+        if (i < targetStationsList.size() - 1) Serial.print(", ");
       }
       Serial.println();
     }
@@ -264,8 +264,8 @@ void pembacaanStation() {
       }
       
       // Check if this is a target station RFID
-      if (detectedStationId > 0 && indexTarget < stationsList.size()) {
-        if (stationsList[indexTarget] == detectedStationId) {
+      if (detectedStationId > 0 && indexTarget < targetStationsList.size()) {
+        if (targetStationsList[indexTarget] == detectedStationId) {
           Serial.println("Target station " + String(detectedStationId) + " reached!");
           station = detectedStationId;
           inStation();
@@ -282,7 +282,7 @@ void pembacaanStation() {
   }
 
   // ― Ujung station: pindah ke warehouse (mundur) jika tidak ada ujung RFID ―
-  if (sensorkebacasemua && modeMaju && !force && indexTarget >= stationsList.size()) {
+  if (sensorkebacasemua && modeMaju && !force && indexTarget >= targetStationsList.size()) {
     Serial.println("Reached end without ujung RFID - returning to warehouse");
     ujungStation();
     return;
@@ -322,13 +322,13 @@ void tombolAgv() {
     } else if (modeStation && modeBerhenti) {
       // Lanjut ke station berikutnya atau ke ujung
       indexTarget++;
-      if (indexTarget >= stationsList.size()) {
+      if (indexTarget >= targetStationsList.size()) {
         Serial.println("All stations completed - heading to ujung");
         // Tetap di mode station untuk mencari ujung
         changeStateMode("maju");
         force = true;
       } else {
-        Serial.println("Moving to next station: " + String(stationsList[indexTarget]));
+        Serial.println("Moving to next station: " + String(targetStationsList[indexTarget]));
         changeStateMode("maju");
         force = true;
       }
@@ -414,8 +414,8 @@ void displayLogicAgv() {
     // Clear part of row 3 and show station info
     lcd.setCursor(0, 3);
     lcd.print(station);
-    if (indexTarget < stationsList.size()) {
-      lcd.print(stationsList[indexTarget]);
+    if (indexTarget < targetStationsList.size()) {
+      lcd.print(targetStationsList[indexTarget]);
     } else {
       lcd.print("END");
     }

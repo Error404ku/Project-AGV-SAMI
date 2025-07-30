@@ -75,7 +75,7 @@ void setupDisplay() {
 
 void setupWebServer() {
   // Muat daftar stasiun dari Preferences saat startup
-  loadStationsListFromPreferences();
+  loadTargetStationsListFromPreferences();
   
   // Muat konfigurasi WiFi dari Preferences
   loadWifiConfig();
@@ -130,8 +130,8 @@ void setupWebServer() {
    }
   
   // Registrasi Endpoint HTTP yang diminta
-  server.on("/updatestations", HTTP_POST, handleUpdateStations);  // Untuk menyimpan/menimpa daftar stasiun
-  server.on("/showstations", HTTP_GET, handleShowStations);       // Untuk menampilkan daftar stasiun
+  server.on("/updatestations", HTTP_POST, handleUpdateTargetStations);  // Untuk menyimpan/menimpa daftar stasiun
+  server.on("/showstations", HTTP_GET, handleShowTargetStations);       // Untuk menampilkan daftar stasiun
   
   // WiFi Configuration endpoints
   server.on("/", HTTP_GET, handleRoot);                          // Halaman utama dengan menu
@@ -282,10 +282,10 @@ void setupMenu() {
   loadRfidStations();
 
   // Load stations list from HTTP preferences
-  loadStationsListFromPreferences();
+  loadTargetStationsListFromPreferences();
 
-  Serial.print("Loaded stationsList size: ");
-  Serial.println(stationsList.size());
+  Serial.print("Loaded targetStationsList size: ");
+  Serial.println(targetStationsList.size());
 }
 
 void setupTombol() {
