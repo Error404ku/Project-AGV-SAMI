@@ -386,6 +386,10 @@ void agvTerminal();
 void agvStop();
 String lastStateAGV(AgvState lastState);
 void changeStateMode(StateMode mode);
+String agvStateToString(AgvState state);
+void saveCurrentStateAGVToPreferences(AgvState currentState);
+AgvState stringToAgvState(String stateString);
+AgvState loadCurrentStateAGVFromPreferences();
 
 // Auto Input Station functions
 void displayAutoInputStation();
@@ -449,6 +453,7 @@ extern StateMode currentStateMode;
 
 // Global AGV state tracking variables
 extern AgvState lastStateAgv;
+extern AgvState currentStateAgv;
 extern String ujungRfidId;
 
 enum PidMode {
