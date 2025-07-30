@@ -37,7 +37,7 @@ void agvStation() {
   }
 }
 
-void agvTerminal() {
+void agvTerminalPickup(); {
   saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL);
   agvStop();
   hook("turun");
