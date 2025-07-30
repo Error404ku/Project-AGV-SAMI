@@ -1,0 +1,47 @@
+#ifndef MENU_H
+#define MENU_H
+
+#include <Arduino.h>
+#include <Preferences.h>
+#include <Adafruit_SSD1306.h>
+
+// Menu states
+#define MENU_MAIN 0
+#define MENU_MOTOR_TEST 2
+#define MENU_PID_SETTINGS 3
+#define MENU_TARGET_SETTINGS 4
+#define MENU_AGV_MODE 1
+#define MENU_RESET 5
+#define MENU_RFID_SETTINGS 6
+#define MENU_WIFI_SETTINGS 14
+
+// External variables from other files
+extern int targetStation[2];
+extern int targetStationFromKomputer[];
+extern bool modeStation;
+extern bool modeMaju;
+extern bool modeBerhenti;
+extern bool force;
+extern double kp, ki, kd;
+extern int baseSpeed;
+extern bool tombolBoot;
+// Menu variables
+extern int selectedItem;
+extern int maxItems;
+extern bool isAgvMode;
+int currentMenu = MENU_MAIN;
+
+// Function declarations
+void setupMenu();
+void handleMenu();
+void displayMainMenu();
+void displayMotorTest();
+void displayPidSettings();
+void displayTargetSettings();
+void displayWifiSettings();
+void handleMotorTest();
+void handlePidSettings();
+void handleTargetSettings();
+void handleWifiSettings();
+
+#endif
