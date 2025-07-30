@@ -5,8 +5,11 @@ void agvMode(AgvState state) {
     agvMoveBackward();
   } else if (state == AGV_STATE_STOP) {
     agvStop();
-  } else if (state == AGV_STATE_TERMINAL) {
-    agvTerminal();
+  } else if (state == AGV_STATE_TERMINAL_DROP) {
+    agvTerminalDrop();
+  } else if (state == AGV_STATE_TERMINAL_PICKUP) {
+    agvTerminalPickup();
+  }
   } else if (state == AGV_STATE_WAREHOUSE) {
     agvWarehouse();
   } else if (state == AGV_STATE_STATION) {
@@ -39,7 +42,7 @@ void agvTerminal() {
 }
 
 void agvStop() {
-  pidLinefollower(2, PID_MODE_STOPPELANPELAN);
+  pwmMotor(0, 0);
 }
 
 void agvMoveForward() {
