@@ -303,17 +303,6 @@ void initPerformanceOptimization() {
   // Set initial optimized states
   setStatusJalan("BERHENTI");
   setCurrentMode("WAREHOUSE");
-  
-  // Configure stack overflow detection
-  esp_task_wdt_init(30, true); // 30 second watchdog
-  
-  // Print initial memory status
-  Serial.print("Initial free heap: ");
-  Serial.print(ESP.getFreeHeap());
-  Serial.println(" bytes");
-  Serial.print("Initial free stack: ");
-  Serial.print(uxTaskGetStackHighWaterMark(NULL));
-  Serial.println(" words");
 
   Serial.println("Performance Optimization System initialized successfully!");
 }
@@ -331,16 +320,4 @@ void updatePerformanceOptimization() {
 
   // Check error recovery
   checkErrorRecovery();
-  
-  // Monitor stack usage periodically
-  static unsigned long lastStackCheck = 0;
-  if (millis() - lastStackCheck > 10000) { // Check every 10 seconds
-    UBaseType_t stackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-    if (stackHighWaterMark < 500) { // Less than 500 words (2KB) remaining
-      Serial.print("WARNING: Low stack space: ");
-      Serial.print(stackHighWaterMark);
-      Serial.println(" words remaining");
-    }
-    lastStackCheck = millis();
-  }
 }

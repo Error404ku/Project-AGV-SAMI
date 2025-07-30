@@ -18,9 +18,15 @@ String ujungRfidId = "";
 bool stationListReceived = false;  // Flag untuk menandai apakah stationList sudah diterima
 bool waitingForStart = true;       // Flag untuk menunggu tombol start
 
-// Current states - actual definitions
-AGVMode currentAGVMode = MODE_TERMINAL;
-MovementState currentMovement = MOVEMENT_STOP;
+// ― Modes (hanya SATU TRUE sekaligus) ―
+bool modeTerminal = true;   // mulai di terminal & diam
+bool modeWarehouse = false;
+bool modeStation = false;
+
+// ― Movement flags ―
+bool modeMaju = false;
+bool modeMundur = false;
+bool modeBerhenti = true;  // start dalam keadaan berhenti
 bool force = false;        // override manual
 
 // ― Derived sensor flags ―
@@ -35,92 +41,82 @@ const unsigned long xDelay = 200;
 extern bool sudahStopPelanPelan;
 
 /***********************************************************
- *  STATE MANAGEMENT HELPERS                              *
+ *  MODE HELPERS                                          *
  ***********************************************************/
-
-// Movement state helpers
-void setMovementState(MovementState newState) {
-  currentMovement = newState;
-  force = (newState == MOVEMENT_FORCE_FORWARD || newState == MOVEMENT_FORCE_BACKWARD);
+inline void clearMovement() {
+  modeMaju = modeMundur = false;
 }
-
-void clearMovement() {
-  currentMovement = MOVEMENT_STOP;
-  force = false;
+inline void setModeTerminal() {
+  modeTerminal = true;
+  modeWarehouse = modeStation = false;
 }
-
-// AGV mode helpers
-void setAGVMode(AGVMode newMode) {
-  currentAGVMode = newMode;
-}
-
-bool isMode(AGVMode mode) {
-  return currentAGVMode == mode;
-}
-
-bool isMoving(MovementState state) {
-  return currentMovement == state;
-}
-
-// Legacy compatibility helpers
-bool modeTerminal() { return currentAGVMode == MODE_TERMINAL; }
-bool modeWarehouse() { return currentAGVMode == MODE_WAREHOUSE; }
-bool modeStation() { return currentAGVMode == MODE_STATION; }
-bool modeMaju() { return currentMovement == MOVEMENT_FORWARD || currentMovement == MOVEMENT_FORCE_FORWARD; }
-bool modeMundur() { return currentMovement == MOVEMENT_BACKWARD || currentMovement == MOVEMENT_FORCE_BACKWARD; }
-bool modeBerhenti() { return currentMovement == MOVEMENT_STOP; }
-
 int currentMillis = 0;
+inline void setModeWarehouse() {
+  modeWarehouse = true;
+  modeTerminal = modeStation = false;
+}
+inline void setModeStation() {
+  modeStation = true;
+  modeTerminal = modeWarehouse = false;
+}
 
 /***********************************************************
  *  TRANSITIONS (MASUK / KELUAR)                          *
  ***********************************************************/
 void inTerminal() {
-  setAGVMode(MODE_TERMINAL);
-  setMovementState(MOVEMENT_STOP);
+  clearMovement();
+  modeBerhenti = true;
 }
-
 void outTerminal() {
-  setAGVMode(MODE_WAREHOUSE);
-  setMovementState(MOVEMENT_FORCE_FORWARD);
+  setModeWarehouse();
+  modeMaju = true;
+  // ("maju");
+  force = true;
 }
 
 void inWarehouse() {
   music("komputer");
-  setAGVMode(MODE_WAREHOUSE);
-  setMovementState(MOVEMENT_STOP);
+  clearMovement();
   clearStationsData();
+  modeBerhenti = true;
 }
 
 void outWarehouse() {
-  setAGVMode(MODE_STATION);
+  setModeStation();
   sortStationsList();
-  setMovementState(MOVEMENT_FORCE_FORWARD);
+  // modeMundur = false;
+  modeMaju = true;
+  // ("maju");
+  force = true;
   statusMusic = false;
 }
 
 void inStation() {
   music("station");
-  setAGVMode(MODE_STATION);
-  setMovementState(MOVEMENT_STOP);
+  clearMovement();
+  modeBerhenti = true;
 }
-
 void outStation() {
   // Check if this is the last station in the list
   if (indexTarget >= stationsList.size()) {
     Serial.println("Last station reached via outStation - calling ujungStation!");
     ujungStation();
   } else {
-    setMovementState(MOVEMENT_FORCE_FORWARD);
+    // modeMaju = true;
+    changeStateMode("maju");
+    force = true;
     sudahStopPelanPelan = false;
   }
   statusMusic = false;
 }
-
 void ujungStation() {  // ujung station → mundur ke warehouse
-  setMovementState(MOVEMENT_FORCE_BACKWARD);
+  modeMaju = false;
+  // modeMundur = true;
+  changeStateMode("mundur");
+  force = true;
   pidLinefollower(errorValue, "FORCEMUNDUR");
-  setAGVMode(MODE_WAREHOUSE);
+  // delay(1000);
+  setModeWarehouse();
 }
 
 /***********************************************************
@@ -133,27 +129,34 @@ void ujungStation() {  // ujung station → mundur ke warehouse
  */
 void changeStateMode(String mode) {
   if (mode == "maju") {
-    setMovementState(MOVEMENT_FORWARD);
+    modeMaju = true;
+    modeMundur = false;
+    modeBerhenti = false;
     Serial.println("[INFO] Mode berubah: MAJU");
   } else if (mode == "mundur") {
-    setMovementState(MOVEMENT_BACKWARD);
+    modeMaju = false;
+    modeMundur = true;
+    modeBerhenti = false;
     Serial.println("[INFO] Mode berubah: MUNDUR");
   } else if (mode == "berhenti") {
-    setMovementState(MOVEMENT_STOP);
+    modeMaju = false;
+    modeMundur = false;
+    modeBerhenti = true;
     Serial.println("[INFO] Mode berubah: BERHENTI");
   } else if (mode == "forcemaju") {
-    setMovementState(MOVEMENT_FORCE_FORWARD);
+    modeMaju = true;
+    modeMundur = false;
+    modeBerhenti = false;
+    force = true;
     Serial.println("[INFO] Mode berubah: FORCE MAJU");
   } else if (mode == "forcemundur") {
-    setMovementState(MOVEMENT_FORCE_BACKWARD);
+    modeMaju = false;
+    modeMundur = true;
+    modeBerhenti = false;
+    force = true;
     Serial.println("[INFO] Mode berubah: FORCE MUNDUR");
   } else {
-    Serial.println("[ERROR] Mode tidak dikenal: " + mode);
-  }
-  
-  // Reset detection flag when changing movement state
-  if (mode != "berhenti") {
-    sudahDeteksiStasiun = false;
+    Serial.println("[WARNING] Mode tidak dikenal: " + mode);
   }
 }
 
@@ -178,7 +181,7 @@ void pembacaanTerminal() {
   
   if (waitingForStart) {
     // AGV tetap berhenti di terminal menunggu tombol start
-    setMovementState(MOVEMENT_STOP);
+    modeBerhenti = true;
     pidLinefollower(errorValue, "STOP");
     return;
   }
@@ -227,9 +230,9 @@ void pembacaanWarehouse() {
     bool kanan = (kananHilang && station % 2 == 0);
     bool kiri = (kiriHilang && station % 2 == 1);
 
-    if ((kanan || kiri) && !isMoving(MOVEMENT_STOP)) {
-        errorValue = 0;
-      }
+    if ((kanan || kiri) && !modeBerhenti) {
+      errorValue = 0;
+    }
     pidLinefollower(errorValue, "MUNDUR");
     return;
   }
@@ -239,11 +242,47 @@ void pembacaanWarehouse() {
 void pembacaanStation() {
   // ― RFID Detection (Priority) - Independent of sensor conditions ―
   if (!sudahDeteksiStasiun) {
-    handleRfidDetection();
+    int detectedStationId = getStationFromLastRfid();
+    String currentRfid = String(lastScannedRfidOptimized);
+    
+    if (detectedStationId > 0 || currentRfid.length() > 0) {
+      errorValue = 0;
+      sudahDeteksiStasiun = true;
+      
+      // Check if this is warehouse RFID
+      if (currentRfid.equals(warehouseRfidId) && warehouseRfidId.length() > 0) {
+        Serial.println("Warehouse RFID detected - entering warehouse mode");
+        inWarehouse();
+        return;
+      }
+      
+      // Check if this is ujung RFID
+      if (currentRfid.equals(ujungRfidId) && ujungRfidId.length() > 0) {
+        Serial.println("Ujung RFID detected - returning to warehouse");
+        ujungStation();
+        return;
+      }
+      
+      // Check if this is a target station RFID
+      if (detectedStationId > 0 && indexTarget < stationsList.size()) {
+        if (stationsList[indexTarget] == detectedStationId) {
+          Serial.println("Target station " + String(detectedStationId) + " reached!");
+          station = detectedStationId;
+          inStation();
+          return;
+        } else {
+          Serial.println("Non-target station " + String(detectedStationId) + " detected - continue");
+        }
+      }
+      
+      // If no specific action needed, continue moving
+      pidLinefollower(errorValue, "MAJU");
+      return;
+    }
   }
 
   // ― Ujung station: pindah ke warehouse (mundur) jika tidak ada ujung RFID ―
-  if (sensorkebacasemua && isMoving(MOVEMENT_FORWARD) && !force && indexTarget >= stationsList.size()) {
+  if (sensorkebacasemua && modeMaju && !force && indexTarget >= stationsList.size()) {
     Serial.println("Reached end without ujung RFID - returning to warehouse");
     ujungStation();
     return;
@@ -263,47 +302,6 @@ void pembacaanStation() {
   pidLinefollower(errorValue, "MAJU");
 }
 
-// Helper function for RFID detection
-void handleRfidDetection() {
-  int detectedStationId = getStationFromLastRfid();
-  String currentRfid = String(lastScannedRfidOptimized);
-  
-  if (detectedStationId > 0 || currentRfid.length() > 0) {
-    errorValue = 0;
-    sudahDeteksiStasiun = true;
-    
-    // Check if this is warehouse RFID
-    if (currentRfid.equals(warehouseRfidId) && warehouseRfidId.length() > 0) {
-      Serial.println("Warehouse RFID detected - entering warehouse mode");
-      inWarehouse();
-      return;
-    }
-    
-    // Check if this is ujung RFID
-    if (currentRfid.equals(ujungRfidId) && ujungRfidId.length() > 0) {
-      Serial.println("Ujung RFID detected - returning to warehouse");
-      ujungStation();
-      return;
-    }
-    
-    // Check if this is a target station RFID
-    if (detectedStationId > 0 && indexTarget < stationsList.size()) {
-      if (stationsList[indexTarget] == detectedStationId) {
-        Serial.println("Target station " + String(detectedStationId) + " reached!");
-        station = detectedStationId;
-        inStation();
-        return;
-      } else {
-        Serial.println("Non-target station " + String(detectedStationId) + " detected - continue");
-      }
-    }
-    
-    // If no specific action needed, continue moving
-    pidLinefollower(errorValue, "MAJU");
-    return;
-  }
-}
-
 /***********************************************************
  *  BUTTON HANDLER (PS3)                                  *
  ***********************************************************/
@@ -313,24 +311,26 @@ void tombolAgv() {
   if (START() && (ms - lastXPress >= xDelay)) {
     lastXPress = ms;
     
-    if (isMode(MODE_TERMINAL) && stationListReceived && waitingForStart) {
+    if (modeTerminal && stationListReceived && waitingForStart) {
       // Mulai perjalanan dari terminal ke station pertama
       Serial.println("Starting journey from terminal to first station");
-      setAGVMode(MODE_STATION);
+      setModeStation();
       changeStateMode("maju");
       force = true;
       waitingForStart = false;
       indexTarget = 0;  // Reset ke station pertama
-    } else if (isMode(MODE_STATION) && isMoving(MOVEMENT_STOP)) {
+    } else if (modeStation && modeBerhenti) {
       // Lanjut ke station berikutnya atau ke ujung
       indexTarget++;
       if (indexTarget >= stationsList.size()) {
         Serial.println("All stations completed - heading to ujung");
         // Tetap di mode station untuk mencari ujung
-        setMovementState(MOVEMENT_FORCE_FORWARD);
+        changeStateMode("maju");
+        force = true;
       } else {
         Serial.println("Moving to next station: " + String(stationsList[indexTarget]));
-        setMovementState(MOVEMENT_FORCE_FORWARD);
+        changeStateMode("maju");
+        force = true;
       }
       sudahStopPelanPelan = false;
     }
@@ -342,10 +342,10 @@ void tombolAgv() {
  ***********************************************************/
 void logicAgv() {
   // ― Update processed sensor flags ―
-  tengahAktif = jumlahMagnet[SENSOR_CENTER_LEFT] && jumlahMagnet[SENSOR_CENTER_RIGHT];
-  kananHilang = jumlahMagnet[SENSOR_RIGHT_1] || jumlahMagnet[SENSOR_RIGHT_2];
-  kiriHilang = jumlahMagnet[SENSOR_LEFT_1] || jumlahMagnet[SENSOR_LEFT_2];
-  sensorkebacasemua = (totalSensorAktif > SENSOR_THRESHOLD_ALL_ACTIVE);
+  tengahAktif = jumlahMagnet[7] && jumlahMagnet[8];
+  kananHilang = jumlahMagnet[14] || jumlahMagnet[15];
+  kiriHilang = jumlahMagnet[0] || jumlahMagnet[2];
+  sensorkebacasemua = (totalSensorAktif > 14);
 
   tombolAgv();
 
@@ -357,79 +357,49 @@ void logicAgv() {
   else if (modeStation)
     pembacaanStation();
 
+  if (force)
+    modeBerhenti = false;
   // ― Prioritas gerakan global ―
-  if (modeBerhenti()) {
-    if (modeStation()) {
+  if (strcmp(getStatusJalan(), "BERHENTI") != 0) {
+    modeBerhenti = false;
+  }
+  if (modeBerhenti) {
+    if (modeStation) {
       pidLinefollower(errorValue, "STOPPELANPELAN");
     } else {
       pidLinefollower(errorValue, "STOP");
     }
     return;
   }
-  
-  // ― Main logic based on current mode ―
-  switch (currentAGVMode) {
-    case MODE_TERMINAL:
-      // Terminal mode: stay put until START
-      if (isMoving(MOVEMENT_STOP)) {
-        pidLinefollower(errorValue, "BERHENTI");
-      }
-      break;
-      
-    case MODE_WAREHOUSE:
-      // Warehouse mode: handle movement
-      if (isMoving(MOVEMENT_FORCE_FORWARD)) {
-        pidLinefollower(errorValue, "FORCEMAJU");
-      } else if (isMoving(MOVEMENT_FORCE_BACKWARD)) {
-        pidLinefollower(errorValue, "FORCEMUNDUR");
-      } else if (isMoving(MOVEMENT_STOP)) {
-        pidLinefollower(errorValue, "BERHENTI");
-      }
-      break;
-      
-    case MODE_STATION:
-      // Station mode: handle station visits
-      if (isMoving(MOVEMENT_FORCE_FORWARD)) {
-        pidLinefollower(errorValue, "FORCEMAJU");
-      } else if (isMoving(MOVEMENT_FORCE_BACKWARD)) {
-        pidLinefollower(errorValue, "FORCEMUNDUR");
-      } else if (isMoving(MOVEMENT_STOP)) {
-        pidLinefollower(errorValue, "BERHENTI");
-      }
-      break;
-  }
-  
-  // Handle non-force movements
-  if (isMoving(MOVEMENT_FORWARD) && !force)
+  if (modeMaju && !force)
     pidLinefollower(errorValue, "MAJU");
-  else if (isMoving(MOVEMENT_BACKWARD) && !force)
+  if (modeMundur && !force)
     pidLinefollower(errorValue, "MUNDUR");
-  else if (isMoving(MOVEMENT_STOP) && !force)
-    pidLinefollower(errorValue, "BERHENTI");
 }
 
 void displayLogicAgv() {
 
-  if (modeMaju()) {
+  if (modeMaju) {
     setStatusJalan("MAJU");
-  } else if (modeMundur()) {
+  } else if (modeMundur) {
     setStatusJalan("MUNDUR");
-  } else if (modeBerhenti()) {
+  } else if (modeBerhenti) {
     setStatusJalan("BERHENTI");
   } else {
     setStatusJalan("BERHENTI");
-    setMovementState(MOVEMENT_STOP);
+    modeBerhenti = true;
   }
   // Tentukan mode aktif
-  if (modeTerminal()) {
+  if (modeTerminal) {
     setCurrentMode("TERMINAL");
-  } else if (modeWarehouse()) {
+  } else if (modeWarehouse) {
     setCurrentMode("WAREHOUSE");
-  } else if (modeStation()) {
+  } else if (modeStation) {
     setCurrentMode("STATION");
   } else {
     setCurrentMode("UNKNOWN");
-    setAGVMode(MODE_WAREHOUSE);
+    // modeTerminal = true;
+    modeWarehouse = true;
   }
 
   // Display on row 3 (last available row)
@@ -440,7 +410,7 @@ void displayLogicAgv() {
   snprintf(displayBuffer, sizeof(displayBuffer), "%.8s %.7s", getCurrentMode(), getStatusJalan());
   lcd.print(displayBuffer);
 
-  if (modeStation()) {
+  if (modeStation) {
     // Clear part of row 3 and show station info
     lcd.setCursor(0, 3);
     lcd.print(station);
