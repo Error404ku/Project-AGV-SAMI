@@ -53,6 +53,7 @@ void agvMoveForward() {
       if (targetStationsList[i] == currentStation) {
         agvMode(AGV_STATE_STATION);
         lastStateAGV(AGV_STATE_MOVE_FORWARD);
+        return;
       }
     }
   }
@@ -61,6 +62,7 @@ void agvMoveForward() {
   String currentRfid = String(lastScannedRfidOptimized);
   if (currentRfid.length() > 0 && currentRfid.equals(ujungRfidId) && ujungRfidId.length() > 0) {
     agvMode(AGV_STATE_MOVE_BACKWARD);
+    lastStateAGV(AGV_STATE_MOVE_FORWARD);
     return;
   }
 

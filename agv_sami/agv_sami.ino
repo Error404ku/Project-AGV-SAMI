@@ -10,7 +10,7 @@ void setup() {
   initPerformanceOptimization();
 
   // lcd.clear();
-  changeStateMode("maju");
+  changeStateMode(STATE_MODE_MAJU);
   Serial.println("SETUP SELESAI - Performance Optimization Active");
 }
 
@@ -35,10 +35,10 @@ void loop() {
     loopUltrasonik();
     lamp_flip_flop();
     // --- Pembacaan sensor sesuai mode ---
-    if (modeMaju) {
+    if (currentStateMode == STATE_MODE_MAJU) {
       setMagnetSlaveId(SLAVEID_MAGNET_DEPAN);
       setUltrasonicSlaveId(SLAVEID_ULTRASONIK_DEPAN);
-    } else if (modeMundur) {
+    } else if (currentStateMode == STATE_MODE_MUNDUR) {
       setMagnetSlaveId(SLAVEID_MAGNET_BELAKANG);
       setUltrasonicSlaveId(SLAVEID_ULTRASONIK_BELAKANG);
     }

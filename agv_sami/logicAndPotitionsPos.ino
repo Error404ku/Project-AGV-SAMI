@@ -29,6 +29,13 @@ bool modeMundur = false;
 bool modeBerhenti = true;  // start dalam keadaan berhenti
 bool force = false;        // override manual
 
+// Global StateMode variable definition
+StateMode currentStateMode = STATE_MODE_BERHENTI;
+
+// Global AGV state tracking variables definition
+AgvState lastStateAgv = AGV_STATE_STOP;
+String ujungRfidId = "";
+
 // ― Derived sensor flags ―
 bool tengahAktif = false;
 bool kananHilang = false;
@@ -103,7 +110,7 @@ void outStation() {
     ujungStation();
   } else {
     // modeMaju = true;
-    changeStateMode("maju");
+    changeStateMode(STATE_MODE_MAJU);
     force = true;
     sudahStopPelanPelan = false;
   }
@@ -112,7 +119,7 @@ void outStation() {
 void ujungStation() {  // ujung station → mundur ke warehouse
   modeMaju = false;
   // modeMundur = true;
-  changeStateMode("mundur");
+  changeStateMode(STATE_MODE_MUNDUR);
   force = true;
   pidLinefollower(errorValue, PID_MODE_FORCEMUNDUR);
   // delay(1000);
@@ -124,41 +131,10 @@ void ujungStation() {  // ujung station → mundur ke warehouse
  ***********************************************************/
 
 /**
- * Mengubah state/mode operasional AGV
- * @param mode String mode yang akan diaktifkan ("maju", "mundur", "berhenti", "forcemaju", "forcemundur")
- */
-void changeStateMode(String mode) {
-  if (mode == "maju") {
-    modeMaju = true;
-    modeMundur = false;
-    modeBerhenti = false;
-    Serial.println("[INFO] Mode berubah: MAJU");
-  } else if (mode == "mundur") {
-    modeMaju = false;
-    modeMundur = true;
-    modeBerhenti = false;
-    Serial.println("[INFO] Mode berubah: MUNDUR");
-  } else if (mode == "berhenti") {
-    modeMaju = false;
-    modeMundur = false;
-    modeBerhenti = true;
-    Serial.println("[INFO] Mode berubah: BERHENTI");
-  } else if (mode == "forcemaju") {
-    modeMaju = true;
-    modeMundur = false;
-    modeBerhenti = false;
-    force = true;
-    Serial.println("[INFO] Mode berubah: FORCE MAJU");
-  } else if (mode == "forcemundur") {
-    modeMaju = false;
-    modeMundur = true;
-    modeBerhenti = false;
-    force = true;
-    Serial.println("[INFO] Mode berubah: FORCE MUNDUR");
-  } else {
-    Serial.println("[WARNING] Mode tidak dikenal: " + mode);
-  }
-}
+   * Mengubah mode pergerakan AGV
+   * @param mode StateMode enum yang akan diaktifkan (STATE_MODE_MAJU, STATE_MODE_MUNDUR, STATE_MODE_BERHENTI, STATE_MODE_FORCEMAJU, STATE_MODE_FORCEMUNDUR)
+   */
+
 
 /***********************************************************
  *  MODE HANDLERS                                         *
@@ -315,7 +291,7 @@ void tombolAgv() {
       // Mulai perjalanan dari terminal ke station pertama
       Serial.println("Starting journey from terminal to first station");
       setModeStation();
-      changeStateMode("maju");
+      changeStateMode(STATE_MODE_MAJU);
       force = true;
       waitingForStart = false;
       indexTarget = 0;  // Reset ke station pertama
@@ -325,11 +301,11 @@ void tombolAgv() {
       if (indexTarget >= targetStationsList.size()) {
         Serial.println("All stations completed - heading to ujung");
         // Tetap di mode station untuk mencari ujung
-        changeStateMode("maju");
+        changeStateMode(STATE_MODE_MAJU);
         force = true;
       } else {
         Serial.println("Moving to next station: " + String(targetStationsList[indexTarget]));
-        changeStateMode("maju");
+        changeStateMode(STATE_MODE_MAJU);
         force = true;
       }
       sudahStopPelanPelan = false;

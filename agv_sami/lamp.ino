@@ -4,7 +4,7 @@ void lamp_flip_flop() {
     static bool outputState = LOW; // State awal, merepresentasikan output Q
 
     // Interval waktu (berperan sebagai clock trigger)
-    const int intervalLamp = 1000;
+    const int intervalLamp = 200;
     unsigned long currentTime = millis();
 
     // Cek apakah sudah waktunya untuk "trigger" (toggle)
