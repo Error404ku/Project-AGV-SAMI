@@ -304,8 +304,8 @@ enum MusicMode {
 enum AgvState {
   AGV_STATE_MOVE_FORWARD,
   AGV_STATE_MOVE_BACKWARD,
-  AGV_STATE_STOP,
-  AGV_STATE_TERMINAL,
+  AGV_STATE_TERMINAL_PICKUP,
+  AGV_STATE_TERMINAL_DROP,
   AGV_STATE_WAREHOUSE,
   AGV_STATE_STATION
 };
@@ -382,7 +382,8 @@ void agvMoveForward();
 void agvMoveBackward();
 void agvWarehouse();
 void agvStation();
-void agvTerminal();
+void agvTerminalPickup();
+void agvTerminalDrop();
 void agvStop();
 void lastStateAGV(AgvState lastState);
 void changeStateMode(StateMode mode);
