@@ -352,6 +352,7 @@ bool saveTargetStationsListToPreferences();
 bool loadTargetStationsListFromPreferences();
 void clearTargetStationsData();
 void sortTargetStationsList();
+bool removeTargetStationById(int stationId);
 
 // RFID Ujung functions
 void displayRfidUjung();

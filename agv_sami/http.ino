@@ -144,6 +144,26 @@ void sortTargetStationsList() {
   }
 }
 
+// --- FUNGSI UNTUK MENGHAPUS STATION BERDASARKAN ID ---
+bool removeTargetStationById(int stationId) {  
+  // Cari index dari stationId dalam targetStationsList
+  auto it = std::find(targetStationsList.begin(), targetStationsList.end(), stationId);
+  
+  if (it != targetStationsList.end()) {
+    // Station ditemukan, hapus dari vector
+    int index = std::distance(targetStationsList.begin(), it);
+    targetStationsList.erase(it);
+    // Simpan perubahan ke Preferences
+    if (saveTargetStationsListToPreferences()) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return false;
+  }
+}
+
 // --- FUNGSI KONFIGURASI WIFI ---
 // Menyimpan konfigurasi WiFi ke Preferences
 bool saveWifiConfig(const String& ssid, const String& password, const String& staticIP, const String& gateway, const String& subnet, const String& dns) {
