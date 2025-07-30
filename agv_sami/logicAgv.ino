@@ -25,9 +25,9 @@ void agvWarehouse() {
 
 void agvStation() {
   if (START()) {
-    if (lastStateAGV(AGV_STATE_MOVE_FORWARD) == "MOVE_FORWARD") {
+    if (lastStateAgv == AGV_STATE_MOVE_FORWARD) {
       agvMode(AGV_STATE_MOVE_BACKWARD);
-    }else if (lastStateAGV(AGV_STATE_MOVE_BACKWARD) == "MOVE_BACKWARD") {
+    }else if (lastStateAgv == AGV_STATE_MOVE_BACKWARD) {
       agvMode(AGV_STATE_MOVE_FORWARD);
     }
   }
@@ -70,20 +70,10 @@ void agvMoveForward() {
   }
 }
 
-String lastStateAGV(AgvState lastState){
+void lastStateAGV(AgvState lastState){
     if (lastState == AGV_STATE_MOVE_FORWARD) {
-        return "MOVE_FORWARD";
+        lastStateAgv = AGV_STATE_MOVE_FORWARD;
     } else if (lastState == AGV_STATE_MOVE_BACKWARD) {
-        return "MOVE_BACKWARD";
-    } else if (lastState == AGV_STATE_STOP) {
-        return "STOP";
-    } else if (lastState == AGV_STATE_TERMINAL) {
-        return "TERMINAL";
-    } else if (lastState == AGV_STATE_WAREHOUSE) {
-        return "WAREHOUSE";
-    } else if (lastState == AGV_STATE_STATION) {
-        return "STATION";
-    } else {
-        return "UNKNOWN";
+        lastStateAgv = AGV_STATE_MOVE_BACKWARD;
     }
 }
