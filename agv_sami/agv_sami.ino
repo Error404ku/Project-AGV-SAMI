@@ -37,24 +37,16 @@ void loop() {
     lamp_flip_flop();
     if (!currentStateAGV == AGV_STATE_NULL){
       // --- Pembacaan sensor sesuai mode ---
-      if (currentStateMode == STATE_MODE_MAJU) {
+      if (lastStateAgv == STATE_MODE_MAJU) {
         setMagnetSlaveId(SLAVEID_MAGNET_DEPAN);
         setUltrasonicSlaveId(SLAVEID_ULTRASONIK_DEPAN);
-      } else if (currentStateMode == STATE_MODE_MUNDUR) {
+      } else if (lastStateAgv == STATE_MODE_MUNDUR) {
         setMagnetSlaveId(SLAVEID_MAGNET_BELAKANG);
         setUltrasonicSlaveId(SLAVEID_ULTRASONIK_BELAKANG);
       }
-      switch (expression)
-      {
-      case constant expression:
-        /* code */
-        break;
-      
-      default:
-        break;
-      }
+      agvMode(currentStateAGV);
     }
-    
+
     agvMode(AGV_STATE_TERMINAL_PICKUP);
     displaySensorData();
 

@@ -1,28 +1,45 @@
+// Fungsi ini mengatur mode operasi AGV berdasarkan status yang diberikan.
 void agvMode(AgvState state) {
-  if (state == AGV_STATE_MOVE_FORWARD) {
-    agvMoveForward();
-  } else if (state == AGV_STATE_MOVE_BACKWARD) {
-    agvMoveBackward();
-  } else if (state == AGV_STATE_STOP) {
-    agvStop();
-  } else if (state == AGV_STATE_TERMINAL_DROP) {
-    agvTerminalDrop();
-  } else if (state == AGV_STATE_TERMINAL_PICKUP) {
-    agvTerminalPickup();
-  } else if (state == AGV_STATE_WAREHOUSE) {
-    agvWarehouse();
-  } else if (state == AGV_STATE_STATION) {
-    agvStation();
-  } else {
-    agvStop();
+  switch (state) {
+    case AGV_STATE_MOVE_FORWARD:
+      agvMoveForward();
+      break;
+    case AGV_STATE_MOVE_BACKWARD:
+      agvMoveBackward();
+      break;
+    case AGV_STATE_STOP:
+      agvStop();
+      break;
+    case AGV_STATE_TERMINAL_DROP:
+      agvTerminalDrop();
+      break;
+    case AGV_STATE_TERMINAL_PICKUP:
+      agvTerminalPickup();
+      break;
+    case AGV_STATE_WAREHOUSE:
+      agvWarehouse();
+      break;
+    case AGV_STATE_STATION:
+      agvStation();
+      break;
+    default:
+      agvStop();
+      break;
   }
 }
 
+// Fungsi ini menangani logika AGV saat berada di gudang.
 void agvWarehouse() {
   bool trigger = false;
   saveCurrentStateAGVToPreferences(AGV_STATE_WAREHOUSE);
   agvStop();
-  
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Mode: Warehouse");
+  lcd.setCursor(0,1);
+  lcd.print("Tekan Start");
+  lcd.setCursor(0,2);
+  lcd.print("untuk jalan");
   if (START()) {
     trigger = true;
   }
@@ -33,6 +50,7 @@ void agvWarehouse() {
   }
 }
 
+// Fungsi ini menangani logika AGV saat berada di stasiun.
 void agvStation() {
   bool trigger = false;
   saveCurrentStateAGVToPreferences(AGV_STATE_STATION);
@@ -51,6 +69,7 @@ void agvStation() {
   }
 }
 
+// Fungsi ini menangani logika AGV saat melakukan penurunan di terminal.
 void agvTerminalDrop() {
   bool trigger = false;
   //Save current state
@@ -76,6 +95,7 @@ void agvTerminalDrop() {
   }
 }
 
+// Fungsi ini menangani logika AGV saat melakukan pengambilan di terminal.
 void agvTerminalPickup() {
   bool trigger = false;
   bool triggerHook = false;
@@ -83,19 +103,24 @@ void agvTerminalPickup() {
   saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_PICKUP);
 
   agvStop();
+  hook("turun");
+
   if (!currentStateAGV == AGV_STATE_NULL){
     hook("naik");
     delay(2000);
+  }else{
     if (START()){
       triggerHook = true;
     }
     switch(triggerHook){
       case true:
         hook("naik");
+        delay(2000);
+        trigger = false;
         break;
     }
   }
-  
+
   if (START()){
     trigger = true;
   }
@@ -113,11 +138,13 @@ void agvTerminalPickup() {
     }
 }
 
+// Fungsi ini menghentikan pergerakan AGV.
 void agvStop() {
   pwmMotor(0, 0);
   return;
 }
 
+// Fungsi ini menangani logika AGV saat bergerak maju.
 void agvMoveForward() {
   bool trigger = false;
   saveCurrentStateAGVToPreferences(AGV_STATE_MOVE_FORWARD);
@@ -158,6 +185,7 @@ void agvMoveForward() {
   }
 }
 
+// Fungsi ini menangani logika AGV saat bergerak mundur.
 void agvMoveBackward() {
   bool trigger = false;
   saveCurrentStateAGVToPreferences(AGV_STATE_MOVE_BACKWARD);
@@ -201,6 +229,7 @@ void agvMoveBackward() {
 }
 
 
+// Fungsi ini menyimpan status terakhir AGV (maju atau mundur).
 void lastStateAGV(AgvState lastState){
     if (lastState == AGV_STATE_MOVE_FORWARD) {
         lastStateAgv = AGV_STATE_MOVE_FORWARD;
@@ -210,6 +239,7 @@ void lastStateAGV(AgvState lastState){
 }
 
 // Fungsi untuk mengkonversi AgvState ke string
+// Fungsi ini mengkonversi nilai AgvState menjadi representasi string.
 String agvStateToString(AgvState state) {
     switch (state) {
         case AGV_STATE_MOVE_FORWARD:
@@ -232,6 +262,7 @@ String agvStateToString(AgvState state) {
 }
 
 // Fungsi untuk menyimpan state AGV ke Preferences dalam bentuk string
+// Fungsi ini menyimpan status AGV saat ini ke Preferences.
 void saveCurrentStateAGVToPreferences(AgvState currentState) {
     currentStateAgv = currentState;
     
@@ -247,6 +278,7 @@ void saveCurrentStateAGVToPreferences(AgvState currentState) {
 }
 
 // Fungsi untuk mengkonversi string ke AgvState
+// Fungsi ini mengkonversi representasi string dari status AGV kembali ke nilai AgvState.
 AgvState stringToAgvState(String stateString) {
     if (stateString == "MOVE_FORWARD") {
         return AGV_STATE_MOVE_FORWARD;
@@ -266,6 +298,7 @@ AgvState stringToAgvState(String stateString) {
 }
 
 // Fungsi untuk memuat state AGV dari Preferences
+// Fungsi ini memuat status AGV terakhir dari Preferences.
 AgvState loadCurrentStateAGVFromPreferences() {
     preferences.begin("agv-state", true);
     String stateString = preferences.getString("current_state", "UNKNOWN");
