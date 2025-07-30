@@ -14,6 +14,13 @@
 #define MENU_RESET 5
 #define MENU_RFID_SETTINGS 6
 #define MENU_WIFI_SETTINGS 14
+#define MENU_MOTOR_SETTINGS 18
+#define MENU_MOTOR_INVERT 19
+#define MENU_MUSIC_SETTINGS 20
+#define MENU_MUSIC_TEST 21
+#define MENU_HOOK_TEST 22
+#define MENU_MAGNET_CHECK 23
+#define MENU_ULTRASONIC_CHECK 24
 
 // External variables from other files
 extern int targetStation[2];

@@ -17,6 +17,11 @@
 #define MENU_ULTRASONIC_CHECK 13
 #define MENU_WIFI_SETTINGS 14
 
+// Local menu constants for RFID submenus
+#define MENU_RFID_UJUNG 15
+#define MENU_RFID_WAREHOUSE 16
+#define MENU_AUTO_INPUT_STATION 17
+
 int selectedItem = 0;
 int maxItems = 14;
 int menuStartIndex = 0;        // For scrolling menu
@@ -99,11 +104,11 @@ int hookTestState = 0;  // 0=stop, 1=naik, 2=turun
 bool isConnectingWifi = false;
 bool wifiConnectionResult = false;
 unsigned long wifiConnectStartTime = 0;
-const unsigned long WIFI_CONNECT_TIMEOUT = 5000; // 10 seconds
+const unsigned long WIFI_CONNECT_TIMEOUT = 3000; // Optimized to 3 seconds
 
 // WiFi scroll variables
 int wifiScrollIndex = 0;
-const int WIFI_MAX_SCROLL = 3; // Maximum scroll positions timeout
+const int WIFI_MAX_SCROLL = 3; // Maximum scroll positions (0-3 existing)
 
 // Global display functions
 void displayIndicator(int current, int selected) {
@@ -387,18 +392,21 @@ void displayRfidSettings() {
   }
 
   // RFID Menu items
-  String rfidMenuItems[5] = {
+  String rfidMenuItems[8] = {
     "Station: " + String(selectedStationId),
     "Scan RFID",
     "View All",
     "Delete Station",
-    "Clear All"
+    "Clear All",
+    "RFID Ujung",
+    "RFID Warehouse",
+    "Auto Input Station"
   };
 
   // Simple display - show items with scrolling if needed
-  int startIdx = max(0, min(selectedRfidItem - 1, 5 - 3));
+  int startIdx = max(0, min(selectedRfidItem - 1, 8 - 3));
 
-  for (int i = 0; i < 3 && (startIdx + i) < 5; i++) {
+  for (int i = 0; i < 3 && (startIdx + i) < 8; i++) {
     int itemIndex = startIdx + i;
     lcd.setCursor(0, i + 1);
     lcd.print("                ");  // Clear line
@@ -640,9 +648,9 @@ void handleRfidSettings() {
   }
 
   if (UP()) {
-    selectedRfidItem = (selectedRfidItem - 1 + 5) % 5;
+    selectedRfidItem = (selectedRfidItem - 1 + 8) % 8;
   } else if (DOWN()) {
-    selectedRfidItem = (selectedRfidItem + 1) % 5;
+    selectedRfidItem = (selectedRfidItem + 1) % 8;
   } else if (RIGHT()) {
     if (selectedRfidItem == 0) {
       // Change station ID
@@ -746,6 +754,21 @@ void handleRfidSettings() {
             delay(50);
           }
         }
+        break;
+
+      case 5:  // RFID Ujung
+        currentMenu = MENU_RFID_UJUNG;
+        menuNeedsRefresh = true;
+        break;
+
+      case 6:  // RFID Warehouse
+        currentMenu = MENU_RFID_WAREHOUSE;
+        menuNeedsRefresh = true;
+        break;
+
+      case 7:  // Auto Input Station
+        currentMenu = MENU_AUTO_INPUT_STATION;
+        menuNeedsRefresh = true;
         break;
     }
   } else if (STOP()) {
@@ -895,6 +918,7 @@ void handleMenu() {
           } else if (selectedItem == 13) {  // WiFi Settings (item 14)
             currentMenu = MENU_WIFI_SETTINGS;
             menuNeedsRefresh = true;
+
           } else {
             currentMenu = selectedItem + 1;
             menuNeedsRefresh = true;
@@ -1203,6 +1227,36 @@ void handleMenu() {
         }
       }
       break;
+
+    case MENU_RFID_UJUNG:
+      displayRfidUjung();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleRfidUjung();
+        if (START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_RFID_WAREHOUSE:
+      displayRfidWarehouse();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleRfidWarehouse();
+        if (START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_AUTO_INPUT_STATION:
+      displayAutoInputStation();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleAutoInputStation();
+        if (START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
   }
 }
 
@@ -1378,7 +1432,7 @@ void handleMagnetCheck() {
     switchMagnetSensor(false);
     startTimer(&magnetSwitchTimer, 100);  // Non-blocking delay to prevent multiple triggers
   } else if (STOP()) {
-    currentMenu = MENU_MAIN;
+    currentMenu = MENU_RFID_SETTINGS;
     menuStartIndex = 0;
     menuNeedsRefresh = true;
   }
@@ -1502,6 +1556,8 @@ void displayWifiSettings() {
       lcd.setCursor(0, 2);
       lcd.print("Port: 80            ");
       break;
+      
+
   }
   
   // Show navigation controls
@@ -1519,38 +1575,41 @@ void handleWifiSettings() {
     return;
   }
   
+
+  
   if (UP()) {
-    // Scroll up
+    // Scroll up in main WiFi menu
     wifiScrollIndex--;
     if (wifiScrollIndex < 0) {
       wifiScrollIndex = WIFI_MAX_SCROLL;
     }
-    delay(200); // Debounce
+    menuNeedsRefresh = true;
+    delay(150); // Reduced debounce delay
   } else if (DOWN()) {
-    // Scroll down
+    // Scroll down in main WiFi menu
     wifiScrollIndex++;
     if (wifiScrollIndex > WIFI_MAX_SCROLL) {
       wifiScrollIndex = 0;
     }
-    delay(200); // Debounce
+    menuNeedsRefresh = true;
+    delay(150); // Reduced debounce delay
   } else if (START()) {
     // Start WiFi connection
     isConnectingWifi = true;
     wifiConnectStartTime = millis();
     
-    // Load WiFi config and attempt connection
+    // Load WiFi config from Preferences
     loadWifiConfig();
     WiFi.disconnect();
-    delay(100);
+    delay(50); // Reduced delay
     
-    // Try to connect as client first
+    // Optimized WiFi connection
     WiFi.mode(WIFI_AP_STA);  // Enable both AP and STA mode
+    WiFi.setAutoReconnect(true); // Enable auto-reconnect
+    WiFi.persistent(false); // Reduce flash writes
+    
+    // Configure static IP if available
     if (strlen(staticIPStr) > 0) {
-      IPAddress staticIP, gateway, subnet, dns;
-      staticIP.fromString(staticIPStr);
-      gateway.fromString(gatewayStr);
-      subnet.fromString(subnetStr);
-      dns.fromString(dnsStr);
       WiFi.config(staticIP, gateway, subnet, dns);
     }
     WiFi.begin(ssid, password);
@@ -1564,4 +1623,575 @@ void handleWifiSettings() {
     menuStartIndex = 0;
     menuNeedsRefresh = true;
   }
+}
+
+
+
+
+
+// ===== RFID UJUNG FUNCTIONS =====
+void displayRfidUjung() {
+  displayMenuHeader("RFID Ujung");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Count: ");
+  lcd.print(rfidUjungCount);
+  lcd.print("/");
+  lcd.print(MAX_RFID_UJUNG);
+  lcd.print("        ");
+  
+  lcd.setCursor(0, 2);
+  lcd.print("A:Scan B:View C:Del ");
+  
+  lcd.setCursor(0, 3);
+  lcd.print("STOP:Back           ");
+}
+
+void handleRfidUjung() {
+  if (START()) { // Scan RFID
+    lcd.setCursor(0, 1);
+    lcd.print("Scanning RFID...    ");
+    lcd.setCursor(0, 2);
+    lcd.print("Place card on reader");
+    lcd.setCursor(0, 3);
+    lcd.print("STOP:Cancel         ");
+    
+    unsigned long scanStart = millis();
+    while (millis() - scanStart < 10000) { // 10 second timeout
+      if (STOP()) {
+        displayRfidUjung();
+        return;
+      }
+      
+      if (newRfidScanned) {
+        String rfidData = String(lastScannedRfidOptimized);
+        newRfidScanned = false;
+        
+        // Check if already exists
+        bool exists = false;
+        for (int i = 0; i < rfidUjungCount; i++) {
+          if (rfidUjungList[i].rfidId == rfidData) {
+            exists = true;
+            break;
+          }
+        }
+        
+        if (!exists && rfidUjungCount < MAX_RFID_UJUNG) {
+          rfidUjungList[rfidUjungCount].ujungId = rfidUjungCount + 1;
+          rfidUjungList[rfidUjungCount].rfidId = rfidData;
+          rfidUjungList[rfidUjungCount].isActive = true;
+          rfidUjungCount++;
+          saveRfidUjungToPreferences();
+          
+          lcd.setCursor(0, 1);
+          lcd.print("RFID Saved!         ");
+          lcd.setCursor(0, 2);
+          lcd.print(rfidData.substring(0, 16));
+          lcd.print("    ");
+          delay(2000);
+        } else if (exists) {
+          lcd.setCursor(0, 1);
+          lcd.print("RFID Already Exists!");
+          delay(2000);
+        } else {
+          lcd.setCursor(0, 1);
+          lcd.print("Storage Full!       ");
+          delay(2000);
+        }
+        
+        displayRfidUjung();
+        return;
+      }
+      delay(100);
+    }
+    
+    lcd.setCursor(0, 1);
+    lcd.print("Scan Timeout!       ");
+    delay(2000);
+    displayRfidUjung();
+    
+  } else if (LEFT()) { // View data
+    if (rfidUjungCount == 0) {
+      lcd.setCursor(0, 1);
+      lcd.print("No Data Available   ");
+      delay(2000);
+      displayRfidUjung();
+      return;
+    }
+    
+    int viewIndex = 0;
+    while (true) {
+      displayMenuHeader("View RFID Ujung");
+      
+      lcd.setCursor(0, 1);
+      lcd.print("[");
+      lcd.print(viewIndex + 1);
+      lcd.print("/");
+      lcd.print(rfidUjungCount);
+      lcd.print("]             ");
+      
+      lcd.setCursor(0, 2);
+      lcd.print(rfidUjungList[viewIndex].rfidId.substring(0, 16));
+      lcd.print("    ");
+      
+      lcd.setCursor(0, 3);
+      lcd.print("^v:Nav STOP:Back    ");
+      
+      if (UP() && viewIndex > 0) {
+        viewIndex--;
+        delay(200);
+      } else if (DOWN() && viewIndex < rfidUjungCount - 1) {
+        viewIndex++;
+        delay(200);
+      } else if (STOP()) {
+        displayRfidUjung();
+        return;
+      }
+      delay(50);
+    }
+    
+  } else if (RIGHT()) { // Delete all
+    displayMenuHeader("Delete All Ujung");
+    lcd.setCursor(0, 1);
+    lcd.print("Are you sure?       ");
+    lcd.setCursor(0, 2);
+    lcd.print("A:Yes B:No          ");
+    
+    while (true) {
+      if (START()) {
+        rfidUjungCount = 0;
+        saveRfidUjungToPreferences();
+        lcd.setCursor(0, 1);
+        lcd.print("All Data Deleted!   ");
+        delay(2000);
+        displayRfidUjung();
+        return;
+      } else if (LEFT() || STOP()) {
+        displayRfidUjung();
+        return;
+      }
+      delay(50);
+    }
+    
+  } else if (STOP()) {
+    currentMenu = MENU_MAIN;
+    menuStartIndex = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+void saveRfidUjungToPreferences() {
+  preferences.begin("rfid_ujung", false);
+  preferences.putInt("count", rfidUjungCount);
+  
+  for (int i = 0; i < rfidUjungCount; i++) {
+    String key = "rfid_" + String(i);
+    preferences.putString(key.c_str(), rfidUjungList[i].rfidId);
+    
+    String idKey = "id_" + String(i);
+    preferences.putInt(idKey.c_str(), rfidUjungList[i].ujungId);
+    
+    String activeKey = "active_" + String(i);
+    preferences.putBool(activeKey.c_str(), rfidUjungList[i].isActive);
+  }
+  
+  preferences.end();
+}
+
+void loadRfidUjungFromPreferences() {
+  preferences.begin("rfid_ujung", true);
+  rfidUjungCount = preferences.getInt("count", 0);
+  
+  for (int i = 0; i < rfidUjungCount && i < MAX_RFID_UJUNG; i++) {
+    String key = "rfid_" + String(i);
+    rfidUjungList[i].rfidId = preferences.getString(key.c_str(), "");
+    
+    String idKey = "id_" + String(i);
+    rfidUjungList[i].ujungId = preferences.getInt(idKey.c_str(), i + 1);
+    
+    String activeKey = "active_" + String(i);
+    rfidUjungList[i].isActive = preferences.getBool(activeKey.c_str(), true);
+  }
+  
+  preferences.end();
+}
+
+// ===== RFID WAREHOUSE FUNCTIONS =====
+void displayRfidWarehouse() {
+  displayMenuHeader("RFID Warehouse");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Count: ");
+  lcd.print(rfidWarehouseCount);
+  lcd.print("/");
+  lcd.print(MAX_RFID_WAREHOUSE);
+  lcd.print("        ");
+  
+  lcd.setCursor(0, 2);
+  lcd.print("A:Scan B:View C:Del ");
+  
+  lcd.setCursor(0, 3);
+  lcd.print("STOP:Back           ");
+}
+
+void handleRfidWarehouse() {
+  if (START()) { // Scan RFID
+    lcd.setCursor(0, 1);
+    lcd.print("Scanning RFID...    ");
+    lcd.setCursor(0, 2);
+    lcd.print("Place card on reader");
+    lcd.setCursor(0, 3);
+    lcd.print("STOP:Cancel         ");
+    
+    unsigned long scanStart = millis();
+    while (millis() - scanStart < 10000) { // 10 second timeout
+      if (STOP()) {
+        displayRfidWarehouse();
+        return;
+      }
+      
+      if (newRfidScanned) {
+        String rfidData = String(lastScannedRfidOptimized);
+        newRfidScanned = false;
+        
+        // Check if already exists
+        bool exists = false;
+        for (int i = 0; i < rfidWarehouseCount; i++) {
+          if (rfidWarehouseList[i].rfidId == rfidData) {
+            exists = true;
+            break;
+          }
+        }
+        
+        if (!exists && rfidWarehouseCount < MAX_RFID_WAREHOUSE) {
+          rfidWarehouseList[rfidWarehouseCount].warehouseId = rfidWarehouseCount + 1;
+          rfidWarehouseList[rfidWarehouseCount].rfidId = rfidData;
+          rfidWarehouseList[rfidWarehouseCount].isActive = true;
+          rfidWarehouseCount++;
+          saveRfidWarehouseToPreferences();
+          
+          lcd.setCursor(0, 1);
+          lcd.print("RFID Saved!         ");
+          lcd.setCursor(0, 2);
+          lcd.print(rfidData.substring(0, 16));
+          lcd.print("    ");
+          delay(2000);
+        } else if (exists) {
+          lcd.setCursor(0, 1);
+          lcd.print("RFID Already Exists!");
+          delay(2000);
+        } else {
+          lcd.setCursor(0, 1);
+          lcd.print("Storage Full!       ");
+          delay(2000);
+        }
+        
+        displayRfidWarehouse();
+        return;
+      }
+      delay(100);
+    }
+    
+    lcd.setCursor(0, 1);
+    lcd.print("Scan Timeout!       ");
+    delay(2000);
+    displayRfidWarehouse();
+    
+  } else if (LEFT()) { // View data
+    if (rfidWarehouseCount == 0) {
+      lcd.setCursor(0, 1);
+      lcd.print("No Data Available   ");
+      delay(2000);
+      displayRfidWarehouse();
+      return;
+    }
+    
+    int viewIndex = 0;
+    while (true) {
+      displayMenuHeader("View Warehouse");
+      
+      lcd.setCursor(0, 1);
+      lcd.print("[");
+      lcd.print(viewIndex + 1);
+      lcd.print("/");
+      lcd.print(rfidWarehouseCount);
+      lcd.print("]             ");
+      
+      lcd.setCursor(0, 2);
+      lcd.print(rfidWarehouseList[viewIndex].rfidId.substring(0, 16));
+      lcd.print("    ");
+      
+      lcd.setCursor(0, 3);
+      lcd.print("^v:Nav STOP:Back    ");
+      
+      if (UP() && viewIndex > 0) {
+        viewIndex--;
+        delay(200);
+      } else if (DOWN() && viewIndex < rfidWarehouseCount - 1) {
+        viewIndex++;
+        delay(200);
+      } else if (STOP()) {
+        displayRfidWarehouse();
+        return;
+      }
+      delay(50);
+    }
+    
+  } else if (RIGHT()) { // Delete all
+    displayMenuHeader("Delete All Warehouse");
+    lcd.setCursor(0, 1);
+    lcd.print("Are you sure?       ");
+    lcd.setCursor(0, 2);
+    lcd.print("A:Yes B:No          ");
+    
+    while (true) {
+      if (START()) {
+        rfidWarehouseCount = 0;
+        saveRfidWarehouseToPreferences();
+        lcd.setCursor(0, 1);
+        lcd.print("All Data Deleted!   ");
+        delay(2000);
+        displayRfidWarehouse();
+        return;
+      } else if (LEFT() || STOP()) {
+        displayRfidWarehouse();
+        return;
+      }
+      delay(50);
+    }
+    
+  } else if (STOP()) {
+    currentMenu = MENU_RFID_SETTINGS;
+    menuStartIndex = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+void saveRfidWarehouseToPreferences() {
+  preferences.begin("rfid_warehouse", false);
+  preferences.putInt("count", rfidWarehouseCount);
+  
+  for (int i = 0; i < rfidWarehouseCount; i++) {
+    String key = "rfid_" + String(i);
+    preferences.putString(key.c_str(), rfidWarehouseList[i].rfidId);
+    
+    String idKey = "id_" + String(i);
+    preferences.putInt(idKey.c_str(), rfidWarehouseList[i].warehouseId);
+    
+    String activeKey = "active_" + String(i);
+    preferences.putBool(activeKey.c_str(), rfidWarehouseList[i].isActive);
+  }
+  
+  preferences.end();
+}
+
+void loadRfidWarehouseFromPreferences() {
+  preferences.begin("rfid_warehouse", true);
+  rfidWarehouseCount = preferences.getInt("count", 0);
+  
+  for (int i = 0; i < rfidWarehouseCount && i < MAX_RFID_WAREHOUSE; i++) {
+    String key = "rfid_" + String(i);
+    rfidWarehouseList[i].rfidId = preferences.getString(key.c_str(), "");
+    
+    String idKey = "id_" + String(i);
+    rfidWarehouseList[i].warehouseId = preferences.getInt(idKey.c_str(), i + 1);
+    
+    String activeKey = "active_" + String(i);
+    rfidWarehouseList[i].isActive = preferences.getBool(activeKey.c_str(), true);
+  }
+  
+  preferences.end();
+}
+
+// ===== AUTO INPUT STATION FUNCTIONS =====
+void displayAutoInputStation() {
+  displayMenuHeader("Auto Input Station");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Count: ");
+  lcd.print(autoStationCount);
+  lcd.print("/");
+  lcd.print(MAX_AUTO_STATIONS);
+  lcd.print("        ");
+  
+  lcd.setCursor(0, 2);
+  lcd.print("A:Scan B:View C:Del ");
+  
+  lcd.setCursor(0, 3);
+  lcd.print("STOP:Back           ");
+}
+
+void handleAutoInputStation() {
+  if (START()) { // Scan RFID
+    lcd.setCursor(0, 1);
+    lcd.print("Scanning RFID...    ");
+    lcd.setCursor(0, 2);
+    lcd.print("Place card on reader");
+    lcd.setCursor(0, 3);
+    lcd.print("STOP:Cancel         ");
+    
+    unsigned long scanStart = millis();
+    while (millis() - scanStart < 10000) { // 10 second timeout
+      if (STOP()) {
+        displayAutoInputStation();
+        return;
+      }
+      
+      if (newRfidScanned) {
+        String rfidData = String(lastScannedRfidOptimized);
+        newRfidScanned = false;
+        
+        // Check if already exists in auto stations
+        if (!isStationExists(rfidData) && autoStationCount < MAX_AUTO_STATIONS) {
+          autoStations[autoStationCount].rfidId = rfidData;
+          autoStations[autoStationCount].stationId = autoStationCount + 1;
+          autoStations[autoStationCount].isActive = true;
+          autoStationCount++;
+          saveAutoStationsToPreferences();
+          
+          lcd.setCursor(0, 1);
+          lcd.print("Station Added!      ");
+          lcd.setCursor(0, 2);
+          lcd.print("ID: ");
+          lcd.print(autoStationCount);
+          lcd.print(" ");
+          lcd.print(rfidData.substring(0, 8));
+          lcd.print("    ");
+          delay(2000);
+        } else if (isStationExists(rfidData)) {
+          lcd.setCursor(0, 1);
+          lcd.print("Station Exists!     ");
+          delay(2000);
+        } else {
+          lcd.setCursor(0, 1);
+          lcd.print("Storage Full!       ");
+          delay(2000);
+        }
+        
+        displayAutoInputStation();
+        return;
+      }
+      delay(100);
+    }
+    
+    lcd.setCursor(0, 1);
+    lcd.print("Scan Timeout!       ");
+    delay(2000);
+    displayAutoInputStation();
+    
+  } else if (LEFT()) { // View data
+    if (autoStationCount == 0) {
+      lcd.setCursor(0, 1);
+      lcd.print("No Data Available   ");
+      delay(2000);
+      displayAutoInputStation();
+      return;
+    }
+    
+    int viewIndex = 0;
+    while (true) {
+      displayMenuHeader("View Auto Stations");
+      
+      lcd.setCursor(0, 1);
+      lcd.print("[");
+      lcd.print(viewIndex + 1);
+      lcd.print("/");
+      lcd.print(autoStationCount);
+      lcd.print("] ID:");
+      lcd.print(autoStations[viewIndex].stationId);
+      lcd.print("        ");
+      
+      lcd.setCursor(0, 2);
+      lcd.print(autoStations[viewIndex].rfidId.substring(0, 16));
+      lcd.print("    ");
+      
+      lcd.setCursor(0, 3);
+      lcd.print("^v:Nav STOP:Back    ");
+      
+      if (UP() && viewIndex > 0) {
+        viewIndex--;
+        delay(200);
+      } else if (DOWN() && viewIndex < autoStationCount - 1) {
+        viewIndex++;
+        delay(200);
+      } else if (STOP()) {
+        displayAutoInputStation();
+        return;
+      }
+      delay(50);
+    }
+    
+  } else if (RIGHT()) { // Delete all
+    displayMenuHeader("Delete All Stations");
+    lcd.setCursor(0, 1);
+    lcd.print("Are you sure?       ");
+    lcd.setCursor(0, 2);
+    lcd.print("A:Yes B:No          ");
+    
+    while (true) {
+      if (START()) {
+        autoStationCount = 0;
+        saveAutoStationsToPreferences();
+        lcd.setCursor(0, 1);
+        lcd.print("All Data Deleted!   ");
+        delay(2000);
+        displayAutoInputStation();
+        return;
+      } else if (LEFT() || STOP()) {
+        displayAutoInputStation();
+        return;
+      }
+      delay(50);
+    }
+    
+  } else if (STOP()) {
+    currentMenu = MENU_RFID_SETTINGS;
+    menuStartIndex = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+void saveAutoStationsToPreferences() {
+  preferences.begin("auto_stations", false);
+  preferences.putInt("count", autoStationCount);
+  
+  for (int i = 0; i < autoStationCount; i++) {
+    String rfidKey = "rfid_" + String(i);
+    preferences.putString(rfidKey.c_str(), autoStations[i].rfidId);
+    
+    String idKey = "id_" + String(i);
+    preferences.putInt(idKey.c_str(), autoStations[i].stationId);
+    
+    String activeKey = "active_" + String(i);
+    preferences.putBool(activeKey.c_str(), autoStations[i].isActive);
+  }
+  
+  preferences.end();
+}
+
+void loadAutoStationsFromPreferences() {
+  preferences.begin("auto_stations", true);
+  autoStationCount = preferences.getInt("count", 0);
+  
+  for (int i = 0; i < autoStationCount && i < MAX_AUTO_STATIONS; i++) {
+    String rfidKey = "rfid_" + String(i);
+    autoStations[i].rfidId = preferences.getString(rfidKey.c_str(), "");
+    
+    String idKey = "id_" + String(i);
+    autoStations[i].stationId = preferences.getInt(idKey.c_str(), i + 1);
+    
+    String activeKey = "active_" + String(i);
+    autoStations[i].isActive = preferences.getBool(activeKey.c_str(), true);
+  }
+  
+  preferences.end();
+}
+
+bool isStationExists(String rfidData) {
+  for (int i = 0; i < autoStationCount; i++) {
+    if (autoStations[i].rfidId == rfidData) {
+      return true;
+    }
+  }
+  return false;
 }

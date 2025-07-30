@@ -227,10 +227,6 @@ void updateIPAddressesFromStrings() {
 
 // Handler untuk halaman konfigurasi WiFi
 void handleWifiConfig() {
-  // Scan WiFi networks
-  Serial.println("Memulai WiFi scan...");
-  int n = WiFi.scanNetworks();
-  
   String html = "<!DOCTYPE html>";
   html += "<html><head><title>Konfigurasi WiFi AGV</title>";
   html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
@@ -238,57 +234,23 @@ void handleWifiConfig() {
   html += "body{font-family:Arial,sans-serif;margin:20px;background:#f0f0f0}";
   html += ".container{max-width:500px;margin:0 auto;background:white;padding:20px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}";
   html += "h1{color:#333;text-align:center}";
-  html += "input[type=text],input[type=password],select{width:100%;padding:10px;margin:5px 0;border:1px solid #ddd;border-radius:5px;box-sizing:border-box}";
+  html += "input[type=text],input[type=password]{width:100%;padding:10px;margin:5px 0;border:1px solid #ddd;border-radius:5px;box-sizing:border-box}";
   html += "button{background:#4CAF50;color:white;padding:12px 20px;border:none;border-radius:5px;cursor:pointer;width:100%;font-size:16px}";
   html += "button:hover{background:#45a049}";
-  html += ".scan-btn{background:#2196F3;margin-bottom:10px;width:auto;padding:8px 16px;font-size:14px}";
-  html += ".scan-btn:hover{background:#1976D2}";
   html += ".form-group{margin-bottom:15px}";
   html += "label{display:block;margin-bottom:5px;font-weight:bold}";
-  html += ".signal-strength{font-size:12px;color:#666;margin-left:10px}";
   html += "</style>";
-  html += "<script>";
-  html += "function refreshScan(){window.location.reload();}";
-  html += "</script>";
   html += "</head><body>";
   html += "<div class='container'>";
   html += "<h1>Konfigurasi WiFi AGV</h1>";
   html += "<form action='/save-wifi' method='POST'>";
   html += "<div class='form-group'>";
   html += "<label for='ssid'>SSID WiFi:</label>";
-  html += "<button type='button' class='scan-btn' onclick='refreshScan()'>Refresh Scan</button>";
-  html += "<select id='ssid' name='ssid' required>";
-  html += "<option value=''>-- Pilih WiFi Network --</option>";
-  
-  if (n == 0) {
-    html += "<option value='' disabled>Tidak ada WiFi ditemukan</option>";
-  } else {
-    // Sort networks by signal strength (RSSI)
-    for (int i = 0; i < n - 1; i++) {
-      for (int j = i + 1; j < n; j++) {
-        if (WiFi.RSSI(i) < WiFi.RSSI(j)) {
-          // Swap networks (we can't directly swap, so we'll handle this in display)
-        }
-      }
-    }
-    
-    for (int i = 0; i < n; ++i) {
-      String ssid = WiFi.SSID(i);
-      int32_t rssi = WiFi.RSSI(i);
-      String encType = (WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? "Open" : "Secured";
-      
-      // Skip empty SSID
-      if (ssid.length() == 0) continue;
-      
-      html += "<option value='" + ssid + "'>" + ssid + " (" + String(rssi) + "dBm, " + encType + ")</option>";
-    }
-  }
-  
-  html += "</select>";
+  html += "<input type='text' id='ssid' name='ssid' placeholder='Masukkan nama WiFi' required>";
   html += "</div>";
   html += "<div class='form-group'>";
   html += "<label for='password'>Password WiFi:</label>";
-  html += "<input type='password' id='password' name='password' required>";
+  html += "<input type='password' id='password' name='password' placeholder='Masukkan password WiFi' required>";
   html += "</div>";
   html += "<div class='form-group'>";
   html += "<label for='static_ip'>Static IP:</label>";
@@ -312,9 +274,6 @@ void handleWifiConfig() {
   html += "</div></body></html>";
   
   server.send(200, "text/html", html);
-  
-  // Clean up scan results
-  WiFi.scanDelete();
 }
 
 // Handler untuk menyimpan konfigurasi WiFi
@@ -393,36 +352,7 @@ void handleSaveWifi() {
   }
 }
 
-// Handler untuk WiFi scan API (JSON response)
-void handleWifiScan() {
-  Serial.println("API WiFi scan dipanggil...");
-  int n = WiFi.scanNetworks();
-  
-  String json = "{\"networks\":[";
-  
-  if (n > 0) {
-    for (int i = 0; i < n; ++i) {
-      String ssid = WiFi.SSID(i);
-      int32_t rssi = WiFi.RSSI(i);
-      String encType = (WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? "Open" : "Secured";
-      
-      // Skip empty SSID
-      if (ssid.length() == 0) continue;
-      
-      if (i > 0) json += ",";
-      json += "{";
-      json += "\"ssid\":\"" + ssid + "\",";
-      json += "\"rssi\":" + String(rssi) + ",";
-      json += "\"encryption\":\"" + encType + "\"";
-      json += "}";
-    }
-  }
-  
-  json += "]}";
-  
-  server.send(200, "application/json", json);
-  WiFi.scanDelete();
-}
+
 
 // Handler untuk halaman utama dengan menu
 void handleRoot() {

@@ -215,7 +215,7 @@ int baseSpeed = 1000;
 // Wiegand object declaration
 Wiegand wiegand;
 
-// RFID Station mapping variables
+// RFID Station Management
 const int MAX_RFID_STATIONS = 10;
 struct RfidStation {
   int stationId;
@@ -224,6 +224,37 @@ struct RfidStation {
 };
 RfidStation rfidStations[MAX_RFID_STATIONS];
 int rfidStationCount = 0;
+
+// RFID Ujung and Warehouse Management
+const int MAX_RFID_UJUNG = 10;
+const int MAX_RFID_WAREHOUSE = 10;
+
+struct RfidUjung {
+  int ujungId;
+  String rfidId;
+  bool isActive;
+};
+
+struct RfidWarehouse {
+  int warehouseId;
+  String rfidId;
+  bool isActive;
+};
+
+RfidUjung rfidUjungList[MAX_RFID_UJUNG];
+RfidWarehouse rfidWarehouseList[MAX_RFID_WAREHOUSE];
+int rfidUjungCount = 0;
+int rfidWarehouseCount = 0;
+
+// Auto input station data
+struct AutoInputStation {
+  int stationId;
+  String rfidId;
+  bool isActive;
+};
+const int MAX_AUTO_STATIONS = 20;
+AutoInputStation autoStations[MAX_AUTO_STATIONS];
+int autoStationCount = 0;
 
 // RFID scanning variables
 bool isScanning = false;
@@ -298,8 +329,32 @@ bool loadWifiConfig();
 void updateIPAddressesFromStrings();
 void handleWifiConfig();
 void handleSaveWifi();
-void handleWifiScan();
 void handleRoot();
+void handleUpdateStations();
+void handleShowStations();
+bool saveStationsListToPreferences();
+bool loadStationsListFromPreferences();
+void clearStationsData();
+void sortStationsList();
+
+// RFID Ujung functions
+void displayRfidUjung();
+void handleRfidUjung();
+void saveRfidUjungToPreferences();
+void loadRfidUjungFromPreferences();
+
+// RFID Warehouse functions
+void displayRfidWarehouse();
+void handleRfidWarehouse();
+void saveRfidWarehouseToPreferences();
+void loadRfidWarehouseFromPreferences();
+
+// Auto Input Station functions
+void displayAutoInputStation();
+void handleAutoInputStation();
+void saveAutoStationsToPreferences();
+void loadAutoStationsFromPreferences();
+bool isStationExists(String rfidData);
 
 // ===== PERFORMANCE OPTIMIZATION FUNCTIONS =====
 // Timer system

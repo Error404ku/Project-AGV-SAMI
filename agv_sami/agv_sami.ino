@@ -33,6 +33,7 @@ void loop() {
     displayPrint();
     bacaSensor();
     loopUltrasonik();
+    lamp_flip_flop();
     // --- Pembacaan sensor sesuai mode ---
     if (modeMaju) {
       setMagnetSlaveId(SLAVEID_MAGNET_DEPAN);
