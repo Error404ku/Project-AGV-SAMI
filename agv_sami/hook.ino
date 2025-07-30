@@ -10,7 +10,7 @@ void hook(String mode) {
       actualMode = "naik";
     }
   }
-
+ 
   if (actualMode == "naik") {
     digitalWrite(pinMotorHook, LOW);
     if (digitalRead(pinHook1) == HIGH) {
