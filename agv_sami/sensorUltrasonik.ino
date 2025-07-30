@@ -137,7 +137,7 @@ void checkObstacles() {
   if (obstacleDetected && !previousObstacleState) {
     Serial.println("EMERGENCY STOP - Obstacle detected!");
     // buzzerError();
-    music("error");
+    music(MUSIC_MODE_ERROR);
   } else if (!obstacleDetected && previousObstacleState) {
     stopMusic();
   }

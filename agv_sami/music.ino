@@ -1,4 +1,4 @@
-void music(String mode) {
+void music(MusicMode mode) {
   Serial.print("Start Music : ");
   Serial.println(mode);
 
@@ -17,10 +17,12 @@ void music(String mode) {
 
   // Mapping
   int targetPin = -1;
-  if (mode == "station") targetPin = musicStationPin;
-  else if (mode == "error") targetPin = musicErrorPin;
-  else if (mode == "detect") targetPin = musicDetectPin;
-  else if (mode == "komputer") targetPin = musicKomputerPin;
+  switch (mode) {
+    case MUSIC_MODE_STATION: targetPin = musicStationPin; break;
+    case MUSIC_MODE_ERROR: targetPin = musicErrorPin; break;
+    case MUSIC_MODE_DETECT: targetPin = musicDetectPin; break;
+    case MUSIC_MODE_KOMPUTER: targetPin = musicKomputerPin; break;
+  }
   // print target pin
   Serial.print("Target Pin : ");
   Serial.println(targetPin);
@@ -36,7 +38,7 @@ void music(String mode) {
   }
 
   // Atur timer hanya untuk station & komputer
-  if (mode != "error" && mode != "detect") {
+  if (mode != MUSIC_MODE_ERROR && mode != MUSIC_MODE_DETECT) {
     previousMillis = millis();  // <- UPDATE timer di sini
   }
 }

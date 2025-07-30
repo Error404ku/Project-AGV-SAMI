@@ -75,7 +75,7 @@ void outTerminal() {
 }
 
 void inWarehouse() {
-  music("komputer");
+  music(MUSIC_MODE_KOMPUTER);
   clearMovement();
   clearStationsData();
   modeBerhenti = true;
@@ -92,7 +92,7 @@ void outWarehouse() {
 }
 
 void inStation() {
-  music("station");
+  music(MUSIC_MODE_STATION);
   clearMovement();
   modeBerhenti = true;
 }
@@ -114,7 +114,7 @@ void ujungStation() {  // ujung station → mundur ke warehouse
   // modeMundur = true;
   changeStateMode("mundur");
   force = true;
-  pidLinefollower(errorValue, "FORCEMUNDUR");
+  pidLinefollower(errorValue, PID_MODE_FORCEMUNDUR);
   // delay(1000);
   setModeWarehouse();
 }
@@ -182,7 +182,7 @@ void pembacaanTerminal() {
   if (waitingForStart) {
     // AGV tetap berhenti di terminal menunggu tombol start
     modeBerhenti = true;
-    pidLinefollower(errorValue, "STOP");
+    pidLinefollower(errorValue, PID_MODE_DEFAULT);
     return;
   }
   
@@ -199,17 +199,17 @@ void pembacaanTerminal() {
     return;
   }
   if (modeMundur) {
-    pidLinefollower(errorValue, "MUNDUR");
+    pidLinefollower(errorValue, PID_MODE_MUNDUR);
     return;
   }
 
-  pidLinefollower(errorValue, "MAJU");
+  pidLinefollower(errorValue, PID_MODE_MAJU);
 }
 
 void pembacaanWarehouse() {
 
   if (sensorkebacasemua && force && modeMaju) {
-    pidLinefollower(errorValue, "FORCEMAJU");
+    pidLinefollower(errorValue, PID_MODE_FORCEMAJU);
     return;
   }
   // Serial.println(force);
@@ -290,7 +290,7 @@ void pembacaanStation() {
   
   // ― Keluar station dengan tombol (FORCEMAJU) ―
   if ((kananHilang || kiriHilang) && force) {
-    return pidLinefollower(errorValue, "FORCEMAJU");
+    return pidLinefollower(errorValue, PID_MODE_FORCEMAJU);
   }
 
   // ― Reset bila keluar garis ―
@@ -365,9 +365,9 @@ void logicAgv() {
   }
   if (modeBerhenti) {
     if (modeStation) {
-      pidLinefollower(errorValue, "STOPPELANPELAN");
+      pidLinefollower(errorValue, PID_MODE_STOPPELANPELAN);
     } else {
-      pidLinefollower(errorValue, "STOP");
+      pidLinefollower(errorValue, PID_MODE_DEFAULT);
     }
     return;
   }

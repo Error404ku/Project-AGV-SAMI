@@ -206,7 +206,7 @@ const unsigned long interval = 100;
 int totalSensorAktif = 0;
 int buttonStep = 0;  // Track button state for sequential actions
 
-int baseSpeed = 1000;
+int baseSpeed = 2000;
 
 // RFID
 #define PIN_D0 12
@@ -262,6 +262,22 @@ int musicErrorPin = 1;     // Default: pinMusic2 untuk error
 int musicDetectPin = 2;    // Default: pinMusic3 untuk detect
 int musicKomputerPin = 3;  // Default: pinMusic4 untuk komputer
 
+// Enum for music modes
+enum MusicMode {
+  MUSIC_MODE_STATION,
+  MUSIC_MODE_ERROR,
+  MUSIC_MODE_DETECT,
+  MUSIC_MODE_KOMPUTER
+};
+
+enum AgvState {
+  AGV_STATE_MOVE_FORWARD,
+  AGV_STATE_MOVE_BACKWARD,
+  AGV_STATE_STOP,
+  AGV_STATE_TERMINAL,
+  AGV_STATE_WAREHOUSE,
+  AGV_STATE_STATION
+}
 // Error codes definition
 #define ERROR_SENSOR_COMMUNICATION 1
 #define ERROR_MOTOR_CONTROL 2
@@ -341,5 +357,16 @@ bool recoverRfidCommunication();
 bool recoverWifiConnection();
 void checkErrorRecovery();
 void initErrorRecovery();
+
+// Enum for PID modes
+enum PidMode {
+  PID_MODE_MAJU,
+  PID_MODE_MUNDUR,
+  PID_MODE_FORCEMUNDUR,
+  PID_MODE_FORCEMAJU,
+  PID_MODE_STOPPELANPELAN,
+  PID_MODE_BERHENTI,
+  PID_MODE_DEFAULT
+};
 
 #endif

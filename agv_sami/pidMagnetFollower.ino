@@ -7,14 +7,14 @@ float derivative = 0;
 
 // Kecepatan dasar
 bool sudahStopPelanPelan = false;
-void pidLinefollower(int errorPosisi, String mode) {
+void pidLinefollower(int errorPosisi, PidMode mode) {
   // kalo sensor jarak mendeteksi ada benda di depan maka berhenti dulu
-  if (obstacleDetected && mode != "BERHENTI") {
+  if (obstacleDetected && mode != PID_MODE_BERHENTI) {
     // Emergency stop - obstacle detected
     pwmMotor(0, 0);
     Serial.println("MOTOR STOPPED - Obstacle detected!");
     // buzzerError();
-    music("error");
+    music(MUSIC_MODE_ERROR);
     return;  // Exit function early
   }
 
@@ -35,27 +35,36 @@ void pidLinefollower(int errorPosisi, String mode) {
 
   motorKiri = constrain(motorKiri, -maxPwm, maxPwm);
   motorKanan = constrain(motorKanan, -maxPwm, maxPwm);
-  if (mode == "MAJU") {
-    pwmMotor(motorKanan, -motorKiri);
-  } else if (mode == "MUNDUR") {
-    pwmMotor(-motorKanan, motorKiri);
-  } else if (mode == "FORCEMUNDUR") {
-    pwmMotor(-baseSpeed, baseSpeed);
-  } else if (mode == "FORCEMAJU") {
-    pwmMotor(baseSpeed, -baseSpeed);
-  } else if (mode == "STOPPELANPELAN") {
-    if (!sudahStopPelanPelan) {
-      pwmMotor(-baseSpeed / 2, baseSpeed / 2);
-      startTimer(&stopPelanPelanTimer, 500);
-      sudahStopPelanPelan = true;
-    } else if (checkTimer(&stopPelanPelanTimer)) {
+  switch (mode) {
+    case PID_MODE_MAJU:
+      pwmMotor(motorKanan, -motorKiri);
+      break;
+    case PID_MODE_MUNDUR:
+      pwmMotor(-motorKanan, motorKiri);
+      break;
+    case PID_MODE_FORCEMUNDUR:
+      pwmMotor(-baseSpeed, baseSpeed);
+      break;
+    case PID_MODE_FORCEMAJU:
+      pwmMotor(baseSpeed, -baseSpeed);
+      break;
+    case PID_MODE_STOPPELANPELAN:
+      if (!sudahStopPelanPelan) {
+        pwmMotor(-baseSpeed / 2, baseSpeed / 2);
+        startTimer(&stopPelanPelanTimer, 500);
+        sudahStopPelanPelan = true;
+      } else if (checkTimer(&stopPelanPelanTimer)) {
+        pwmMotor(0, 0);
+      } else if (!isTimerActive(&stopPelanPelanTimer)) {
+        pwmMotor(0, 0);
+      }
+      break;
+    case PID_MODE_BERHENTI:
+    case PID_MODE_DEFAULT:
       pwmMotor(0, 0);
-    } else if (!isTimerActive(&stopPelanPelanTimer)) {
-      pwmMotor(0, 0);
-    }
-  } else {
-    pwmMotor(0, 0);
+      break;
   }
-  Serial.println(mode);
+  // Serial.println(mode); // Tidak bisa mencetak enum secara langsung
+
   lastError = pidError;
 }

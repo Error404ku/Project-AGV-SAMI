@@ -1220,22 +1220,22 @@ void displayMusicTest() {
 void handleMusicTest() {
   if (UP()) {
     statusMusic = false;
-    music("station");
+    music(MUSIC_MODE_STATION);
     lcd.setCursor(15, 1);
     lcd.print("ON ");
   } else if (DOWN()) {
     statusMusic = false;
-    music("error");
+    music(MUSIC_MODE_ERROR);
     lcd.setCursor(15, 2);
     lcd.print("ON ");
   } else if (LEFT()) {
     statusMusic = false;
-    music("detect");
+    music(MUSIC_MODE_DETECT);
     lcd.setCursor(15, 3);
     lcd.print("ON ");
   } else if (RIGHT()) {
     statusMusic = false;
-    music("komputer");
+    music(MUSIC_MODE_KOMPUTER);
     lcd.setCursor(15, 3);
     lcd.print("ON ");
   } else if (STOP()) {
