@@ -113,6 +113,81 @@ void handleShowTargetStations() {
   Serial.println("Mengirim daftar stasiun dari RAM.");
   server.send(200, "application/json", output);
 }
+
+// Handler untuk menampilkan alamat station RFID
+void handleShowStationAddresses() {
+  DynamicJsonDocument doc(2048);
+  JsonArray array = doc.to<JsonArray>();
+  
+  for (int i = 0; i < rfidStationCount; i++) {
+    if (rfidStations[i].isActive) {
+      JsonObject station = array.createNestedObject();
+      station["stationId"] = rfidStations[i].stationId;
+      station["rfidId"] = rfidStations[i].rfidId;
+    }
+  }
+  
+  String output;
+  serializeJsonPretty(doc, output);
+  
+  Serial.println("Mengirim daftar alamat station RFID.");
+  server.send(200, "application/json", output);
+}
+
+// Handler untuk menampilkan data ujung station RFID
+void handleShowUjungStations() {
+  DynamicJsonDocument doc(1024);
+  JsonArray array = doc.to<JsonArray>();
+  
+  for (int i = 0; i < rfidUjungCount; i++) {
+    if (rfidUjungList[i].isActive) {
+      JsonObject ujung = array.createNestedObject();
+      ujung["ujungId"] = rfidUjungList[i].ujungId;
+      ujung["rfidId"] = rfidUjungList[i].rfidId;
+    }
+  }
+  
+  String output;
+  serializeJsonPretty(doc, output);
+  
+  Serial.println("Mengirim daftar ujung station RFID.");
+  server.send(200, "application/json", output);
+}
+
+// Handler untuk menampilkan data warehouse RFID
+void handleShowWarehouseRfid() {
+  DynamicJsonDocument doc(1024);
+  JsonArray array = doc.to<JsonArray>();
+  
+  for (int i = 0; i < rfidWarehouseCount; i++) {
+    if (rfidWarehouseList[i].isActive) {
+      JsonObject warehouse = array.createNestedObject();
+      warehouse["warehouseId"] = rfidWarehouseList[i].warehouseId;
+      warehouse["rfidId"] = rfidWarehouseList[i].rfidId;
+    }
+  }
+  
+  String output;
+  serializeJsonPretty(doc, output);
+  
+  Serial.println("Mengirim daftar warehouse RFID.");
+  server.send(200, "application/json", output);
+}
+
+// Handler untuk menampilkan data terminal RFID
+void handleShowTerminalRfid() {
+  DynamicJsonDocument doc(1024);
+  JsonObject root = doc.to<JsonObject>();
+  
+  root["terminalDropRfid"] = terminalDropRfidId;
+  root["terminalPickUpRfid"] = terminalPickUpRfidId;
+  
+  String output;
+  serializeJsonPretty(doc, output);
+  
+  Serial.println("Mengirim data terminal RFID.");
+  server.send(200, "application/json", output);
+}
 // --- FUNGSI UNTUK MENGOSONGKAN DAFTAR STATION ---
 void clearTargetStationsData() {
   // 1. Kosongkan std::vector di RAM

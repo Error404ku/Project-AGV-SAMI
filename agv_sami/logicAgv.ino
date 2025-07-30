@@ -37,16 +37,30 @@ void agvStation() {
   }
 }
 
-void agvTerminalPickup(); {
-  saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL);
+void agvTerminalDrop() {
+  saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_DROP);
   agvStop();
   hook("turun");
   delay(2000);
   pidLinefollower(2, PID_MODE_MAJU);
+  
   String currentRfid = String(lastScannedRfidOptimized);
-  if (currentRfid.length() > 0) {
-    agvMode(AGV_STATE_WAREHOUSE);
-    lastStateAGV(AGV_STATE_TERMINAL);
+  if (currentRfid.length() > 0 && currentRfid.equals(terminalPickUpRfidId) && terminalPickUpRfidId.length() > 0) {
+    agvMode(AGV_STATE_TERMINAL_PICKUP);
+    return;
+  }
+}
+
+void agvTerminalPickup() {
+  saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_PICKUP);
+  agvStop();
+  hook("naik");
+  delay(2000);
+  pidLinefollower(2, PID_MODE_MAJU);
+  
+  String currentRfid = String(lastScannedRfidOptimized);
+  if (currentRfid.length() > 0 && currentRfid.equals(terminalDropRfidId) && terminalDropRfidId.length() > 0) {
+    agvMode(AGV_STATE_TERMINAL_DROP);
     return;
   }
 }
@@ -77,7 +91,6 @@ void agvMoveForward() {
   String currentRfid = String(lastScannedRfidOptimized);
   if (currentRfid.length() > 0 && currentRfid.equals(ujungRfidId) && ujungRfidId.length() > 0) {
     agvMode(AGV_STATE_MOVE_BACKWARD);
-    lastStateAGV(AGV_STATE_MOVE_FORWARD);
     return;
   }
 
@@ -108,7 +121,7 @@ void agvMoveBackward() {
 
   // Cek apakah RFID terminal terdeteksi
   String currentRfid = String(lastScannedRfidOptimized);
-  if (currentRfid.length() > 0) {
+  if (currentRfid.length() > 0 && currentRfid.equals(terminalDropRfidId) && terminalDropRfidId.length() > 0) {
     agvMode(AGV_STATE_TERMINAL);
     lastStateAGV(AGV_STATE_MOVE_BACKWARD);
     return;
@@ -125,14 +138,6 @@ void lastStateAGV(AgvState lastState){
         lastStateAgv = AGV_STATE_MOVE_FORWARD;
     } else if (lastState == AGV_STATE_MOVE_BACKWARD) {
         lastStateAgv = AGV_STATE_MOVE_BACKWARD;
-    } else if (lastState == AGV_STATE_TERMINAL) {
-        lastStateAgv = AGV_STATE_TERMINAL;
-    } else if (lastState == AGV_STATE_WAREHOUSE) {
-        lastStateAgv = AGV_STATE_WAREHOUSE;
-    } else if (lastState == AGV_STATE_STATION) {
-        lastStateAgv = AGV_STATE_STATION;
-    } else if (lastState == AGV_STATE_STOP) {
-        lastStateAgv = AGV_STATE_STOP;
     }
 }
 
@@ -151,6 +156,10 @@ String agvStateToString(AgvState state) {
             return "WAREHOUSE";
         case AGV_STATE_STATION:
             return "STATION";
+        case AGV_STATE_TERMINAL_DROP:
+            return "TERMINAL_DROP";
+        case AGV_STATE_TERMINAL_PICKUP:
+            return "TERMINAL_PICKUP";
         default:
             return "UNKNOWN";
     }
@@ -185,6 +194,10 @@ AgvState stringToAgvState(String stateString) {
         return AGV_STATE_WAREHOUSE;
     } else if (stateString == "STATION") {
         return AGV_STATE_STATION;
+    } else if (stateString == "TERMINAL_DROP") {
+        return AGV_STATE_TERMINAL_DROP;
+    } else if (stateString == "TERMINAL_PICKUP") {
+        return AGV_STATE_TERMINAL_PICKUP;
     } else {
         return AGV_STATE_STOP; // Default state
     }
@@ -218,6 +231,10 @@ String agvStateToString(AgvState state) {
             return "WAREHOUSE";
         case AGV_STATE_STATION:
             return "STATION";
+        case AGV_STATE_TERMINAL_DROP:
+            return "TERMINAL_DROP";
+        case AGV_STATE_TERMINAL_PICKUP:
+            return "TERMINAL_PICKUP";
         default:
             return "UNKNOWN";
     }
@@ -252,6 +269,10 @@ AgvState stringToAgvState(String stateString) {
         return AGV_STATE_WAREHOUSE;
     } else if (stateString == "STATION") {
         return AGV_STATE_STATION;
+    } else if (stateString == "TERMINAL_DROP") {
+        return AGV_STATE_TERMINAL_DROP;
+    } else if (stateString == "TERMINAL_PICKUP") {
+        return AGV_STATE_TERMINAL_PICKUP;
     } else {
         return AGV_STATE_STOP; // Default state
     }

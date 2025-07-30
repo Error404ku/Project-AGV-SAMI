@@ -305,7 +305,8 @@ enum AgvState {
   AGV_STATE_MOVE_FORWARD,
   AGV_STATE_MOVE_BACKWARD,
   AGV_STATE_STOP,
-  AGV_STATE_TERMINAL,
+  AGV_STATE_TERMINAL_PICKUP,
+  AGV_STATE_TERMINAL_DROP,
   AGV_STATE_WAREHOUSE,
   AGV_STATE_STATION
 };
@@ -353,6 +354,10 @@ void handleSaveWifi();
 void handleRoot();
 void handleUpdateTargetStations();
 void handleShowTargetStations();
+void handleShowStationAddresses();
+void handleShowUjungStations();
+void handleShowWarehouseRfid();
+void handleShowTerminalRfid();
 bool saveTargetStationsListToPreferences();
 bool loadTargetStationsListFromPreferences();
 void clearTargetStationsData();
@@ -376,6 +381,11 @@ void loadWarehouseUjungRfid();
 void saveWarehouseRfid(String rfidId);
 void saveUjungRfid(String rfidId);
 
+// Terminal Drop & Pickup RFID functions
+void loadTerminalRfid();
+void saveTerminalDropRfid(String rfidId);
+void saveTerminalPickUpRfid(String rfidId);
+
 // AGV Movement functions
 void agvMode(AgvState state);
 void agvMoveForward();
@@ -383,6 +393,8 @@ void agvMoveBackward();
 void agvWarehouse();
 void agvStation();
 void agvTerminal();
+void agvTerminalDrop();
+void agvTerminalPickup();
 void agvStop();
 void lastStateAGV(AgvState lastState);
 void changeStateMode(StateMode mode);
@@ -483,6 +495,8 @@ extern StateMode currentStateMode;
 extern AgvState lastStateAgv;
 extern AgvState currentStateAgv;
 extern String ujungRfidId;
+extern String terminalDropRfidId;
+extern String terminalPickUpRfidId;
 
 enum PidMode {
   PID_MODE_MAJU,

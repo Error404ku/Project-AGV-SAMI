@@ -438,3 +438,32 @@ void saveUjungRfid(String rfidId) {
   ujungRfidId = rfidId;
   Serial.println("Ujung RFID saved: " + rfidId);
 }
+
+/***********************************************************
+ *  TERMINAL DROP & PICKUP RFID FUNCTIONS                *
+ ***********************************************************/
+void loadTerminalRfid() {
+  preferences.begin("terminal-rfid", false);
+  terminalDropRfidId = preferences.getString("terminalDropRfid", "");
+  terminalPickUpRfidId = preferences.getString("terminalPickUpRfid", "");
+  preferences.end();
+  
+  Serial.println("Loaded Terminal Drop RFID: " + terminalDropRfidId);
+  Serial.println("Loaded Terminal PickUp RFID: " + terminalPickUpRfidId);
+}
+
+void saveTerminalDropRfid(String rfidId) {
+  preferences.begin("terminal-rfid", false);
+  preferences.putString("terminalDropRfid", rfidId);
+  preferences.end();
+  terminalDropRfidId = rfidId;
+  Serial.println("Terminal Drop RFID saved: " + rfidId);
+}
+
+void saveTerminalPickUpRfid(String rfidId) {
+  preferences.begin("terminal-rfid", false);
+  preferences.putString("terminalPickUpRfid", rfidId);
+  preferences.end();
+  terminalPickUpRfidId = rfidId;
+  Serial.println("Terminal PickUp RFID saved: " + rfidId);
+}

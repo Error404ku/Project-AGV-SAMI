@@ -185,10 +185,14 @@ bool systemInErrorState = false;
 int errorRecoveryAttempts = 0;
 const int maxErrorRecoveryAttempts = 3;
 
-// Global AGV state tracking variables definition
+// Global AGV state tracking variables
 StateMode currentStateMode = STATE_MODE_BERHENTI;
 AgvState lastStateAgv = AGV_STATE_STOP;
 AgvState currentStateAgv = AGV_STATE_STOP;
+
+// Terminal RFID variables
+String terminalDropRfidId = "";
+String terminalPickUpRfidId = "";
 
 void initErrorRecovery() {
   systemInErrorState = false;

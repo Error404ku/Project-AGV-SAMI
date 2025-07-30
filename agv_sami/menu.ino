@@ -21,6 +21,8 @@
 #define MENU_RFID_UJUNG 15
 #define MENU_RFID_WAREHOUSE 16
 #define MENU_AUTO_INPUT_STATION 17
+#define MENU_TERMINAL_DROP 18
+#define MENU_TERMINAL_PICKUP 19
 
 int selectedItem = 0;
 int maxItems = 14;
@@ -392,7 +394,7 @@ void displayRfidSettings() {
   }
 
   // RFID Menu items
-  String rfidMenuItems[8] = {
+  String rfidMenuItems[10] = {
     "Station: " + String(selectedStationId),
     "Scan RFID",
     "View All",
@@ -400,13 +402,15 @@ void displayRfidSettings() {
     "Clear All",
     "RFID Ujung",
     "RFID Warehouse",
-    "Auto Input Station"
+    "Auto Input Station",
+    "Terminal Drop",
+    "Terminal Pickup"
   };
 
   // Simple display - show items with scrolling if needed
-  int startIdx = max(0, min(selectedRfidItem - 1, 8 - 3));
+  int startIdx = max(0, min(selectedRfidItem - 1, 10 - 3));
 
-  for (int i = 0; i < 3 && (startIdx + i) < 8; i++) {
+  for (int i = 0; i < 3 && (startIdx + i) < 10; i++) {
     int itemIndex = startIdx + i;
     lcd.setCursor(0, i + 1);
     lcd.print("                ");  // Clear line
@@ -648,9 +652,9 @@ void handleRfidSettings() {
   }
 
   if (UP()) {
-    selectedRfidItem = (selectedRfidItem - 1 + 8) % 8;
+    selectedRfidItem = (selectedRfidItem - 1 + 10) % 10;
   } else if (DOWN()) {
-    selectedRfidItem = (selectedRfidItem + 1) % 8;
+    selectedRfidItem = (selectedRfidItem + 1) % 10;
   } else if (RIGHT()) {
     if (selectedRfidItem == 0) {
       // Change station ID
@@ -768,6 +772,16 @@ void handleRfidSettings() {
 
       case 7:  // Auto Input Station
         currentMenu = MENU_AUTO_INPUT_STATION;
+        menuNeedsRefresh = true;
+        break;
+        
+      case 8:  // Terminal Drop
+        currentMenu = MENU_TERMINAL_DROP;
+        menuNeedsRefresh = true;
+        break;
+        
+      case 9:  // Terminal Pickup
+        currentMenu = MENU_TERMINAL_PICKUP;
         menuNeedsRefresh = true;
         break;
     }
@@ -1252,6 +1266,26 @@ void handleMenu() {
       displayAutoInputStation();
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handleAutoInputStation();
+        if (START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+      
+    case MENU_TERMINAL_DROP:
+      displayTerminalDrop();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleTerminalDrop();
+        if (START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+      
+    case MENU_TERMINAL_PICKUP:
+      displayTerminalPickup();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleTerminalPickup();
         if (START() || STOP()) {
           lastButtonPress = currentMillis;
         }
@@ -2173,4 +2207,126 @@ bool isStationExists(String rfidData) {
     }
   }
   return false;
+}
+
+// ===== TERMINAL DROP FUNCTIONS =====
+void displayTerminalDrop() {
+  displayMenuHeader("Terminal Drop");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Current RFID:");
+  
+  lcd.setCursor(0, 2);
+  if (terminalDropRfidId.length() > 0) {
+    String shortRfid = terminalDropRfidId.substring(0, 12);
+    lcd.print(shortRfid);
+    lcd.print("    ");
+  } else {
+    lcd.print("Not set         ");
+  }
+  
+  lcd.setCursor(0, 3);
+  lcd.print("A:Scan STOP:Back   ");
+}
+
+void handleTerminalDrop() {
+  if (START()) { // Scan RFID
+    lcd.setCursor(0, 1);
+    lcd.print("Scanning RFID...    ");
+    lcd.setCursor(0, 2);
+    lcd.print("Place card on reader");
+    lcd.setCursor(0, 3);
+    lcd.print("STOP:Cancel         ");
+    
+    unsigned long scanStart = millis();
+    newRfidScanned = false;
+    
+    while (millis() - scanStart < 10000) { // 10 second timeout
+      if (newRfidScanned) {
+        String scannedRfid = String(lastScannedRfidOptimized);
+        saveTerminalDropRfid(scannedRfid);
+        
+        lcd.clear();
+        lcd.setCursor(0, 1);
+        lcd.print("Terminal Drop RFID");
+        lcd.setCursor(0, 2);
+        lcd.print("saved successfully!");
+        delay(2000);
+        
+        newRfidScanned = false;
+        displayTerminalDrop();
+        return;
+      } else if (LEFT() || STOP()) {
+        displayTerminalDrop();
+        return;
+      }
+      delay(50);
+    }
+    
+  } else if (STOP()) {
+    currentMenu = MENU_RFID_SETTINGS;
+    menuStartIndex = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+// ===== TERMINAL PICKUP FUNCTIONS =====
+void displayTerminalPickup() {
+  displayMenuHeader("Terminal Pickup");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Current RFID:");
+  
+  lcd.setCursor(0, 2);
+  if (terminalPickUpRfidId.length() > 0) {
+    String shortRfid = terminalPickUpRfidId.substring(0, 12);
+    lcd.print(shortRfid);
+    lcd.print("    ");
+  } else {
+    lcd.print("Not set         ");
+  }
+  
+  lcd.setCursor(0, 3);
+  lcd.print("A:Scan STOP:Back   ");
+}
+
+void handleTerminalPickup() {
+  if (START()) { // Scan RFID
+    lcd.setCursor(0, 1);
+    lcd.print("Scanning RFID...    ");
+    lcd.setCursor(0, 2);
+    lcd.print("Place card on reader");
+    lcd.setCursor(0, 3);
+    lcd.print("STOP:Cancel         ");
+    
+    unsigned long scanStart = millis();
+    newRfidScanned = false;
+    
+    while (millis() - scanStart < 10000) { // 10 second timeout
+      if (newRfidScanned) {
+        String scannedRfid = String(lastScannedRfidOptimized);
+        saveTerminalPickUpRfid(scannedRfid);
+        
+        lcd.clear();
+        lcd.setCursor(0, 1);
+        lcd.print("Terminal Pickup RFID");
+        lcd.setCursor(0, 2);
+        lcd.print("saved successfully!");
+        delay(2000);
+        
+        newRfidScanned = false;
+        displayTerminalPickup();
+        return;
+      } else if (LEFT() || STOP()) {
+        displayTerminalPickup();
+        return;
+      }
+      delay(50);
+    }
+    
+  } else if (STOP()) {
+    currentMenu = MENU_RFID_SETTINGS;
+    menuStartIndex = 0;
+    menuNeedsRefresh = true;
+  }
 }

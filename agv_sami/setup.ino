@@ -132,6 +132,10 @@ void setupWebServer() {
   // Registrasi Endpoint HTTP yang diminta
   server.on("/updatestations", HTTP_POST, handleUpdateTargetStations);  // Untuk menyimpan/menimpa daftar stasiun
   server.on("/showstations", HTTP_GET, handleShowTargetStations);       // Untuk menampilkan daftar stasiun
+  server.on("/showstationaddresses", HTTP_GET, handleShowStationAddresses); // Untuk menampilkan alamat station RFID
+  server.on("/showujungstations", HTTP_GET, handleShowUjungStations);   // Untuk menampilkan data ujung station RFID
+  server.on("/showwarehouserfid", HTTP_GET, handleShowWarehouseRfid);   // Untuk menampilkan data warehouse RFID
+  server.on("/showterminalrfid", HTTP_GET, handleShowTerminalRfid);     // Untuk menampilkan data terminal RFID
   
   // WiFi Configuration endpoints
   server.on("/", HTTP_GET, handleRoot);                          // Halaman utama dengan menu
@@ -285,6 +289,9 @@ void setupMenu() {
   loadRfidUjungFromPreferences();
   loadRfidWarehouseFromPreferences();
   loadWarehouseUjungRfid();
+  
+  // Load Terminal RFID data
+  loadTerminalRfid();
 
   // Load stations list from HTTP preferences
   loadTargetStationsListFromPreferences();
@@ -320,6 +327,7 @@ void setupAll() {
   loadRfidUjungFromPreferences();
   loadRfidWarehouseFromPreferences();
   loadAutoStationsFromPreferences();
+  loadTerminalRfid();
   
   lcd.clear();
   lcd.setCursor(0, 0);
