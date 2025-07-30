@@ -5,11 +5,8 @@ void agvMode(AgvState state) {
     agvMoveBackward();
   } else if (state == AGV_STATE_STOP) {
     agvStop();
-  } else if (state == AGV_STATE_TERMINAL_DROP) {
-    agvTerminalDrop();
-  } else if (state == AGV_STATE_TERMINAL_PICKUP) {
-    agvTerminalPickup();
-  }
+  } else if (state == AGV_STATE_TERMINAL) {
+    agvTerminal();
   } else if (state == AGV_STATE_WAREHOUSE) {
     agvWarehouse();
   } else if (state == AGV_STATE_STATION) {
@@ -38,7 +35,15 @@ void agvStation() {
 
 void agvTerminal() {
   agvStop();
-
+  hook("turun");
+  delay(2000);
+  pidLinefollower(2, PID_MODE_MAJU);
+  String currentRfid = String(lastScannedRfidOptimized);
+  if (currentRfid.length() > 0) {
+    agvMode(AGV_STATE_WAREHOUSE);
+    lastStateAGV(AGV_STATE_TERMINAL);
+    return;
+  }
 }
 
 void agvStop() {
@@ -87,15 +92,17 @@ void agvMoveBackward() {
         if (targetStationsList[i] == currentStation) {
           agvMode(AGV_STATE_STATION);
           lastStateAGV(AGV_STATE_MOVE_BACKWARD);
+          return;
         }
       }
     }
   }
 
-  // Cek apakah RFID ujung terdeteksi
+  // Cek apakah RFID terminal terdeteksi
   String currentRfid = String(lastScannedRfidOptimized);
-  if (currentRfid.length() > 0 && currentRfid.equals(terminalDropRfidId) && terminalDropRfidId.length() > 0) {
+  if (currentRfid.length() > 0) {
     agvMode(AGV_STATE_TERMINAL);
+    lastStateAGV(AGV_STATE_MOVE_BACKWARD);
     return;
   }
   // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
@@ -110,5 +117,13 @@ void lastStateAGV(AgvState lastState){
         lastStateAgv = AGV_STATE_MOVE_FORWARD;
     } else if (lastState == AGV_STATE_MOVE_BACKWARD) {
         lastStateAgv = AGV_STATE_MOVE_BACKWARD;
+    } else if (lastState == AGV_STATE_TERMINAL) {
+        lastStateAgv = AGV_STATE_TERMINAL;
+    } else if (lastState == AGV_STATE_WAREHOUSE) {
+        lastStateAgv = AGV_STATE_WAREHOUSE;
+    } else if (lastState == AGV_STATE_STATION) {
+        lastStateAgv = AGV_STATE_STATION;
+    } else if (lastState == AGV_STATE_STOP) {
+        lastStateAgv = AGV_STATE_STOP;
     }
 }

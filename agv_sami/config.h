@@ -384,8 +384,36 @@ void agvWarehouse();
 void agvStation();
 void agvTerminal();
 void agvStop();
-String lastStateAGV(AgvState lastState);
+void lastStateAGV(AgvState lastState);
 void changeStateMode(StateMode mode);
+
+// Hook control function
+void hook(String command);
+
+// PID and motor control functions
+void pidLinefollower(int error, PidMode mode);
+void pwmMotor(int leftSpeed, int rightSpeed);
+
+// Button functions
+bool START();
+bool STOP();
+bool UP();
+bool DOWN();
+bool LEFT();
+bool RIGHT();
+
+// AGV mode control
+extern bool isAgvMode;
+extern bool modeBerhenti;
+
+// Terminal and display functions
+void inTerminal();
+void displayPrint();
+void displaySensorData();
+void lamp_flip_flop();
+void handleMenu();
+void loopRfid();
+void setupAll();
 
 // Auto Input Station functions
 void displayAutoInputStation();
