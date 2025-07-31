@@ -399,9 +399,11 @@ void agvStop();
 void lastStateAGV(AgvState lastState);
 void changeStateMode(StateMode mode);
 String agvStateToString(AgvState state);
-void saveCurrentStateAGVToPreferences(AgvState currentState);
 AgvState stringToAgvState(String stateString);
+void saveCurrentStateAGVToPreferences(AgvState currentState);
 AgvState loadCurrentStateAGVFromPreferences();
+void saveLastStateAGVToPreferences(AgvState lastState);
+AgvState loadLastStateAGVFromPreferences();
 
 // Hook control function
 void hook(String command);

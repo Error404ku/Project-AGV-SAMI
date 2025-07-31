@@ -12,6 +12,7 @@ void setup() {
   // lcd.clear();
   // changeStateMode(STATE_MODE_MAJU);
   AgvState currentStateAGV = loadCurrentStateAGVFromPreferences();
+  AgvState lastStateAGV = loadLastStateAGVFromPreferences();
   Serial.println("SETUP SELESAI - Performance Optimization Active");
 }
 
