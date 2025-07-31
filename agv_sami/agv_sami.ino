@@ -17,23 +17,14 @@ void setup() {
 }
 
 void loop() {
-  // Start performance monitoring
-  startPerformanceMonitoring();
-  // Update performance optimization timers
-  updatePerformanceOptimization();
-  // Skip main operations if system is in error state
-  if (systemInErrorState) {
-    endPerformanceMonitoring();
-    return;
-  }
   server.handleClient();
   loopWifi();  // Handle WiFi connection monitoring
   loopRfid();  // Handle RFID scanning - now controlled internally by conditions
-  // loopUltrasonik(); // Akan dipanggil manual sesuai mode
 
   if (isAgvMode) {
     // AGV Mode - Run normal AGV operation    
-    bacaSensor();
+    loopMagneticSensor(SLAVEID_MAGNET_DEPAN);
+  loopMagneticSensor(SLAVEID_MAGNET_BELAKANG);
     loopUltrasonik();
     lamp_flip_flop();
     if (currentStateAgv != AGV_STATE_NULL){
@@ -48,12 +39,13 @@ void loop() {
       agvMode(currentStateAgv);
     }
     else if (currentStateAgv == AGV_STATE_NULL){
+      if (hookPosition != DOWN_POS){
+        hook(DOWN_HOOK);
+      }
+      lcd.clear(); // Membersihkan tampilan sebelum menampilkan mode AGV
       displayPrint();
-      hook("turun");
       agvMode(AGV_STATE_TERMINAL_PICKUP);
     }
-    // displaySensorData();
-
     // Check for B button to exit AGV mode
     if (STOP()) {
       agvMode(AGV_STATE_STOP);
@@ -64,11 +56,8 @@ void loop() {
   } else {
     // Menu Mode
     // inTerminal();
-    // agvMode(AGV_STATE_STOP);
+    agvMode(AGV_STATE_STOP);
     handleMenu();
   }
 
-  // End performance monitoring
-  endPerformanceMonitoring();
-  // LCD doesn't need display() call - content shows immediately
 }

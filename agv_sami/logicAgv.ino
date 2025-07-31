@@ -10,10 +10,10 @@ void agvMode(AgvState state) {
       break;
     case AGV_STATE_STOP:
       static bool stopCalled = false;
-  if (!stopCalled) {
-    agvStop();
-    stopCalled = true;
-  }
+        if (!stopCalled) {
+          agvStop();
+          stopCalled = true;
+        }
       break;
     case AGV_STATE_TERMINAL_DROP:
       agvTerminalDrop();
@@ -70,53 +70,52 @@ void agvStation() {
 
 // Fungsi ini menangani logika AGV saat melakukan penurunan di terminal.
 void agvTerminalDrop() {
-  static bool stopCalledDrop = false;
-  //Save current state
+  static int dropProcessStep = 0; 
   saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_DROP);
   modeDisplayTerminalDrop();
 
-  if (!stopCalledDrop) {
-    agvStop();
-    hook("turun");
-    delay(2000);
-    stopCalledDrop = true;
+  switch (dropProcessStep) {
+    case 0: 
+      dropProcessStep = 1;
+      agvStop();
+      break;
+    case 1: 
+      if (hook(DOWN_HOOK) == DOWN_POS) {
+        dropProcessStep = 2; 
+      }
+      break;
+    case 2: 
+      dropProcessStep = 0; 
+      agvMode(AGV_STATE_MOVE_FORWARD);
+      break;
   }
-
-  // Reset flag saat akan pindah ke state berikutnya
-  stopCalledDrop = false;
-  agvMode(AGV_STATE_MOVE_FORWARD);
 }
 
 // Fungsi ini menangani logika AGV saat melakukan pengambilan di terminal.
 void agvTerminalPickup() {
-  bool trigger = false;
-  bool triggerHook = false;
-  modeDisplayTerminalPickup();
-  //Save current state
+  static bool isHookUp = false;
+  modeDisplayTerminalPickup(isHookUp);
+
   saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_PICKUP);
 
   if (!stopCalledPickup) {
     agvStop();
     stopCalledPickup = true;
   }
-  if (currentStateAgv != AGV_STATE_NULL) {
-    hook("naik");
-    delay(2000);
-  } else if (digitalRead(pinHook2) == HIGH) {
-    if (START()) {
-      triggerHook = true;
-    }
-    if (triggerHook) {
-      hook("naik");
-      // delay(2000);
-    }
-  }
+  if (!isHookUp) {
+    bool triggerNaikOtomatis = (currentStateAgv != AGV_STATE_NULL);
+    bool triggerNaikManual = (currentStateAgv == AGV_STATE_NULL && START());
 
-  if (START()) {
-    trigger = true;
-  }
-  if (trigger) {
-    agvMode(AGV_STATE_MOVE_FORWARD);
+    if (triggerNaikOtomatis || triggerNaikManual) {
+      hook(UP_HOOK);
+      isHookUp = true;
+    }
+  } else {
+    if (START()) {
+      agvMode(AGV_STATE_MOVE_FORWARD);
+      isHookUp = false;
+      stopCalledPickup = false;
+    }
   }
 }
 
@@ -129,6 +128,7 @@ void agvStop() {
 // Fungsi ini menangani logika AGV saat bergerak maju.
 void agvMoveForward() {
   saveCurrentStateAGVToPreferences(AGV_STATE_MOVE_FORWARD);
+  checkObstacles();
   modeDisplayMoveForward();
   moveStateAGV(AGV_STATE_MOVE_FORWARD);
   // Cek apakah ada RFID yang terbaca
@@ -167,11 +167,10 @@ void agvMoveForward() {
   // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
   if (!obstacleDetected) {
     if (exceptErrorPosition && totalSensorAktif > 5) {
-      pidLinefollower(0, PID_MODE_MUNDUR);  // Error = 0
+      pidLinefollower(0, PID_MODE_MAJU);  // Error = 0
     } else {
-      pidLinefollower(errorValue, PID_MODE_MUNDUR);  // Error dari sensor magnet
+      pidLinefollower(errorValue, PID_MODE_MAJU);  // Error dari sensor magnet
     }
-    return;
   }
 }
 

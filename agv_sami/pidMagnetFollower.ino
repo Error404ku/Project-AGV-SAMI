@@ -26,8 +26,8 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
 
   float koreksi = kpLinefollower * pidError + kiLinefollower * integral + kdLinefollower * derivative;
 
-  int motorKiri = baseSpeed - koreksi;
-  int motorKanan = baseSpeed + koreksi;
+  int motorKiri = baseSpeed + koreksi;
+  int motorKanan = baseSpeed - koreksi;
 
   motorKiri = constrain(motorKiri, -maxPwm, maxPwm);
   motorKanan = constrain(motorKanan, -maxPwm, maxPwm);

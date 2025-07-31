@@ -226,6 +226,7 @@ void handleMenu() {
           switch (selectedItem) {
             case 0:  // AGV Mode
               isAgvMode = true;
+              lcd.clear(); // Membersihkan tampilan saat masuk ke mode AGV
               menuStartIndex = 0;  // Reset scroll position
               menuNeedsRefresh = true;
               break;
@@ -1449,13 +1450,13 @@ void displayUltrasonicCheck() {
 void handleHookTest() {
   if (UP()) {
     hookTestState = 1;  // Set to naik
-    hook("naik");
+    hook(UP_HOOK);
   } else if (DOWN()) {
     hookTestState = 2;  // Set to turun
-    hook("turun");
+    hook(DOWN_HOOK);
   } else if (STOP()) {
     hookTestState = 0;  // Stop
-    hook("stop");       // Stop hook movement
+    hook(STOP_HOOK);       // Stop hook movement
     currentMenu = MENU_MAIN;
     menuStartIndex = 0;
     menuNeedsRefresh = true;
@@ -1463,14 +1464,14 @@ void handleHookTest() {
     // Continue current state
     switch (hookTestState) {
       case 1:  // Continue naik
-        hook("naik");
+        hook(UP_HOOK);
         break;
       case 2:  // Continue turun
-        hook("turun");
+        hook(DOWN_HOOK);
         break;
       case 0:  // Stopped
       default:
-        hook("stop");
+        hook(STOP_HOOK);
         break;
     }
   }
@@ -1478,7 +1479,7 @@ void handleHookTest() {
 
 void handleMagnetCheck() {
   // Selalu baca sensor saat menu ini aktif
-  bacaSensor();
+  loopMagneticSensor(SLAVEID_MAGNET_DEPAN);
 
   if (LEFT()) {
     // Switch to front magnet sensor

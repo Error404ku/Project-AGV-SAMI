@@ -23,41 +23,41 @@ void postTransmissionUltrasonic() {
 }
 
 void loopUltrasonik() {
-  static unsigned long lastReadTime = 0;
-  const unsigned long readInterval = 100;  // Read every 100ms
+  static unsigned long lastSensorReadTime = 0;
+  const unsigned long ULTRASONIC_READ_INTERVAL_MS = 100;  // Baca setiap 100ms
 
   unsigned long currentTime = millis();
-  if (currentTime - lastReadTime >= readInterval) {
-    lastReadTime = currentTime;
+  // Periksa apakah sudah waktunya untuk membaca sensor ultrasonik lagi
+  if (currentTime - lastSensorReadTime >= ULTRASONIC_READ_INTERVAL_MS) {
+    lastSensorReadTime = currentTime;
 
-    // Set current slave ID for node communication
-    node.begin(currentUltrasonicSlaveId, Serial1);
-    node.preTransmission(preTransmissionUltrasonic);
-    node.postTransmission(postTransmissionUltrasonic);
+    // Inisialisasi komunikasi Modbus RTU untuk sensor ultrasonik
+    node.begin(currentUltrasonicSlaveId, Serial1); // Mengatur ID slave dan port serial
+    node.preTransmission(preTransmissionUltrasonic); // Callback sebelum transmisi
+    node.postTransmission(postTransmissionUltrasonic); // Callback setelah transmisi
 
-    // Read 5 holding registers from address 0x0000 (Probe 1-5)
-    uint8_t result = node.readHoldingRegisters(0x0000, 5);
+    // Membaca 5 register penahan (holding registers) dari alamat 0x0000
+    // Register ini berisi data jarak dari Probe 1 hingga Probe 5
+    uint8_t modbusResult = node.readHoldingRegisters(0x0000, 5);
 
-    if (result == node.ku8MBSuccess) {
-      Serial.printf("=== Ultrasonic Data (Slave ID: %d) ===\n", currentUltrasonicSlaveId);
+    // Periksa hasil komunikasi Modbus
+    if (modbusResult == node.ku8MBSuccess) {
+      Serial.printf("=== Data Ultrasonik (Slave ID: %d) ===\n", currentUltrasonicSlaveId);
 
-      // Extract distance data from response buffer
+      // Ekstrak data jarak dari buffer respons Modbus
       for (int i = 0; i < 5; i++) {
-        ultrasonicDistances[i] = node.getResponseBuffer(i);
-        Serial.printf("  Probe %d: %d cm\n", i + 1, ultrasonicDistances[i]);
+        ultrasonicDistances[i] = node.getResponseBuffer(i); // Simpan jarak ke array
+        Serial.printf("  Probe %d: %d cm\n", i + 1, ultrasonicDistances[i]); // Cetak jarak
       }
 
-      // Check for obstacles
-      checkObstacles();
+      // Setelah membaca semua data jarak, periksa apakah ada halangan
+      // checkObstacles();
 
     } else {
-      // Handle communication error
-      Serial.printf("Error reading ultrasonic sensor (Slave ID: %d), error code: 0x%02X\n",
-                    currentUltrasonicSlaveId, result);
-
-      // Log error but don't stop system
-      logError(ERROR_ULTRASONIC_COMMUNICATION,
-               "Gagal baca sensor ultrasonik slave " + String(currentUltrasonicSlaveId));
+      // Tangani kesalahan komunikasi Modbus
+      Serial.printf("Error membaca sensor ultrasonik (Slave ID: %d), kode error: 0x%02X\n",currentUltrasonicSlaveId, modbusResult);
+      // Catat kesalahan tetapi jangan hentikan sistem
+      logError(ERROR_ULTRASONIC_COMMUNICATION, "Gagal membaca sensor ultrasonik slave " + String(currentUltrasonicSlaveId));
     }
   }
 }

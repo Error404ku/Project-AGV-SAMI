@@ -335,8 +335,8 @@ void setupAll() {
   loadRfidWarehouseFromPreferences();
   loadAutoStationsFromPreferences();
   loadTerminalRfid();
-  
-  lcd.setCursor(0, 0);
+  lcd.clear();
+  lcd.setCursor(0, 1);
   lcd.println("SETUP ALL SELESAI");
   delay(1000);
 }

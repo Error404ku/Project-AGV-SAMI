@@ -56,64 +56,64 @@ bool wasTimerTriggered(Timer* timer) {
 /***********************************************************
  *  PERFORMANCE MONITORING FUNCTIONS                      *
  ***********************************************************/
-void startPerformanceMonitoring() {
-  loopStartTime = micros();
-}
+// void startPerformanceMonitoring() {
+//   loopStartTime = micros();
+// }
 
-void endPerformanceMonitoring() {
-  loopExecutionTime = micros() - loopStartTime;
+// void endPerformanceMonitoring() {
+//   loopExecutionTime = micros() - loopStartTime;
 
-  // Update statistics
-  if (loopExecutionTime > maxLoopTime) {
-    maxLoopTime = loopExecutionTime;
-  }
-  if (loopExecutionTime < minLoopTime) {
-    minLoopTime = loopExecutionTime;
-  }
+//   // Update statistics
+//   if (loopExecutionTime > maxLoopTime) {
+//     maxLoopTime = loopExecutionTime;
+//   }
+//   if (loopExecutionTime < minLoopTime) {
+//     minLoopTime = loopExecutionTime;
+//   }
 
-  totalLoops++;
+//   totalLoops++;
 
-  // Update memory statistics
-  freeHeapSize = ESP.getFreeHeap();
-  if (freeHeapSize < minFreeHeap) {
-    minFreeHeap = freeHeapSize;
-  }
+//   // Update memory statistics
+//   freeHeapSize = ESP.getFreeHeap();
+//   if (freeHeapSize < minFreeHeap) {
+//     minFreeHeap = freeHeapSize;
+//   }
 
-  // Print performance stats periodically
-  unsigned long currentMillis = millis();
-  if (currentMillis - lastPerformanceUpdate >= performanceUpdateInterval) {
-    printPerformanceStats();
-    lastPerformanceUpdate = currentMillis;
-  }
-}
+//   // Print performance stats periodically
+//   unsigned long currentMillis = millis();
+//   if (currentMillis - lastPerformanceUpdate >= performanceUpdateInterval) {
+//     printPerformanceStats();
+//     lastPerformanceUpdate = currentMillis;
+//   }
+// }
 
-void printPerformanceStats() {
-  if (totalLoops == 0) return;
+// void printPerformanceStats() {
+//   if (totalLoops == 0) return;
 
-  Serial.println("\n=== PERFORMANCE STATS ===");
-  Serial.print("Loop Time (us) - Current: ");
-  Serial.print(loopExecutionTime);
-  Serial.print(", Max: ");
-  Serial.print(maxLoopTime);
-  Serial.print(", Min: ");
-  Serial.println(minLoopTime);
+//   Serial.println("\n=== PERFORMANCE STATS ===");
+//   Serial.print("Loop Time (us) - Current: ");
+//   Serial.print(loopExecutionTime);
+//   Serial.print(", Max: ");
+//   Serial.print(maxLoopTime);
+//   Serial.print(", Min: ");
+//   Serial.println(minLoopTime);
 
-  Serial.print("Memory - Free: ");
-  Serial.print(freeHeapSize);
-  Serial.print(" bytes, Min Free: ");
-  Serial.print(minFreeHeap);
-  Serial.println(" bytes");
+//   Serial.print("Memory - Free: ");
+//   Serial.print(freeHeapSize);
+//   Serial.print(" bytes, Min Free: ");
+//   Serial.print(minFreeHeap);
+//   Serial.println(" bytes");
 
-  Serial.print("Total Loops: ");
-  Serial.println(totalLoops);
+//   Serial.print("Total Loops: ");
+//   Serial.println(totalLoops);
 
-  // Calculate average loop time
-  Serial.print("Loop Frequency: ");
-  Serial.print(1000000.0 / loopExecutionTime);
-  Serial.println(" Hz");
+//   // Calculate average loop time
+//   Serial.print("Loop Frequency: ");
+//   Serial.print(1000000.0 / loopExecutionTime);
+//   Serial.println(" Hz");
 
-  Serial.println("========================\n");
-}
+//   Serial.println("========================\n");
+// }
 
 void resetPerformanceStats() {
   maxLoopTime = 0;
@@ -306,14 +306,14 @@ void initPerformanceOptimization() {
 /***********************************************************
  *  MAIN LOOP INTEGRATION                                 *
  ***********************************************************/
-void updatePerformanceOptimization() {
-  // Check all active timers
-  checkTimer(&stopPelanPelanTimer);
-  checkTimer(&ultrasonicSwitchTimer);
-  checkTimer(&buttonDebounceTimer);
-  checkTimer(&menuDelayTimer);
-  checkTimer(&errorRecoveryTimer);
+// void updatePerformanceOptimization() {
+//   // Check all active timers
+//   checkTimer(&stopPelanPelanTimer);
+//   checkTimer(&ultrasonicSwitchTimer);
+//   checkTimer(&buttonDebounceTimer);
+//   checkTimer(&menuDelayTimer);
+//   checkTimer(&errorRecoveryTimer);
 
-  // Check error recovery
-  checkErrorRecovery();
-}
+//   // Check error recovery
+//   checkErrorRecovery();
+// }

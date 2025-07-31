@@ -52,12 +52,12 @@ void loop() {
 
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
-    bacaSensor();
+    loopMagneticSensor();
   }
 }
 
 // ==================== Fungsi Membaca Sensor ====================
-void bacaSensor() {
+void loopMagneticSensor() {
   Serial.println(F("Mengirim permintaan pembacaan..."));
   uint8_t result = node.readHoldingRegisters(0x0000, 2);
 

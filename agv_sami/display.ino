@@ -5,6 +5,15 @@ void displayPrint() {
   lcd.print(agvStateToString(currentStateAgv));
 }
 
+struct ScrollState {
+  String currentMessage;
+  String paddedMessage;
+  int scrollPos = 0;
+  unsigned long lastScrollTime = 0;
+};
+ScrollState scrollLine0;
+ScrollState scrollLine1;
+
 void scrollText(int row, String message, int delayTime) {
   unsigned long lastScrollTime = 0;
   int scrollPos = 0;
@@ -51,10 +60,25 @@ void modeDisplayMoveBackward(){
   displaySensorData();
 }
 
-void modeDisplayTerminalPickup(){
-  lcd.setCursor(0,0);
-  scrollText(0, "Mode: Terminal Pickup", 500);
-  scrollText(1, "Tekan Start untuk jalan", 500);
+/*
+ * Hapus fungsi scrollText() Anda yang lama.
+ * Ganti fungsi modeDisplayTerminalPickup() dengan yang ini.
+ * Fungsi ini menerima parameter 'hookIsUp' untuk menentukan teks yang ditampilkan.
+*/
+void modeDisplayTerminalPickup(bool hookIsUp) {
+  lcd.setCursor(0, 0);
+  lcd.print("Mode: Pickup"); 
+  lcd.setCursor(0, 1);
+  if (!hookIsUp) {
+    if (currentStateAgv == AGV_STATE_NULL) {
+      lcd.print("Start u/ Naikkan"); 
+    } else {
+      lcd.print("Hook naik auto..");
+    }
+  } else {
+    lcd.print("START untuk jln");
+  }
+  lcd.print("   ");
 }
 
 void modeDisplayTerminalDrop(){

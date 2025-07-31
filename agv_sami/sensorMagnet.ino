@@ -23,58 +23,73 @@ void bacaSensorGaris() {
 
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
-    bacaSensor();
+
   }
 }
 
 // ==================== Fungsi Membaca Sensor ====================
-void bacaSensor() {
-  bacaSensor(currentMagnetSlaveId);
-}
-
-void bacaSensor(int slaveId) {
-  // Verify Serial1 is initialized
+void loopMagneticSensor(int slaveId) {
+  // Memastikan Serial1 telah diinisialisasi sebelum digunakan
   if (!Serial1) {
-    Serial.println("[ERROR] Serial1 tidak terinisialisasi!");
-    return;
+    Serial.println("[ERROR] Serial1 tidak terinisialisasi untuk sensor magnet!");
+    return; // Keluar dari fungsi jika Serial1 belum siap
   }
 
-  node.begin(slaveId, Serial1);
-  node.preTransmission(preTransmissionMagnet);
-  node.postTransmission(postTransmissionMagnet);
+  // Mengatur parameter komunikasi Modbus RTU untuk sensor magnet
+  node.begin(currentMagnetSlaveId, Serial1); // Mengatur ID slave magnet dan port serial
+  node.preTransmission(preTransmissionMagnet); // Callback sebelum transmisi Modbus
+  node.postTransmission(postTransmissionMagnet); // Callback setelah transmisi Modbus
 
-  static int consecutiveFailuresFront = 0;
-  static int consecutiveFailuresBack = 0;
-  int& consecutiveFailures = (slaveId == SLAVEID_MAGNET_DEPAN) ? consecutiveFailuresFront : consecutiveFailuresBack;
+  // Mengelola penghitung kegagalan komunikasi berturut-turut untuk sensor depan dan belakang
+  static int consecutiveModbusFailuresFront = 0;
+  static int consecutiveModbusFailuresBack = 0;
+  // Menggunakan referensi untuk memilih penghitung yang sesuai (depan atau belakang)
+  int& currentConsecutiveFailures = (slaveId == SLAVEID_MAGNET_DEPAN) ? consecutiveModbusFailuresFront : consecutiveModbusFailuresBack;
 
-  // Add timeout for modbus communication
-  unsigned long startTime = millis();
-  uint8_t result = node.readHoldingRegisters(0x0000, 2);
-  unsigned long endTime = millis();
+  // Melakukan pembacaan register dari sensor magnet
+  // Membaca 2 holding register dari alamat 0x0000 (biasanya untuk nilai median dan posisi)
+  uint8_t modbusReadResult = node.readHoldingRegisters(0x0000, 2);
 
-  if (result == node.ku8MBSuccess) {
-    consecutiveFailures = 0;
-    uint16_t medianValue = node.getResponseBuffer(0);
-    uint16_t positionValue = node.getResponseBuffer(1);
-    printActiveSegmentsFromBitmask(positionValue);
-    updateJumlahMagnet(positionValue);
-    if (positionValue == 0xFFFF) {
+  // Memeriksa hasil komunikasi Modbus
+  if (modbusReadResult == node.ku8MBSuccess) {
+    currentConsecutiveFailures = 0; // Reset penghitung kegagalan jika komunikasi berhasil
+
+    // Mengambil nilai median dan posisi dari buffer respons Modbus
+    uint16_t medianSensorValue = node.getResponseBuffer(0);
+    uint16_t magneticPositionBitmask = node.getResponseBuffer(1);
+
+    // Memproses dan menampilkan segmen magnet yang aktif berdasarkan bitmask posisi
+    printActiveSegmentsFromBitmask(magneticPositionBitmask);
+
+    // Memperbarui jumlah magnet yang terdeteksi
+    updateJumlahMagnet(magneticPositionBitmask);
+
+    // Menghitung total sensor aktif dan nilai error posisi
+    if (magneticPositionBitmask == 0xFFFF) { // Jika semua bit aktif (nilai khusus untuk tidak ada magnet)
       totalSensorAktif = 0;
     } else {
-      totalSensorAktif = 0;
+      totalSensorAktif = 0; // Reset total sensor aktif
+      // Menghitung jumlah sensor magnet yang aktif (bit yang disetel)
       for (int i = 0; i < 16; i++) {
-        if (jumlahMagnet[i]) totalSensorAktif++;
+        if (jumlahMagnet[i]) { // Jika sensor ke-i aktif
+          totalSensorAktif++;
+        }
       }
-      errorValue = hitungErrorPosisi(positionValue);
+      // Menghitung nilai error posisi berdasarkan bitmask magnet
+      errorValue = hitungErrorPosisi(magneticPositionBitmask);
     }
   } else {
-    consecutiveFailures++;
+    // Menangani kegagalan komunikasi Modbus
+    currentConsecutiveFailures++; // Tingkatkan penghitung kegagalan
 
-    // Reset communication if too many failures
-    if (consecutiveFailures >= 5) {
-      setupRS485(BAUDRATE);
-      consecutiveFailures = 0;
+    // Jika terlalu banyak kegagalan berturut-turut, coba reset komunikasi RS485
+    if (currentConsecutiveFailures >= 5) {
+      Serial.println("[WARNING] Terlalu banyak kegagalan komunikasi sensor magnet. Mereset RS485...");
+      setupRS485(BAUDRATE); // Panggil fungsi untuk mereset inisialisasi RS485
+      currentConsecutiveFailures = 0; // Reset penghitung setelah mencoba reset
     }
+    // Opsional: Log error komunikasi jika diperlukan
+    // logError(ERROR_MAGNETIC_COMMUNICATION, "Gagal baca sensor magnet slave " + String(currentMagnetSlaveId));
   }
 }
 

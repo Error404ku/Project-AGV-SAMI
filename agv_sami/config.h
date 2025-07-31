@@ -118,7 +118,7 @@ size_t minFreeHeap = 0;
 
 // AGV State variables
 AgvState currentStateAgv = AGV_STATE_NULL;
-AgvState moveStateAgv = AGV_STATE_STOP;
+AgvState moveStateAgv = AGV_STATE_MOVE_FORWARD;
 
 // Timer system structure
 struct Timer {
@@ -535,8 +535,7 @@ void preTransmissionUltrasonic();
 void postTransmissionUltrasonic();
 
 // ===== MAGNET SENSOR FUNCTIONS =====
-void bacaSensor();
-void bacaSensor(int slaveId);
+void loopMagneticSensor(int slaveId);
 void switchMagnetSensor(bool useFrontSensor);
 int getCurrentMagnetSlaveId();
 void setMagnetSlaveId(int slaveId);
@@ -606,7 +605,22 @@ void savemoveStateAGVToPreferences(AgvState lastState);
 void loadAllAGVStatesFromPreferences();
 
 // Hook control function
-void hook(String command);
+
+enum HookPosition {
+  UP_POS,
+  DOWN_POS,
+  STOP_POS
+};
+
+enum HookPositionMode {
+  UP_HOOK,
+  DOWN_HOOK,
+  STOP_HOOK
+};
+
+HookPosition hookPosition = STOP_POS;
+HookPositionMode hookPositionMode = STOP_HOOK;
+HookPosition hook(HookPositionMode mode);
 
 // PID and motor control functions
 enum PidMode {
