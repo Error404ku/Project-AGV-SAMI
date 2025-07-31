@@ -1,5 +1,7 @@
 // Current magnet slave ID (default: front sensor)
-int currentMagnetSlaveId = SLAVEID_MAGNET_DEPAN;
+// ===================================================================
+// SENSOR MAGNET VARIABLES SUDAH DIPINDAHKAN KE config.h
+// ===================================================================
 
 void preTransmissionMagnet() {
   Serial.println("[DEBUG] preTransmissionMagnet: Setting MAX485 to transmit mode (RE=1, DE=1)");
@@ -41,7 +43,6 @@ void bacaSensor(int slaveId) {
   node.preTransmission(preTransmissionMagnet);
   node.postTransmission(postTransmissionMagnet);
 
-  Serial.println(F("[DEBUG] Memulai pembacaan sensor magnet..."));
   static int consecutiveFailuresFront = 0;
   static int consecutiveFailuresBack = 0;
   int& consecutiveFailures = (slaveId == SLAVEID_MAGNET_DEPAN) ? consecutiveFailuresFront : consecutiveFailuresBack;
@@ -51,35 +52,26 @@ void bacaSensor(int slaveId) {
   uint8_t result = node.readHoldingRegisters(0x0000, 2);
   unsigned long endTime = millis();
 
-  Serial.printf("[DEBUG] Modbus result: 0x%02X (waktu: %lu ms)\n", result, endTime - startTime);
-  Serial.printf("[DEBUG] Using Slave ID: %d\n", slaveId);
-
   if (result == node.ku8MBSuccess) {
     consecutiveFailures = 0;
     uint16_t medianValue = node.getResponseBuffer(0);
     uint16_t positionValue = node.getResponseBuffer(1);
-    Serial.printf("[SUCCESS] medianValue: 0x%04X, positionValue: 0x%04X\n", medianValue, positionValue);
     printActiveSegmentsFromBitmask(positionValue);
     updateJumlahMagnet(positionValue);
     if (positionValue == 0xFFFF) {
       totalSensorAktif = 0;
-      Serial.println("[INFO] Sensor mendeteksi 0xFFFF - tidak ada magnet");
     } else {
       totalSensorAktif = 0;
       for (int i = 0; i < 16; i++) {
         if (jumlahMagnet[i]) totalSensorAktif++;
       }
       errorValue = hitungErrorPosisi(positionValue);
-      Serial.printf("[INFO] Total sensor aktif: %d, Error value: %d\n", totalSensorAktif, errorValue);
     }
   } else {
-    Serial.printf("[ERROR] Gagal membaca data sensor. Error Code: 0x%02X\n", result);
     consecutiveFailures++;
-    Serial.printf("[ERROR] Consecutive failures: %d\n", consecutiveFailures);
 
     // Reset communication if too many failures
     if (consecutiveFailures >= 5) {
-      Serial.println("[WARNING] Terlalu banyak kegagalan, mereset komunikasi...");
       setupRS485(BAUDRATE);
       consecutiveFailures = 0;
     }
@@ -95,15 +87,12 @@ void printActiveSegmentsFromBitmask(uint16_t positionValue) {
   bool foundAny = false;
   for (int i = 0; i < 16; i++) {
     if (!((positionValue >> i) & 0x01)) {
-      Serial.print(i + 1);
-      Serial.print(" ");
       foundAny = true;
     }
   }
   if (!foundAny) {
     Serial.print(F("Tidak ada segmen aktif (Error Logika)."));
   }
-  Serial.println();
 }
 
 int hitungErrorPosisi(uint16_t bitmask) {

@@ -1,24 +1,9 @@
 extern int totalSensorAktif;  // counter sensor aktif
-extern int errorValue;        // nilai error PID
-// String statusJalan; // Replaced with optimized version in performance_optimization.ino
-/***********************************************************
- *  GLOBAL STATE                                          *
- ***********************************************************/
-// Removed unused variables: station, sudahDeteksiStasiun, targetStation[], targetStationFromKomputer[], totalTarget, indexTarget
+// ===================================================================
+// RFID TERMINAL VARIABLES SUDAH DIPINDAHKAN KE config.h
+// ===================================================================
 
-// ― Warehouse dan Ujung RFID IDs ―
-String warehouseRfidId = "";
-// Removed unused variables: stationListReceived, waitingForStart
 
-// ― Movement flags ― (keeping only used variables)
-bool modeBerhenti = true;  // start dalam keadaan berhenti
-// Removed unused variables: modeTerminal, modeWarehouse, modeStation, modeMaju, modeMundur, force
-
-// Global StateMode variable definition
-StateMode currentStateMode = STATE_MODE_BERHENTI;
-
-// Global AGV state tracking variables definition
-AgvState lastStateAgv = AGV_STATE_STOP;
 
 
 /***********************************************************

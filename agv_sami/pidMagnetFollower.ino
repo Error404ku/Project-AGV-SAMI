@@ -1,12 +1,8 @@
 
 
-float pidError = 0;
-float lastError = 0;
-float integral = 0;
-float derivative = 0;
-
-// Kecepatan dasar
-bool sudahStopPelanPelan = false;
+// ===================================================================
+// PID CONTROLLER VARIABLES SUDAH DIPINDAHKAN KE config.h
+// ===================================================================
 void pidLinefollower(int errorPosisi, PidMode mode) {
   // kalo sensor jarak mendeteksi ada benda di depan maka berhenti dulu
   if (obstacleDetected && mode != PID_MODE_BERHENTI) {

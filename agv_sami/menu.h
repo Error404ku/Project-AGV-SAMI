@@ -21,14 +21,12 @@
 #define MENU_HOOK_TEST 22
 #define MENU_MAGNET_CHECK 23
 #define MENU_ULTRASONIC_CHECK 24
+#define MENU_RESET_AGV_STATE 25
 
 // External variables from other files
 extern int targetStation[2];
 extern int targetStationFromKomputer[];
-extern bool modeStation;
 extern bool modeMaju;
-extern bool modeBerhenti;
-extern bool force;
 extern double kp, ki, kd;
 extern int baseSpeed;
 extern bool tombolBoot;
@@ -36,7 +34,9 @@ extern bool tombolBoot;
 extern int selectedItem;
 extern int maxItems;
 extern bool isAgvMode;
-int currentMenu = MENU_MAIN;
+// ===================================================================
+// MENU VARIABLES SUDAH DIPINDAHKAN KE config.h
+// ===================================================================
 
 // Function declarations
 void setupMenu();

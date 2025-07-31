@@ -1,13 +1,9 @@
 
-// Obstacle detection variables
-bool obstacleDetected = false;
-uint16_t minSafeDistance = 30;            // cm - minimum safe distance
-uint16_t ultrasonicDistances[5] = { 0 };  // Store distances from 5 probes
-unsigned long lastObstacleCheck = 0;
-const unsigned long obstacleCheckInterval = 100;  // Check every 100ms
+// ===================================================================
+// SENSOR ULTRASONIK VARIABLES SUDAH DIPINDAHKAN KE config.h
+// ===================================================================
 
-// Current ultrasonic slave ID (default: front sensor)
-int currentUltrasonicSlaveId = SLAVEID_ULTRASONIK_DEPAN;
+// Konstanta yang tidak dipindahkan // Check every 100ms
 
 // Function to set ultrasonic slave ID dynamically
 void setUltrasonicSlaveId(int slaveId) {
@@ -53,7 +49,6 @@ void loopUltrasonik() {
 
       // Check for obstacles
       checkObstacles();
-      Serial.println("========================\n");
 
     } else {
       // Handle communication error
@@ -135,7 +130,7 @@ void checkObstacles() {
 
   // If obstacle just detected, trigger buzzer
   if (obstacleDetected && !previousObstacleState) {
-    Serial.println("EMERGENCY STOP - Obstacle detected!");
+    agvStop();
     // buzzerError();
     music(MUSIC_MODE_ERROR);
   } else if (!obstacleDetected && previousObstacleState) {

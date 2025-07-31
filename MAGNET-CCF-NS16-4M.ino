@@ -85,7 +85,7 @@ void bacaSensor() {
     if (positionValue == 0xFFFF) {
         Serial.println(F("Status: Di Luar Jalur"));
     } else {
-        int errorValue = hitungErrorPosisi(positionValue);
+        errorValue = hitungErrorPosisi(positionValue);
         Serial.print(F("Nilai Error Posisi: "));
         Serial.println(errorValue);
     }

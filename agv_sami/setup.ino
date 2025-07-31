@@ -103,7 +103,7 @@ void setupWebServer() {
   int wifiAttempts = 0;
   bool wifiConnected = false;
   
-  while (WiFi.status() != WL_CONNECTED && wifiAttempts < 20) {  // Reduced timeout to 10 seconds
+  while (WiFi.status() != WL_CONNECTED && wifiAttempts < 5) {  // Reduced timeout to 10 seconds
     lcd.setCursor(0, 0);
     lcd.print("MENCARI WIFI");
     delay(500);
@@ -292,9 +292,15 @@ void setupMenu() {
   
   // Load Terminal RFID data
   loadTerminalRfid();
+  
+  // Load except error position flag
+  loadExceptErrorFlag();
 
   // Load stations list from HTTP preferences
   loadTargetStationsListFromPreferences();
+
+  // Initialize menu temporary variables
+  initMenuTempVariables();
 
   Serial.print("Loaded targetStationsList size: ");
   Serial.println(targetStationsList.size());
@@ -319,6 +325,7 @@ void setupAll() {
   setupSensorMagnet(SLAVEID_MAGNET_DEPAN);
   setupUltrasonikWithParams(SLAVEID_ULTRASONIK_DEPAN);
   setupHook();  // setupBuzzer();
+  setupWifi();  // Setup WiFi configuration
   setupWebServer();
   setupTombol();
   setupRfid();
@@ -329,7 +336,6 @@ void setupAll() {
   loadAutoStationsFromPreferences();
   loadTerminalRfid();
   
-  lcd.clear();
   lcd.setCursor(0, 0);
   lcd.println("SETUP ALL SELESAI");
   delay(1000);

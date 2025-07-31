@@ -1,24 +1,9 @@
 // Variables for button handling
-bool tombolBoot = false;
-unsigned long bootHoldStart = 0;
-int lastPressed;
+// ===================================================================
+// BUTTON VARIABLES SUDAH DIPINDAHKAN KE config.h
+// ===================================================================
 
-// Button pin variables
-int upPin = PIN_UP;
-int downPin = PIN_DOWN;
-int rightPin = PIN_RIGHT;
-int leftPin = PIN_LEFT;
-int startPin = PIN_START;
-int stopPin = PIN_STOP;
-
-// Debounce variables
-unsigned long lastUpPress = 0;
-unsigned long lastDownPress = 0;
-unsigned long lastLeftPress = 0;
-unsigned long lastRightPress = 0;
-unsigned long lastStartPress = 0;
-unsigned long lastStopPress = 0;
-const unsigned long debounceDelay = 300;  // 200ms debounce
+// Konstanta debounceDelay sudah didefinisikan di config.h
 
 
 // Optimized button functions using efficient debounce system

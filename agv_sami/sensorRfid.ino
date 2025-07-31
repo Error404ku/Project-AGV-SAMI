@@ -1,6 +1,6 @@
 void loopRfid() {
   // Only process RFID when in RFID Settings menu or in Station mode
-  if (!(currentMenu == MENU_RFID_SETTINGS || modeStation)) {
+  if (!(currentMenu == MENU_RFID_SETTINGS)) {
     return;
   }
 
@@ -60,17 +60,6 @@ void receivedData(uint8_t* data, uint8_t bits, const char* message) {
   if (currentMenu == MENU_RFID_SETTINGS) {
     Serial.print("RFID Scanned for Settings: ");
     Serial.println(rfidBuffer);
-  } else if (modeStation) {
-    Serial.print("RFID Scanned at Station: ");
-    Serial.println(rfidBuffer);
-    // Check if this RFID matches any configured station
-    for (int i = 0; i < rfidStationCount; i++) {
-      if (rfidStations[i].isActive && rfidStations[i].rfidId.equals(rfidBuffer)) {
-        Serial.print("Matched Station ID: ");
-        Serial.println(rfidStations[i].stationId);
-        break;
-      }
-    }
   }
 }
 
@@ -214,7 +203,7 @@ void clearAllRfidStations() {
 }
 
 // Function to check if current RFID matches a station and return station ID (optimized)
-int getStationFromLastRfid() {
+int getStationFromLastRfid(){
   if (strlen(lastScannedRfidOptimized) == 0 || !newRfidScanned) {
     return -1;  // No RFID scanned
   }

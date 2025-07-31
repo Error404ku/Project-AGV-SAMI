@@ -1,8 +1,9 @@
 void displayPrint() {
   lcd.setCursor(0, 0);
-  lcd.print("AGV MODE");
+  lcd.print("AGV Mode: ");
+  lcd.print(agvStateToString(currentStateAgv));
+  displaySensorData();
 }
-
 
 void scrollText(int row, String message, int delayTime) {
   unsigned long lastScrollTime = 0;
@@ -33,6 +34,7 @@ void scrollText(int row, String message, int delayTime) {
     }
   }
 }
+
 void modeDisplayWarehouse(){
   lcd.setCursor(0,0);
   lcd.print("Mode: Warehouse");
@@ -41,7 +43,30 @@ void modeDisplayWarehouse(){
 
 void modeDisplayMoveForward(){
   scrollText(0, "Mode : Move Forward", 500);
-  displaySensorData
+  displaySensorData;
+}
+
+void modeDisplayMoveBackward(){
+  scrollText(0, "Mode : Move Backward", 500);
+  displaySensorData;
+}
+
+void modeDisplayTerminalPickup(){
+  lcd.setCursor(0,0);
+  scrollText(0, "Mode: Terminal Pickup", 500);
+  scrollText(1, "Tekan Start untuk jalan", 500);
+}
+
+void modeDisplayTerminalDrop(){
+  lcd.setCursor(0,0);
+  scrollText(0, "Mode: Terminal Drop", 500);
+  scrollText(1, "Tekan Start untuk jalan", 500);
+}
+
+void modeDisplayStation(){
+  lcd.setCursor(0,0);
+  scrollText(0, "Mode: Station", 500);
+  scrollText(1, "Tekan Start untuk jalan", 500);
 }
 
 void displaySensorData() {

@@ -12,39 +12,9 @@
   Date: 2024
 */
 
-/***********************************************************
- *  PERFORMANCE MONITORING VARIABLES                      *
- ***********************************************************/
-unsigned long loopStartTime = 0;
-unsigned long loopExecutionTime = 0;
-unsigned long maxLoopTime = 0;
-unsigned long minLoopTime = 999999;
-unsigned long totalLoops = 0;
-unsigned long performanceUpdateInterval = 5000; // 5 seconds
-unsigned long lastPerformanceUpdate = 0;
-
-// Memory tracking
-size_t freeHeapSize = 0;
-size_t minFreeHeap = 999999;
-
-/***********************************************************
- *  NON-BLOCKING TIMER SYSTEM                             *
- ***********************************************************/
-struct Timer {
-  unsigned long previousMillis;
-  unsigned long interval;
-  bool active;
-  bool triggered;
-};
-
-// Timer instances for different operations
-Timer stopPelanPelanTimer = {0, 500, false, false};
-Timer ultrasonicSwitchTimer = {0, 100, false, false};
-Timer magnetSwitchTimer = {0, 100, false, false};
-Timer buttonDebounceTimer = {0, 300, false, false};
-Timer menuDelayTimer = {0, 1500, false, false};
-Timer errorRecoveryTimer = {0, 5000, false, false};
-Timer performanceTimer = {0, 5000, false, false};
+// ===================================================================
+// PERFORMANCE OPTIMIZATION VARIABLES SUDAH DIPINDAHKAN KE config.h
+// ===================================================================
 
 /***********************************************************
  *  TIMER MANAGEMENT FUNCTIONS                            *
@@ -181,22 +151,39 @@ const char* getCurrentMode() {
 /***********************************************************
  *  ERROR RECOVERY SYSTEM                                 *
  ***********************************************************/
-bool systemInErrorState = false;
-int errorRecoveryAttempts = 0;
+// Variables moved to config.h: systemInErrorState, errorRecoveryAttempts
 const int maxErrorRecoveryAttempts = 3;
 
-// Global AGV state tracking variables
-StateMode currentStateMode = STATE_MODE_BERHENTI;
-AgvState lastStateAgv = AGV_STATE_STOP;
-AgvState currentStateAgv = AGV_STATE_STOP;
+// Global AGV state tracking variables - moved to config.h as extern declarations
+// AgvState currentStateAgv, moveStateAgv, terminalDropRfidId, terminalPickUpRfidId, ujungRfidId, exceptErrorPosition
 
-// Terminal RFID variables
-String terminalDropRfidId = "";
-String terminalPickUpRfidId = "";
+
 
 void initErrorRecovery() {
   systemInErrorState = false;
   errorRecoveryAttempts = 0;
+  Serial.println("Error recovery system initialized");
+}
+
+// Fungsi untuk mereset flag except error position
+void resetExceptErrorFlag() {
+  exceptErrorPosition = false;
+  Serial.println("Except error position flag reset");
+}
+
+// Fungsi untuk menyimpan flag except error position ke preferences
+void saveExceptErrorFlag() {
+  preferences.begin("except-error", false);
+  preferences.putBool("position", exceptErrorPosition);
+  preferences.end();
+}
+
+// Fungsi untuk memuat flag except error position dari preferences
+void loadExceptErrorFlag() {
+  preferences.begin("except-error", true);
+  exceptErrorPosition = preferences.getBool("position", false);
+  preferences.end();
+  Serial.println("Except error position flag loaded: " + String(exceptErrorPosition));
 }
 
 bool attemptErrorRecovery(int errorCode) {

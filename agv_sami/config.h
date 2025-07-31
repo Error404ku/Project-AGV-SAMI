@@ -5,7 +5,7 @@
 #include <Arduino.h>
 #include <math.h>
 #include <Wire.h>
-#include <LiquidCrystal_I2C.h>  // ESP32 LCD I2C Library
+#include <LiquidCrystal_I2C.h>  // ESP32 compatible LCD I2C Library
 #include <ModbusMaster.h>
 #include <WiFi.h>
 #include <WebServer.h>
@@ -18,13 +18,228 @@
 #include "menu.h"
 #include <Wiegand.h>
 
-// --- Deklarasi Global ---
+enum AgvState {
+  AGV_STATE_MOVE_FORWARD,
+  AGV_STATE_MOVE_BACKWARD,
+  AGV_STATE_STOP,
+  AGV_STATE_TERMINAL_PICKUP,
+  AGV_STATE_TERMINAL_DROP,
+  AGV_STATE_WAREHOUSE,
+  AGV_STATE_STATION,
+  AGV_STATE_NULL
+};
+
+// ===================================================================
+//                        PIN DEFINITIONS
+// ===================================================================
+
+#define BOOT_PIN 0
+
+// Button pins
+#define PIN_UP 10     // UP button
+#define PIN_LEFT 42   // LEFT button
+#define PIN_RIGHT 39  // RIGHT button
+#define PIN_DOWN 40   // DOWN button
+#define PIN_START 9   // START button
+#define PIN_STOP 41   // STOP button
+
+// Slave IDs
+#define SLAVEID_MAGNET_DEPAN 1
+#define SLAVEID_ULTRASONIK_DEPAN 2
+#define SLAVEID_ULTRASONIK_BELAKANG 3
+#define SLAVEID_MAGNET_BELAKANG 4
+
+// ===================================================================
+//                        DEKLARASI GLOBAL VARIABLES
+// ===================================================================
+
+// --- HTTP & WEB SERVER ---
 WebServer server(80);
+
+// --- PREFERENCES & STORAGE ---
 Preferences preferences;
 Preferences stationsPreferences;  // Objek Preferences untuk station yang ditemukan
 std::vector<int> targetStationsList;    // Array di RAM untuk menyimpan station yang ditemukan
 
+// --- COMMUNICATION ---
 int BAUDRATE = 9600;
+
+// --- SENSOR MAGNET VARIABLES ---
+int currentMagnetSlaveId = SLAVEID_MAGNET_DEPAN;
+
+// --- SENSOR ULTRASONIK VARIABLES ---
+bool obstacleDetected = false;
+unsigned long lastObstacleCheck = 0;
+const unsigned long obstacleCheckInterval = 100;  // Check every 100ms
+int currentUltrasonicSlaveId = SLAVEID_ULTRASONIK_DEPAN;
+
+// --- TOMBOL/BUTTON VARIABLES ---
+bool tombolBoot = false;
+unsigned long bootHoldStart = 0;
+int lastPressed;
+
+// Button pin assignments
+int upPin = PIN_UP;
+int downPin = PIN_DOWN;
+int rightPin = PIN_RIGHT;
+int leftPin = PIN_LEFT;
+int startPin = PIN_START;
+int stopPin = PIN_STOP;
+
+// Button debounce timers
+unsigned long lastUpPress = 0;
+unsigned long lastDownPress = 0;
+unsigned long lastLeftPress = 0;
+unsigned long lastRightPress = 0;
+unsigned long lastStartPress = 0;
+unsigned long lastStopPress = 0;
+
+// --- PID CONTROLLER VARIABLES ---
+float pidError = 0;
+float lastError = 0;
+float integral = 0;
+float derivative = 0;
+bool sudahStopPelanPelan = false;
+
+// --- PERFORMANCE OPTIMIZATION VARIABLES ---
+unsigned long loopStartTime = 0;
+unsigned long loopExecutionTime = 0;
+unsigned long maxLoopTime = 0;
+unsigned long minLoopTime = 999999;
+unsigned long totalLoops = 0;
+unsigned long performanceUpdateInterval = 5000; // 5 seconds
+unsigned long lastPerformanceUpdate = 0;
+bool systemInErrorState = false;
+int errorRecoveryAttempts = 0;
+
+// Memory tracking variables
+size_t freeHeapSize = 0;
+size_t minFreeHeap = 0;
+
+// AGV State variables
+AgvState currentStateAgv = AGV_STATE_NULL;
+AgvState moveStateAgv = AGV_STATE_STOP;
+
+// Timer system structure
+struct Timer {
+  unsigned long previousMillis;
+  unsigned long interval;
+  bool active;
+  bool triggered;
+};
+
+// Timer instances for different operations
+Timer stopPelanPelanTimer = {0, 500, false, false};
+Timer ultrasonicSwitchTimer = {0, 100, false, false};
+Timer magnetSwitchTimer = {0, 100, false, false};
+Timer buttonDebounceTimer = {0, 300, false, false};
+Timer menuDelayTimer = {0, 1500, false, false};
+Timer errorRecoveryTimer = {0, 5000, false, false};
+Timer performanceTimer = {0, 5000, false, false};
+
+// Sensor distances array
+uint16_t ultrasonicDistances[5] = { 0 };  // Store distances from 5 probes
+uint16_t minSafeDistance = 30;            // cm - minimum safe distance
+
+// --- RFID TERMINAL VARIABLES ---
+String terminalDropRfidId = "";
+String terminalPickUpRfidId = "";
+String ujungRfidId = "";
+bool exceptErrorPosition = false;
+
+// --- WAREHOUSE & UJUNG RFID VARIABLES ---
+String warehouseRfidId = "";
+
+// --- MENU SYSTEM VARIABLES ---
+int selectedItem = 0;
+int maxItems;
+int menuStartIndex = 0;        // For scrolling menu
+int maxMenuDisplay = 3;        // Maximum items displayed at once
+bool isAgvMode = false;
+int currentMenu = 0;           // MENU_MAIN
+
+// --- KONSTANTA MENU ---
+const int MAX_MANUAL_TARGETS = 10;  // Maximum number of manual targets allowed
+const unsigned long debounceDelay = 300;  // 200ms debounce
+const unsigned long RFID_SCAN_TIMEOUT = 10000;  // 10 seconds timeout
+const unsigned long X_HOLD_DURATION = 3000;  // 3 seconds hold
+const float MAX_INCREMENT = 10.0f;
+const unsigned long ACCELERATION_INTERVAL = 500;  // Time in ms to increase increment
+const unsigned long buttonDelay = 200;  // Delay in milliseconds between button presses
+const int maxInvertItems = 5;
+const int maxMusicItems = 4;
+const unsigned long WIFI_CONNECT_TIMEOUT = 3000; // Optimized to 3 seconds
+const int WIFI_MAX_SCROLL = 3; // Maximum scroll positions (0-3 existing)
+
+// Menu refresh control
+bool menuNeedsRefresh = true;
+int lastSelectedItem = -1;
+int lastMenuStartIndex = -1;
+
+// Temporary variables for settings
+double tempKp = 70.0;          // Will be initialized from kpLinefollower
+double tempKi = 0.0;           // Will be initialized from kiLinefollower
+double tempKd = 0.0;           // Will be initialized from kdLinefollower
+int tempBaseSpeed = 2000;      // Will be initialized from baseSpeed
+
+// Target settings
+bool useAutoTarget = false;         // New variable to track target source
+int manualTargetCount = 2;          // Default to 2 targets for manual mode
+
+// Menu navigation variables
+int selectedParam = 0;   // For PID settings menu
+int selectedTarget = 0;  // For Target settings menu
+
+// Button handling
+unsigned long lastButtonPress = 0;
+
+// PID adjustment variables
+unsigned long pidButtonHoldStart = 0;
+float pidIncrement = 0.1f;
+
+// RFID menu variables
+int selectedRfidItem = 0;
+int selectedStationId = 1;
+bool isWaitingForRfid = false;
+unsigned long rfidScanTimeout = 0;
+
+// Target settings variables
+unsigned long xButtonHoldStart = 0;
+bool isClearingStations = false;
+
+// Motor invert settings (temporary)
+bool tempInvertY = false;      // Will be initialized from invertMotorY
+bool tempInvertX = false;      // Will be initialized from invertMotorX
+bool tempInvertKanan = false;  // Will be initialized from invertMotorKanan
+bool tempInvertKiri = false;   // Will be initialized from invertMotorKiri
+bool tempInvertHook = false;   // Will be initialized from invertHook
+
+// Music mapping settings (temporary)
+int tempMusicStationPin = 0;   // Will be initialized from musicStationPin
+int tempMusicErrorPin = 1;     // Will be initialized from musicErrorPin
+int tempMusicDetectPin = 2;    // Will be initialized from musicDetectPin
+int tempMusicKomputerPin = 3;  // Will be initialized from musicKomputerPin
+
+// Motor invert menu variables
+int selectedInvertItem = 0;  // 0=Y-axis, 1=X-axis, 2=Motor Kanan, 3=Motor Kiri, 4=Hook
+
+// Music settings variables
+int selectedMusicItem = 0;  // 0=Station, 1=Error, 2=Detect, 3=Komputer
+
+// Motor test variables
+int motorTestState = 0;  // 0=stop, 1=forward, 2=backward, 3=left, 4=right
+
+// Hook test variables
+int hookTestState = 0;  // 0=stop, 1=naik, 2=turun
+
+// WiFi connection variables
+bool isConnectingWifi = false;
+bool wifiConnectionResult = false;
+unsigned long wifiConnectStartTime = 0;
+
+// WiFi menu scroll variables
+int wifiScrollIndex = 0;
+
 void setupSensorMagnet(int slaveId);
 void setupUltrasonikWithParams(int slaveId);
 void setupRS485(int baudrate);
@@ -32,15 +247,9 @@ void setupRS485(int baudrate);
 // ### DEFINE ###
 // # TOMBOL
 // #define tombol 6  // Pin analog lama (tidak digunakan lagi)
-#define BOOT_PIN 0
+// BOOT_PIN definition moved to top of file
 
-// Individual button pins (manual assignment)
-#define PIN_UP 10     // UP button
-#define PIN_LEFT 42   // LEFT button
-#define PIN_RIGHT 39  // RIGHT button
-#define PIN_DOWN 40   // DOWN button
-#define PIN_START 9   // START button
-#define PIN_STOP 41   // STOP button
+// Individual button pins (manual assignment) - definitions moved to top of file
 
 // Available pins for button calibration (not used with manual assignment)
 const int availablePins[] = { 39, 40, 41, 42, 2, 1 };
@@ -85,11 +294,7 @@ LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 #define RS485_RX 18
 #define RS485_TX 17
 
-// Mapping Slave ID ke Sensor
-#define SLAVEID_MAGNET_DEPAN 1
-#define SLAVEID_ULTRASONIK_DEPAN 2
-#define SLAVEID_ULTRASONIK_BELAKANG 3
-#define SLAVEID_MAGNET_BELAKANG 4
+// Mapping Slave ID ke Sensor - definitions moved to top of file
 
 // Hapus/abaikan pin RX/TX sensor lain (semua pakai RS485_RX dan RS485_TX)
 // #define RX_MAGNET_FRONT 11//3
@@ -301,18 +506,8 @@ enum MusicMode {
   MUSIC_MODE_KOMPUTER
 };
 
-enum AgvState {
-  AGV_STATE_MOVE_FORWARD,
-  AGV_STATE_MOVE_BACKWARD,
-  AGV_STATE_STOP,
-  AGV_STATE_TERMINAL_PICKUP,
-  AGV_STATE_TERMINAL_DROP,
-  AGV_STATE_WAREHOUSE,
-  AGV_STATE_STATION,
-  AGV_STATE_NULL
-};
 
-enum LastStateAGV {
+enum moveStateAGV {
   LAST_STATE_MOVE_FORWARD,
   LAST_STATE_MOVE_BACKWARD
 };
@@ -365,6 +560,11 @@ void clearTargetStationsData();
 void sortTargetStationsList();
 bool removeTargetStationById(int stationId);
 
+// WiFi connection management functions
+void setupWifi();           // Dipanggil di setup()
+void startWifiConnection(); // Dipanggil saat tombol START ditekan
+void loopWifi();            // Dipanggil di loop() jika diperlukan
+
 // RFID Ujung functions
 void displayRfidUjung();
 void handleRfidUjung();
@@ -396,19 +596,28 @@ void agvStation();
 void agvTerminalPickup();
 void agvTerminalDrop();
 void agvStop();
-void lastStateAGV(AgvState lastState);
-void changeStateMode(StateMode mode);
+void moveStateAGV(AgvState lastState);
 String agvStateToString(AgvState state);
 AgvState stringToAgvState(String stateString);
 void saveCurrentStateAGVToPreferences(AgvState currentState);
-AgvState loadCurrentStateAGVFromPreferences();
-void saveLastStateAGVToPreferences(AgvState lastState);
-AgvState loadLastStateAGVFromPreferences();
+// AgvState loadCurrentStateAGVFromPreferences();
+void savemoveStateAGVToPreferences(AgvState lastState);
+// AgvState loadmoveStateAGVFromPreferences();
+void loadAllAGVStatesFromPreferences();
 
 // Hook control function
 void hook(String command);
 
 // PID and motor control functions
+enum PidMode {
+  PID_MODE_MAJU,
+  PID_MODE_MUNDUR,
+  PID_MODE_FORCEMUNDUR,
+  PID_MODE_FORCEMAJU,
+  PID_MODE_STOPPELANPELAN,
+  PID_MODE_BERHENTI,
+  PID_MODE_DEFAULT
+};
 void pidLinefollower(int error, PidMode mode);
 void pwmMotor(int leftSpeed, int rightSpeed);
 
@@ -422,10 +631,15 @@ bool RIGHT();
 
 // AGV mode control
 extern bool isAgvMode;
-extern bool modeBerhenti;
+
+// Except error position flag - untuk mengabaikan error setelah warehouse terdeteksi
+extern bool exceptErrorPosition;
+void resetExceptErrorFlag();
+void saveExceptErrorFlag();
+void loadExceptErrorFlag();
 
 // Terminal and display functions
-void inTerminal();
+// void inTerminal();
 void displayPrint();
 void displaySensorData();
 void lamp_flip_flop();
@@ -439,6 +653,9 @@ void handleAutoInputStation();
 void saveAutoStationsToPreferences();
 void loadAutoStationsFromPreferences();
 bool isStationExists(String rfidData);
+
+// Menu initialization function
+void initMenuTempVariables();
 
 // ===== PERFORMANCE OPTIMIZATION FUNCTIONS =====
 // Timer system
@@ -481,33 +698,16 @@ bool recoverWifiConnection();
 void checkErrorRecovery();
 void initErrorRecovery();
 
-// Enum for PID modes
-enum StateMode {
-  STATE_MODE_MAJU,
-  STATE_MODE_MUNDUR,
-  STATE_MODE_BERHENTI,
-  STATE_MODE_FORCEMAJU,
-  STATE_MODE_FORCEMUNDUR
-};
-
-// Global StateMode variable
-extern StateMode currentStateMode;
 
 // Global AGV state tracking variables
-extern AgvState lastStateAgv;
 extern AgvState currentStateAgv;
-extern String ujungRfidId;
-extern String terminalDropRfidId;
-extern String terminalPickUpRfidId;
+extern AgvState moveStateAgv;
+// String variables ujungRfidId, terminalDropRfidId, terminalPickUpRfidId already defined above
 
-enum PidMode {
-  PID_MODE_MAJU,
-  PID_MODE_MUNDUR,
-  PID_MODE_FORCEMUNDUR,
-  PID_MODE_FORCEMAJU,
-  PID_MODE_STOPPELANPELAN,
-  PID_MODE_BERHENTI,
-  PID_MODE_DEFAULT
-};
 
+
+int getStationFromLastRfid();
+void clearAllRfidStations();
+bool deleteRfidStation(int stationId);
+bool addRfidStation(int stationId, String rfidId);
 #endif

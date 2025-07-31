@@ -9,10 +9,8 @@ void setup() {
   // Initialize performance optimization system
   initPerformanceOptimization();
 
-  // lcd.clear();
-  // changeStateMode(STATE_MODE_MAJU);
-  AgvState currentStateAGV = loadCurrentStateAGVFromPreferences();
-  AgvState lastStateAGV = loadLastStateAGVFromPreferences();
+  // Load all AGV states efficiently in one call
+  loadAllAGVStatesFromPreferences();
   Serial.println("SETUP SELESAI - Performance Optimization Active");
 }
 
@@ -27,39 +25,43 @@ void loop() {
     return;
   }
   server.handleClient();
+  loopWifi();  // Handle WiFi connection monitoring
   loopRfid();  // Handle RFID scanning - now controlled internally by conditions
   // loopUltrasonik(); // Akan dipanggil manual sesuai mode
 
   if (isAgvMode) {
     // AGV Mode - Run normal AGV operation    
-    displayPrint();
     bacaSensor();
     loopUltrasonik();
     lamp_flip_flop();
-    if (!currentStateAGV == AGV_STATE_NULL){
+    if (!currentStateAgv == AGV_STATE_NULL){
       // --- Pembacaan sensor sesuai mode ---
-      if (lastStateAgv == STATE_MODE_MAJU) {
+      if (moveStateAgv == AGV_STATE_MOVE_FORWARD) {
         setMagnetSlaveId(SLAVEID_MAGNET_DEPAN);
         setUltrasonicSlaveId(SLAVEID_ULTRASONIK_DEPAN);
-      } else if (lastStateAgv == STATE_MODE_MUNDUR) {
+      } else if (moveStateAgv == AGV_STATE_MOVE_FORWARD) {
         setMagnetSlaveId(SLAVEID_MAGNET_BELAKANG);
         setUltrasonicSlaveId(SLAVEID_ULTRASONIK_BELAKANG);
       }
-      agvMode(currentStateAGV);
+      agvMode(currentStateAgv);
     }
-
-    agvMode(AGV_STATE_TERMINAL_PICKUP);
+    else if (currentStateAgv == AGV_STATE_NULL){
+      displayPrint();
+      hook("turun");
+      agvMode(AGV_STATE_TERMINAL_PICKUP);
+    }
     // displaySensorData();
 
     // Check for B button to exit AGV mode
     if (STOP()) {
+      // agvMode(AGV_STATE_STOP);
       isAgvMode = false;
-      modeBerhenti = true;
       buttonStep = 0;  // Reset button step
     }
   } else {
     // Menu Mode
-    inTerminal();
+    // inTerminal();
+    // agvMode(AGV_STATE_STOP);
     handleMenu();
   }
 
