@@ -631,6 +631,7 @@ bool RIGHT();
 
 // AGV mode control
 extern bool isAgvMode;
+bool agvStopCalled = false;
 
 // Except error position flag - untuk mengabaikan error setelah warehouse terdeteksi
 extern bool exceptErrorPosition;

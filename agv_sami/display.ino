@@ -1,8 +1,8 @@
 void displayPrint() {
   lcd.setCursor(0, 0);
   lcd.print("AGV Mode: ");
+  lcd.setCursor(0, 1);
   lcd.print(agvStateToString(currentStateAgv));
-  displaySensorData();
 }
 
 void scrollText(int row, String message, int delayTime) {
@@ -43,12 +43,12 @@ void modeDisplayWarehouse(){
 
 void modeDisplayMoveForward(){
   scrollText(0, "Mode : Move Forward", 500);
-  displaySensorData;
+  displaySensorData();
 }
 
 void modeDisplayMoveBackward(){
   scrollText(0, "Mode : Move Backward", 500);
-  displaySensorData;
+  displaySensorData();
 }
 
 void modeDisplayTerminalPickup(){

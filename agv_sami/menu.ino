@@ -1489,7 +1489,7 @@ void handleMagnetCheck() {
     switchMagnetSensor(false);
     startTimer(&magnetSwitchTimer, 100);  // Non-blocking delay to prevent multiple triggers
   } else if (STOP()) {
-    currentMenu = MENU_RFID_SETTINGS;
+    currentMenu = MENU_MAIN;
     menuStartIndex = 0;
     menuNeedsRefresh = true;
   }

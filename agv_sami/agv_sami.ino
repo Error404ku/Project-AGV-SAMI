@@ -12,6 +12,8 @@ void setup() {
   // Load all AGV states efficiently in one call
   loadAllAGVStatesFromPreferences();
   Serial.println("SETUP SELESAI - Performance Optimization Active");
+
+
 }
 
 void loop() {
@@ -34,12 +36,12 @@ void loop() {
     bacaSensor();
     loopUltrasonik();
     lamp_flip_flop();
-    if (!currentStateAgv == AGV_STATE_NULL){
+    if (currentStateAgv != AGV_STATE_NULL){
       // --- Pembacaan sensor sesuai mode ---
       if (moveStateAgv == AGV_STATE_MOVE_FORWARD) {
         setMagnetSlaveId(SLAVEID_MAGNET_DEPAN);
         setUltrasonicSlaveId(SLAVEID_ULTRASONIK_DEPAN);
-      } else if (moveStateAgv == AGV_STATE_MOVE_FORWARD) {
+      } else if (moveStateAgv == AGV_STATE_MOVE_BACKWARD) {
         setMagnetSlaveId(SLAVEID_MAGNET_BELAKANG);
         setUltrasonicSlaveId(SLAVEID_ULTRASONIK_BELAKANG);
       }
@@ -54,8 +56,9 @@ void loop() {
 
     // Check for B button to exit AGV mode
     if (STOP()) {
-      // agvMode(AGV_STATE_STOP);
+      agvMode(AGV_STATE_STOP);
       isAgvMode = false;
+      agvStopCalled = false; // Reset agvStopCalled when exiting AGV mode
       buttonStep = 0;  // Reset button step
     }
   } else {

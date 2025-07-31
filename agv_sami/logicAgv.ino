@@ -1,3 +1,4 @@
+static bool stopCalledPickup = false;
 // Fungsi ini mengatur mode operasi AGV berdasarkan status yang diberikan.
 void agvMode(AgvState state) {
   switch (state) {
@@ -8,7 +9,11 @@ void agvMode(AgvState state) {
       agvMoveBackward();
       break;
     case AGV_STATE_STOP:
-      agvStop();
+      static bool stopCalled = false;
+  if (!stopCalled) {
+    agvStop();
+    stopCalled = true;
+  }
       break;
     case AGV_STATE_TERMINAL_DROP:
       agvTerminalDrop();
@@ -38,8 +43,8 @@ void agvWarehouse() {
   if (START()) {
     trigger = true;
   }
-  if (trigger)
-  {
+  if (trigger) {
+    stopCalledPickup = false; // Reset flag untuk penggunaan berikutnya
     agvMode(AGV_STATE_MOVE_FORWARD);
   }
 }
@@ -56,7 +61,7 @@ void agvStation() {
   if (trigger) {
     if (moveStateAgv == AGV_STATE_MOVE_FORWARD) {
       agvMode(AGV_STATE_MOVE_FORWARD);
-    }else if (moveStateAgv == AGV_STATE_MOVE_BACKWARD) {
+    } else if (moveStateAgv == AGV_STATE_MOVE_BACKWARD) {
       agvMode(AGV_STATE_MOVE_BACKWARD);
     }
     return;
@@ -65,14 +70,20 @@ void agvStation() {
 
 // Fungsi ini menangani logika AGV saat melakukan penurunan di terminal.
 void agvTerminalDrop() {
+  static bool stopCalledDrop = false;
   //Save current state
   saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_DROP);
   modeDisplayTerminalDrop();
 
-  agvStop();
-  hook("turun");
-  delay(2000);
+  if (!stopCalledDrop) {
+    agvStop();
+    hook("turun");
+    delay(2000);
+    stopCalledDrop = true;
+  }
 
+  // Reset flag saat akan pindah ke state berikutnya
+  stopCalledDrop = false;
   agvMode(AGV_STATE_MOVE_FORWARD);
 }
 
@@ -83,25 +94,28 @@ void agvTerminalPickup() {
   modeDisplayTerminalPickup();
   //Save current state
   saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_PICKUP);
-  
-  agvStop();
-  if (!currentStateAgv == AGV_STATE_NULL){
+
+  if (!stopCalledPickup) {
+    agvStop();
+    stopCalledPickup = true;
+  }
+  if (currentStateAgv != AGV_STATE_NULL) {
     hook("naik");
     delay(2000);
-  } else if (digitalRead(pinHook2) == HIGH){
-    if (START()){
+  } else if (digitalRead(pinHook2) == HIGH) {
+    if (START()) {
       triggerHook = true;
     }
-    if (triggerHook){
+    if (triggerHook) {
       hook("naik");
-      delay(2000);
+      // delay(2000);
     }
   }
 
-  if (START()){
+  if (START()) {
     trigger = true;
   }
-  if (trigger){
+  if (trigger) {
     agvMode(AGV_STATE_MOVE_FORWARD);
   }
 }
@@ -117,49 +131,48 @@ void agvMoveForward() {
   saveCurrentStateAGVToPreferences(AGV_STATE_MOVE_FORWARD);
   modeDisplayMoveForward();
   moveStateAGV(AGV_STATE_MOVE_FORWARD);
-    // Cek apakah ada RFID yang terbaca
-    int currentStation = getStationFromLastRfid();
+  // Cek apakah ada RFID yang terbaca
+  int currentStation = getStationFromLastRfid();
 
-    // Jika ada stasiun yang terdeteksi, cek apakah ada di target list
-    if (currentStation != -1) {
-      // Cari apakah stasiun ini ada di targetStationsList
-      for (int i = 0; i < targetStationsList.size(); i++) {
-        if (targetStationsList[i] == currentStation) {
-          removeTargetStationById(currentStation);
-          agvMode(AGV_STATE_STATION);
-          return;
-        }
+  // Jika ada stasiun yang terdeteksi, cek apakah ada di target list
+  if (currentStation != -1) {
+    // Cari apakah stasiun ini ada di targetStationsList
+    for (int i = 0; i < targetStationsList.size(); i++) {
+      if (targetStationsList[i] == currentStation) {
+        removeTargetStationById(currentStation);
+        agvMode(AGV_STATE_STATION);
+        return;
       }
     }
+  }
 
-    // Cek RFID yang terdeteksi
-    String currentRfid = String(lastScannedRfidOptimized);
-    if (currentRfid.length() > 0) {
-      if (isRfidMatch(currentRfid, ujungRfidId)) {
-        agvMode(AGV_STATE_MOVE_BACKWARD);
-      } else if (isRfidMatch(currentRfid, terminalDropRfidId)) {
-        agvMode(AGV_STATE_TERMINAL_DROP);
-      } else if (isRfidMatch(currentRfid, terminalPickUpRfidId)) {
-        exceptErrorPosition = true;
-        saveExceptErrorFlag();
-        agvMode(AGV_STATE_TERMINAL_PICKUP);
-      } else if (isRfidMatch(currentRfid, warehouseRfidId)) {
-        exceptErrorPosition = false;
-        saveExceptErrorFlag();
-        agvMode(AGV_STATE_WAREHOUSE);
-      }
+  // Cek RFID yang terdeteksi
+  String currentRfid = String(lastScannedRfidOptimized);
+  if (currentRfid.length() > 0) {
+    if (isRfidMatch(currentRfid, ujungRfidId)) {
+      agvMode(AGV_STATE_MOVE_BACKWARD);
+    } else if (isRfidMatch(currentRfid, terminalDropRfidId)) {
+      agvMode(AGV_STATE_TERMINAL_DROP);
+    } else if (isRfidMatch(currentRfid, terminalPickUpRfidId)) {
+      exceptErrorPosition = true;
+      saveExceptErrorFlag();
+      agvMode(AGV_STATE_TERMINAL_PICKUP);
+    } else if (isRfidMatch(currentRfid, warehouseRfidId)) {
+      exceptErrorPosition = false;
+      saveExceptErrorFlag();
+      agvMode(AGV_STATE_WAREHOUSE);
     }
+  }
 
-    // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
-    if (!obstacleDetected) {
-      if (exceptErrorPosition && totalSensorAktif > 5) {
-        pidLinefollower(0, PID_MODE_MUNDUR); // Error = 0
-      } else {
-        pidLinefollower(errorValue, PID_MODE_MUNDUR); // Error dari sensor magnet
-      }
-      return;
+  // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
+  if (!obstacleDetected) {
+    if (exceptErrorPosition && totalSensorAktif > 5) {
+      pidLinefollower(0, PID_MODE_MUNDUR);  // Error = 0
+    } else {
+      pidLinefollower(errorValue, PID_MODE_MUNDUR);  // Error dari sensor magnet
     }
-  
+    return;
+  }
 }
 
 // Fungsi ini menangani logika AGV saat bergerak mundur.
@@ -168,10 +181,10 @@ void agvMoveBackward() {
   saveCurrentStateAGVToPreferences(AGV_STATE_MOVE_BACKWARD);
   modeDisplayMoveBackward();
   moveStateAGV(AGV_STATE_MOVE_BACKWARD);
-  if (START()){
+  if (START()) {
     trigger = true;
   }
-  if (trigger){
+  if (trigger) {
     if (targetStationsList.size() != 0) {
       // Cek apakah ada RFID yang terbaca
       int currentStation = getStationFromLastRfid();
@@ -193,10 +206,10 @@ void agvMoveBackward() {
     // Cek apakah RFID warehouse terdeteksi untuk pertama kali
     String currentRfid = String(lastScannedRfidOptimized);
     if (currentRfid.length() > 0 && isRfidMatch(currentRfid, warehouseRfidId)) {
-      exceptErrorPosition = true; // Set flag bahwa warehouse RFID pernah terdeteksi
-      saveExceptErrorFlag(); // Simpan flag ke preferences
+      exceptErrorPosition = true;  // Set flag bahwa warehouse RFID pernah terdeteksi
+      saveExceptErrorFlag();       // Simpan flag ke preferences
     }
-    
+
     if (totalSensorAktif > 10) {
       exceptErrorPosition = false;
       saveExceptErrorFlag();
@@ -206,9 +219,9 @@ void agvMoveBackward() {
     if (!obstacleDetected) {
       // Abaikan error jika warehouse RFID pernah terdeteksi dan segment aktif >5
       if (exceptErrorPosition && totalSensorAktif > 5) {
-        pidLinefollower(0, PID_MODE_MUNDUR); // Error = 0
+        pidLinefollower(0, PID_MODE_MUNDUR);  // Error = 0
       } else {
-        pidLinefollower(errorValue, PID_MODE_MUNDUR); // Error normal
+        pidLinefollower(errorValue, PID_MODE_MUNDUR);  // Error normal
       }
     }
     return;
@@ -221,43 +234,43 @@ bool isRfidMatch(const String& currentRfid, const String& targetRfid) {
 }
 
 // Fungsi ini menyimpan status terakhir AGV (maju atau mundur).
-void moveStateAGV(AgvState lastState){
-    if (lastState == AGV_STATE_MOVE_FORWARD) {
-        moveStateAgv = AGV_STATE_MOVE_FORWARD;
-    } else if (lastState == AGV_STATE_MOVE_BACKWARD) {
-        moveStateAgv = AGV_STATE_MOVE_BACKWARD;
-    }
-    
-    // Simpan moveStateAGV ke preferences
-    savemoveStateAGVToPreferences(moveStateAgv);
+void moveStateAGV(AgvState lastState) {
+  if (lastState == AGV_STATE_MOVE_FORWARD) {
+    moveStateAgv = AGV_STATE_MOVE_FORWARD;
+  } else if (lastState == AGV_STATE_MOVE_BACKWARD) {
+    moveStateAgv = AGV_STATE_MOVE_BACKWARD;
+  }
+
+  // Simpan moveStateAGV ke preferences
+  savemoveStateAGVToPreferences(moveStateAgv);
 }
 
 // Fungsi untuk menyimpan moveStateAGV ke Preferences
 void savemoveStateAGVToPreferences(AgvState lastState) {
-    // Konversi state ke string
-    String stateString = agvStateToString(lastState);
-    
-    // Simpan ke Preferences
-    preferences.begin("agv-state", false);
-    preferences.putString("last_state", stateString);
-    preferences.end();
-    
-    Serial.println("Last AGV State saved to Preferences: " + stateString);
+  // Konversi state ke string
+  String stateString = agvStateToString(lastState);
+
+  // Simpan ke Preferences
+  preferences.begin("agv-state", false);
+  preferences.putString("last_state", stateString);
+  preferences.end();
+
+  Serial.println("Last AGV State saved to Preferences: " + stateString);
 }
 
 // Fungsi gabungan untuk memuat semua state AGV dari Preferences
 void loadAllAGVStatesFromPreferences() {
-    preferences.begin("agv-state", true);
-    
-    // Load move state (last_state)
-    String moveStateString = preferences.getString("last_state", "MOVE_FORWARD");
-    moveStateAgv = stringToAgvState(moveStateString);
-    
-    // Load current state
-    String currentStateString = preferences.getString("current_state", "STOP");
-    currentStateAgv = stringToAgvState(currentStateString);
-    
-    preferences.end();
+  preferences.begin("agv-state", true);
+
+  // Load move state (last_state)
+  String moveStateString = preferences.getString("last_state", "MOVE_FORWARD");
+  moveStateAgv = stringToAgvState(moveStateString);
+
+  // Load current state
+  String currentStateString = preferences.getString("current_state", "NULL");
+  currentStateAgv = stringToAgvState(currentStateString);
+
+  preferences.end();
 }
 
 // Fungsi untuk memuat moveStateAGV dari Preferences (backward compatibility)
@@ -265,10 +278,10 @@ void loadAllAGVStatesFromPreferences() {
 //     preferences.begin("agv-state", true);
 //     String stateString = preferences.getString("last_state", "MOVE_FORWARD");
 //     preferences.end();
-    
+
 //     AgvState loadedState = stringToAgvState(stateString);
 //     moveStateAGVVar = loadedState;
-    
+
 //     Serial.println("Last AGV State loaded from Preferences: " + stateString);
 //     return loadedState;
 // }
@@ -276,38 +289,42 @@ void loadAllAGVStatesFromPreferences() {
 // Fungsi untuk mengkonversi AgvState ke string
 // Fungsi ini mengkonversi nilai AgvState menjadi representasi string.
 String agvStateToString(AgvState state) {
-    switch (state) {
-        case AGV_STATE_MOVE_FORWARD:
-            return "MOVE_FORWARD";
-        case AGV_STATE_MOVE_BACKWARD:
-            return "MOVE_BACKWARD";
-        case AGV_STATE_TERMINAL_PICKUP:
-            return "TERMINAL_PICKUP";
-        case AGV_STATE_TERMINAL_DROP:
-            return "TERMINAL_DROP";
-        case AGV_STATE_WAREHOUSE:
-            return "WAREHOUSE";
-        case AGV_STATE_STATION:
-            return "STATION";
-        default:
-            return "UNKNOWN";
-    }
+  switch (state) {
+    case AGV_STATE_MOVE_FORWARD:
+      return "MOVE_FORWARD";
+    case AGV_STATE_MOVE_BACKWARD:
+      return "MOVE_BACKWARD";
+    case AGV_STATE_TERMINAL_PICKUP:
+      return "TERMINAL_PICKUP";
+    case AGV_STATE_TERMINAL_DROP:
+      return "TERMINAL_DROP";
+    case AGV_STATE_WAREHOUSE:
+      return "WAREHOUSE";
+    case AGV_STATE_STATION:
+      return "STATION";
+    case AGV_STATE_STOP:
+      return "STOP";
+    case AGV_STATE_NULL:
+      return "NULL";
+    default:
+      return "STOP";
+  }
 }
 
 // Fungsi untuk menyimpan state AGV ke Preferences dalam bentuk string
 // Fungsi ini menyimpan status AGV saat ini ke Preferences.
 void saveCurrentStateAGVToPreferences(AgvState currentState) {
-    currentStateAgv = currentState;
-    
-    // Konversi state ke string
-    String stateString = agvStateToString(currentState);
-    
-    // Simpan ke Preferences
-    preferences.begin("agv-state", false);
-    preferences.putString("current_state", stateString);
-    preferences.end();
-    
-    Serial.println("AGV State saved to Preferences: " + stateString);
+  currentStateAgv = currentState;
+
+  // Konversi state ke string
+  String stateString = agvStateToString(currentState);
+
+  // Simpan ke Preferences
+  preferences.begin("agv-state", false);
+  preferences.putString("current_state", stateString);
+  preferences.end();
+
+  Serial.println("AGV State saved to Preferences: " + stateString);
 }
 
 // Fungsi untuk mengkonversi string ke AgvState
@@ -325,8 +342,12 @@ AgvState stringToAgvState(String stateString) {
     return AGV_STATE_WAREHOUSE;
   } else if (stateString == "STATION") {
     return AGV_STATE_STATION;
+  } else if (stateString == "STOP") {
+    return AGV_STATE_STOP;
+  } else if (stateString == "NULL") {
+    return AGV_STATE_NULL;
   } else {
-    return AGV_STATE_STOP; // Default state
+    return AGV_STATE_NULL;  // Default state
   }
 }
 
@@ -335,10 +356,10 @@ AgvState stringToAgvState(String stateString) {
 //     preferences.begin("agv-state", true);
 //     String stateString = preferences.getString("current_state", "STOP");
 //     preferences.end();
-    
+
 //     AgvState loadedState = stringToAgvState(stateString);
 //     currentStateAgv = loadedState;
-    
+
 //     Serial.println("Current AGV State loaded from Preferences: " + stateString);
 //     return loadedState;
 // }
