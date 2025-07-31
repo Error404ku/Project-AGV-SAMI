@@ -83,7 +83,6 @@ void agvTerminalDrop() {
       String currentRfid = String(lastScannedRfidOptimized);
       if (currentRfid.length() > 0 && currentRfid.equals(terminalPickUpRfidId) && terminalPickUpRfidId.length() > 0) {
         agvMode(AGV_STATE_TERMINAL_PICKUP);
-        break;
       }
       break;
   }

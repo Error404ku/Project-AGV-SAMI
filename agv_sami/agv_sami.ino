@@ -48,7 +48,7 @@ void loop() {
     }
 
     agvMode(AGV_STATE_TERMINAL_PICKUP);
-    displaySensorData();
+    // displaySensorData();
 
     // Check for B button to exit AGV mode
     if (STOP()) {
