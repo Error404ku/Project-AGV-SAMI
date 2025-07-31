@@ -330,24 +330,25 @@ void saveCurrentStateAGVToPreferences(AgvState currentState) {
 // Fungsi untuk mengkonversi string ke AgvState
 // Fungsi ini mengkonversi representasi string dari status AGV kembali ke nilai AgvState.
 AgvState stringToAgvState(String stateString) {
-  if (stateString == "MOVE_FORWARD") {
-    return AGV_STATE_MOVE_FORWARD;
-  } else if (stateString == "MOVE_BACKWARD") {
-    return AGV_STATE_MOVE_BACKWARD;
-  } else if (stateString == "TERMINAL_PICKUP") {
-    return AGV_STATE_TERMINAL_PICKUP;
-  } else if (stateString == "TERMINAL_DROP") {
-    return AGV_STATE_TERMINAL_DROP;
-  } else if (stateString == "WAREHOUSE") {
-    return AGV_STATE_WAREHOUSE;
-  } else if (stateString == "STATION") {
-    return AGV_STATE_STATION;
-  } else if (stateString == "STOP") {
-    return AGV_STATE_STOP;
-  } else if (stateString == "NULL") {
-    return AGV_STATE_NULL;
-  } else {
-    return AGV_STATE_NULL;  // Default state
+  switch (stateString) {
+    case "MOVE_FORWARD":
+      return AGV_STATE_MOVE_FORWARD;
+    case "MOVE_BACKWARD":
+      return AGV_STATE_MOVE_BACKWARD;
+    case "TERMINAL_PICKUP":
+      return AGV_STATE_TERMINAL_PICKUP;
+    case "TERMINAL_DROP":
+      return AGV_STATE_TERMINAL_DROP;
+    case "WAREHOUSE":
+      return AGV_STATE_WAREHOUSE;
+    case "STATION":
+      return AGV_STATE_STATION;
+    case "STOP":
+      return AGV_STATE_STOP;
+    case "NULL":
+      return AGV_STATE_NULL;
+    default:
+      return AGV_STATE_NULL;  // Default state
   }
 }
 
