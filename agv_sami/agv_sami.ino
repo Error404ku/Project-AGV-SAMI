@@ -23,8 +23,7 @@ void loop() {
 
   if (isAgvMode) {
     // AGV Mode - Run normal AGV operation    
-    loopMagneticSensor(SLAVEID_MAGNET_DEPAN);
-  loopMagneticSensor(SLAVEID_MAGNET_BELAKANG);
+    loopMagneticSensor();
     loopUltrasonik();
     lamp_flip_flop();
     if (currentStateAgv != AGV_STATE_NULL){
@@ -41,10 +40,11 @@ void loop() {
     else if (currentStateAgv == AGV_STATE_NULL){
       if (hookPosition != DOWN_POS){
         hook(DOWN_HOOK);
+      }else{
+        lcd.clear(); // Membersihkan tampilan sebelum menampilkan mode AGV
+        displayPrint();
+        agvMode(AGV_STATE_TERMINAL_PICKUP);
       }
-      lcd.clear(); // Membersihkan tampilan sebelum menampilkan mode AGV
-      displayPrint();
-      agvMode(AGV_STATE_TERMINAL_PICKUP);
     }
     // Check for B button to exit AGV mode
     if (STOP()) {

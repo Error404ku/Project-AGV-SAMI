@@ -775,7 +775,11 @@ void displayTargetSettings() {
 }
 
 void displayRfidSettings() {
-  displayMenuHeader("RFID Settings");
+  static int lastRemainingTime = -1; // Declare as static to retain value across calls
+  if (menuNeedsRefresh) {
+    displayMenuHeader("RFID Settings");
+    menuNeedsRefresh = false;
+  }
 
   if (isWaitingForRfid) {
     lcd.setCursor(0, 1);
@@ -791,48 +795,76 @@ void displayRfidSettings() {
     lcd.print(remainingTime);
     lcd.print("s B:Cancel");
 
+    // Set menuNeedsRefresh to true if we are still waiting for RFID and timeout changes
+    // This ensures the timeout counter updates without full refresh
+    if (lastRemainingTime != remainingTime) {
+      lastRemainingTime = remainingTime;
+      // No full refresh needed, just update the time
+    }
     return;
   }
 
-  // RFID Menu items
-  String rfidMenuItems[10] = {
-    "Station: " + String(selectedStationId),
-    "Scan RFID",
-    "View All",
-    "Delete Station",
-    "Clear All",
-    "RFID Ujung",
-    "RFID Warehouse",
-    "Auto Input Station",
-    "Terminal Drop",
-    "Terminal Pickup"
-  };
-
-  // Simple display - show items with scrolling if needed
-  int startIdx = max(0, min(selectedRfidItem - 1, 10 - 3));
-
-  for (int i = 0; i < 3 && (startIdx + i) < 10; i++) {
-    int itemIndex = startIdx + i;
-    lcd.setCursor(0, i + 1);
-    lcd.print("                ");  // Clear line
-    lcd.setCursor(0, i + 1);
-
-    if (itemIndex == selectedRfidItem) {
-      lcd.print("> ");
-    } else {
-      lcd.print("  ");
-    }
-
-    String item = rfidMenuItems[itemIndex];
-    if (item.length() > 13) {
-      item = item.substring(0, 13);
-    }
-    lcd.print(item);
+  // If not waiting for RFID, and menu needs refresh, clear and redraw
+  if (menuNeedsRefresh) {
+    lcd.clear(); // Clear only if a full redraw is needed
+    displayMenuHeader("RFID Settings"); // Redraw header
+    menuNeedsRefresh = false; // Reset flag after full redraw
   }
 
-  // Show navigation hint
-  lcd.setCursor(12, 3);
-  lcd.print("A:OK");
+  // Only redraw menu items if refresh is needed
+  static int lastSelectedRfidItem = -1;
+  static bool lastMenuDrawn = false;
+  
+  if (menuNeedsRefresh || lastSelectedRfidItem != selectedRfidItem || !lastMenuDrawn) {
+    // RFID Menu items
+    String rfidMenuItems[10] = {
+      "Station: " + String(selectedStationId),
+      "Scan RFID",
+      "View All",
+      "Delete Station",
+      "Clear All",
+      "RFID Ujung",
+      "RFID Warehouse",
+      "Auto Input Station",
+      "Terminal Drop",
+      "Terminal Pickup"
+    };
+
+    // Clear menu area only when needed
+    for (int i = 1; i <= 3; i++) {
+      lcd.setCursor(0, i);
+      lcd.print("                    ");  // Clear entire line
+    }
+
+    // Simple display - show items with scrolling if needed
+    int startIdx = max(0, min(selectedRfidItem - 1, 10 - 3));
+
+    for (int i = 0; i < 3 && (startIdx + i) < 10; i++) {
+      int itemIndex = startIdx + i;
+      lcd.setCursor(0, i + 1);
+
+      if (itemIndex == selectedRfidItem) {
+        lcd.print("> ");
+      } else {
+        lcd.print("  ");
+      }
+
+      String item = rfidMenuItems[itemIndex];
+      if (item.length() > 13) {
+        item = item.substring(0, 13);
+      }
+      lcd.print(item);
+    }
+
+    // Show navigation hint
+    lcd.setCursor(16, 3);
+    lcd.print("A:OK");
+    
+    // Update tracking variables
+    lastSelectedRfidItem = selectedRfidItem;
+    lastMenuDrawn = true;
+    menuNeedsRefresh = false;
+  }
 }
 
 void displayMotorSettings() {
@@ -1075,7 +1107,7 @@ void handleRfidSettings() {
   } else if (LEFT()) {
     if (selectedRfidItem == 0) {
       // Change station ID
-      selectedStationId = selectedStationId == 1 ? 10 : selectedStationId - 1;
+      selectedStationId = selectedStationId == 1 ? MAX_RFID_STATIONS : selectedStationId - 1;
     }
   } else if (START()) {
     switch (selectedRfidItem) {
@@ -1287,14 +1319,10 @@ void handleResetMenu() {
 void handleResetAgvStateMenu() {
   if (START()) {
     // Reset AGV state to default (STOP)
-    preferences.begin("agv-state", false);
-    preferences.clear(); // Hapus data lama
-    preferences.putString("current_state", "STOP");
-    preferences.end();
-    
-    // Update current state in memory
     currentStateAgv = AGV_STATE_NULL;
-    
+    moveStateAgv = AGV_STATE_MOVE_FORWARD;
+    savemoveStateAGVToPreferences(moveStateAgv);
+    saveCurrentStateAGVToPreferences(currentStateAgv);
     // Show confirmation message
     lcd.clear();
     displayMenuHeader("AGV State Reset");
@@ -1479,7 +1507,7 @@ void handleHookTest() {
 
 void handleMagnetCheck() {
   // Selalu baca sensor saat menu ini aktif
-  loopMagneticSensor(SLAVEID_MAGNET_DEPAN);
+  loopMagneticSensor();
 
   if (LEFT()) {
     // Switch to front magnet sensor
@@ -2025,9 +2053,9 @@ void displayAutoInputStation() {
   
   lcd.setCursor(0, 1);
   lcd.print("Count: ");
-  lcd.print(autoStationCount);
+  lcd.print(rfidStationCount);
   lcd.print("/");
-  lcd.print(MAX_AUTO_STATIONS);
+  lcd.print(MAX_RFID_STATIONS);
   lcd.print("        ");
   
   lcd.setCursor(0, 2);
@@ -2057,24 +2085,22 @@ void handleAutoInputStation() {
         String rfidData = String(lastScannedRfidOptimized);
         newRfidScanned = false;
         
-        // Check if already exists in auto stations
-        if (!isStationExists(rfidData) && autoStationCount < MAX_AUTO_STATIONS) {
-          autoStations[autoStationCount].rfidId = rfidData;
-          autoStations[autoStationCount].stationId = autoStationCount + 1;
-          autoStations[autoStationCount].isActive = true;
-          autoStationCount++;
-          saveAutoStationsToPreferences();
+        // Check if already exists using existing function
+        if (findRfidStationByRfidId(rfidData) == -1 && rfidStationCount < MAX_RFID_STATIONS) {
+          // Use existing addRfidStation function
+          int newStationId = rfidStationCount + 1;
+          addRfidStation(newStationId, rfidData);
           
           lcd.setCursor(0, 1);
           lcd.print("Station Added!      ");
           lcd.setCursor(0, 2);
           lcd.print("ID: ");
-          lcd.print(autoStationCount);
+          lcd.print(newStationId);
           lcd.print(" ");
           lcd.print(rfidData.substring(0, 8));
           lcd.print("    ");
           delay(2000);
-        } else if (isStationExists(rfidData)) {
+        } else if (findRfidStationByRfidId(rfidData) != -1) {
           lcd.setCursor(0, 1);
           lcd.print("Station Exists!     ");
           delay(2000);
@@ -2096,7 +2122,7 @@ void handleAutoInputStation() {
     displayAutoInputStation();
     
   } else if (LEFT()) { // View data
-    if (autoStationCount == 0) {
+    if (rfidStationCount == 0) {
       lcd.setCursor(0, 1);
       lcd.print("No Data Available   ");
       delay(2000);
@@ -2106,19 +2132,19 @@ void handleAutoInputStation() {
     
     int viewIndex = 0;
     while (true) {
-      displayMenuHeader("View Auto Stations");
+      displayMenuHeader("View RFID Stations");
       
       lcd.setCursor(0, 1);
       lcd.print("[");
       lcd.print(viewIndex + 1);
       lcd.print("/");
-      lcd.print(autoStationCount);
+      lcd.print(rfidStationCount);
       lcd.print("] ID:");
-      lcd.print(autoStations[viewIndex].stationId);
+      lcd.print(rfidStations[viewIndex].stationId);
       lcd.print("        ");
       
       lcd.setCursor(0, 2);
-      lcd.print(autoStations[viewIndex].rfidId.substring(0, 16));
+      lcd.print(rfidStations[viewIndex].rfidId.substring(0, 16));
       lcd.print("    ");
       
       lcd.setCursor(0, 3);
@@ -2127,7 +2153,7 @@ void handleAutoInputStation() {
       if (UP() && viewIndex > 0) {
         viewIndex--;
         delay(200);
-      } else if (DOWN() && viewIndex < autoStationCount - 1) {
+      } else if (DOWN() && viewIndex < rfidStationCount - 1) {
         viewIndex++;
         delay(200);
       } else if (STOP()) {
@@ -2146,8 +2172,7 @@ void handleAutoInputStation() {
     
     while (true) {
       if (START()) {
-        autoStationCount = 0;
-        saveAutoStationsToPreferences();
+        clearAllRfidStations(); // Use existing function
         lcd.setCursor(0, 1);
         lcd.print("All Data Deleted!   ");
         delay(2000);
@@ -2167,49 +2192,13 @@ void handleAutoInputStation() {
   }
 }
 
-void saveAutoStationsToPreferences() {
-  preferences.begin("auto_stations", false);
-  preferences.putInt("count", autoStationCount);
-  
-  for (int i = 0; i < autoStationCount; i++) {
-    String rfidKey = "rfid_" + String(i);
-    preferences.putString(rfidKey.c_str(), autoStations[i].rfidId);
-    
-    String idKey = "id_" + String(i);
-    preferences.putInt(idKey.c_str(), autoStations[i].stationId);
-    
-    String activeKey = "active_" + String(i);
-    preferences.putBool(activeKey.c_str(), autoStations[i].isActive);
-  }
-  
-  preferences.end();
-}
+// saveAutoStationsToPreferences function removed - using existing RFID station management functions
 
-void loadAutoStationsFromPreferences() {
-  preferences.begin("auto_stations", true);
-  autoStationCount = preferences.getInt("count", 0);
-  
-  for (int i = 0; i < autoStationCount && i < MAX_AUTO_STATIONS; i++) {
-    String rfidKey = "rfid_" + String(i);
-    autoStations[i].rfidId = preferences.getString(rfidKey.c_str(), "");
-    
-    String idKey = "id_" + String(i);
-    autoStations[i].stationId = preferences.getInt(idKey.c_str(), i + 1);
-    
-    String activeKey = "active_" + String(i);
-    autoStations[i].isActive = preferences.getBool(activeKey.c_str(), true);
-  }
-  
-  preferences.end();
-}
+// loadAutoStationsFromPreferences function removed - using existing RFID station management functions
 
 bool isStationExists(String rfidData) {
-  for (int i = 0; i < autoStationCount; i++) {
-    if (autoStations[i].rfidId == rfidData) {
-      return true;
-    }
-  }
-  return false;
+  // Use existing findRfidStation function - returns -1 if not found
+  return findRfidStationByRfidId(rfidData) != -1;
 }
 
 // ===== TERMINAL DROP FUNCTIONS =====

@@ -4,31 +4,22 @@
 // ===================================================================
 
 void preTransmissionMagnet() {
-  Serial.println("[DEBUG] preTransmissionMagnet: Setting MAX485 to transmit mode (RE=1, DE=1)");
+  // Removed debug output for faster performance
   digitalWrite(MAX485_RE, 1);
   digitalWrite(MAX485_DE, 1);
-  delayMicroseconds(10);  // Small delay to ensure pin state change
 }
 
 void postTransmissionMagnet() {
-  Serial.println("[DEBUG] postTransmissionMagnet: Setting MAX485 to receive mode (RE=0, DE=0)");
-  delayMicroseconds(10);  // Small delay before switching
+  // Removed debug output for faster performance
   digitalWrite(MAX485_RE, 0);
   digitalWrite(MAX485_DE, 0);
 }
 
 
-void bacaSensorGaris() {
-  unsigned long currentMillis = millis();
-
-  if (currentMillis - previousMillis >= interval) {
-    previousMillis = currentMillis;
-
-  }
-}
+// Fungsi bacaSensorGaris dihapus karena tidak digunakan dan kosong
 
 // ==================== Fungsi Membaca Sensor ====================
-void loopMagneticSensor(int slaveId) {
+void loopMagneticSensor() {
   // Memastikan Serial1 telah diinisialisasi sebelum digunakan
   if (!Serial1) {
     Serial.println("[ERROR] Serial1 tidak terinisialisasi untuk sensor magnet!");
@@ -44,7 +35,7 @@ void loopMagneticSensor(int slaveId) {
   static int consecutiveModbusFailuresFront = 0;
   static int consecutiveModbusFailuresBack = 0;
   // Menggunakan referensi untuk memilih penghitung yang sesuai (depan atau belakang)
-  int& currentConsecutiveFailures = (slaveId == SLAVEID_MAGNET_DEPAN) ? consecutiveModbusFailuresFront : consecutiveModbusFailuresBack;
+  int& currentConsecutiveFailures = (SLAVEID_MAGNET_DEPAN) ? consecutiveModbusFailuresFront : consecutiveModbusFailuresBack;
 
   // Melakukan pembacaan register dari sensor magnet
   // Membaca 2 holding register dari alamat 0x0000 (biasanya untuk nilai median dan posisi)
@@ -175,30 +166,17 @@ void updateJumlahMagnet(uint16_t bitmask) {
  * Switch between front and back magnet sensors
  */
 void switchMagnetSensor(bool useFrontSensor) {
-  Serial.printf("[DEBUG] switchMagnetSensor called with useFrontSensor: %s\n", useFrontSensor ? "true" : "false");
-
+  // Reduced debug output for faster performance
   if (useFrontSensor) {
     setMagnetSlaveId(SLAVEID_MAGNET_DEPAN);
-    Serial.printf("[INFO] Switched to FRONT magnet sensor (ID: %d)\n", SLAVEID_MAGNET_DEPAN);
   } else {
     setMagnetSlaveId(SLAVEID_MAGNET_BELAKANG);
-    Serial.printf("[INFO] Switched to BACK magnet sensor (ID: %d)\n", SLAVEID_MAGNET_BELAKANG);
   }
-
-  Serial.printf("[DEBUG] Current magnet slave ID after switch: %d\n", getCurrentMagnetSlaveId());
 }
 
 void setMagnetSlaveId(int slaveId) {
-  int previousId = currentMagnetSlaveId;
   currentMagnetSlaveId = slaveId;
-  Serial.printf("[DEBUG] setMagnetSlaveId: %d -> %d\n", previousId, slaveId);
-
-  // Verify the change
-  if (currentMagnetSlaveId == slaveId) {
-    Serial.printf("[SUCCESS] Magnet slave ID successfully set to: %d\n", slaveId);
-  } else {
-    Serial.printf("[ERROR] Failed to set magnet slave ID to: %d (current: %d)\n", slaveId, currentMagnetSlaveId);
-  }
+  // Removed debug output for faster performance
 }
 /**
  * Get current magnet sensor slave ID

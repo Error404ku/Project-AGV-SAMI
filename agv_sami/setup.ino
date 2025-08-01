@@ -78,28 +78,10 @@ void setupWebServer() {
   loadTargetStationsListFromPreferences();
   
   // Muat konfigurasi WiFi dari Preferences
-  loadWifiConfig();
   
   lcd.setCursor(0, 0);
   lcd.print("SETUP WIFI");
-
-  // Set WiFi mode to AP+STA first
-  WiFi.mode(WIFI_AP_STA);
-  
-  // Setup Access Point first
-  const char* ap_ssid = "ESP32-AGV-Config";
-  const char* ap_password = "12345678";
-  WiFi.softAP(ap_ssid, ap_password);
-  WiFi.softAPConfig(IPAddress(192, 168, 121, 14), IPAddress(192, 168, 121, 14), IPAddress(255, 255, 255, 0));
-  
-  // Then try to connect as client
-  if (strlen(staticIPStr) > 0) {
-    if (!WiFi.config(staticIP, gateway, subnet, dns)) {
-      Serial.println("Warning: Gagal mengkonfigurasi IP Statis, lanjut tanpa IP statis");
-    }
-  }
-  WiFi.begin(ssid, password);
-
+ 
   int wifiAttempts = 0;
   bool wifiConnected = false;
   
@@ -123,10 +105,7 @@ void setupWebServer() {
   } else {
     lcd.setCursor(0, 1);
     lcd.print("Wi-Fi Gagal!");
-    Serial.println("\nWiFi gagal terhubung, tetapi Access Point tetap aktif...");
-    
-    // AP info will be shown only in WiFi Settings menu
-    delay(2000);
+    delay(1000);
    }
   
   // Registrasi Endpoint HTTP yang diminta
@@ -151,7 +130,7 @@ void setupWebServer() {
 
   server.begin();  // Memulai server HTTP
   Serial.println("Server HTTP telah dimulai.");
-  delay(1000);
+  delay(500);
 }
 
 void setupUltrasonikWithParams(int slaveId) {
@@ -333,7 +312,7 @@ void setupAll() {
   // Load RFID data from preferences
   loadRfidUjungFromPreferences();
   loadRfidWarehouseFromPreferences();
-  loadAutoStationsFromPreferences();
+  // loadAutoStationsFromPreferences(); // Function removed - using existing RFID station management
   loadTerminalRfid();
   lcd.clear();
   lcd.setCursor(0, 1);

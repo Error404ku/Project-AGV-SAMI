@@ -11,7 +11,9 @@ void setupWifi() {
   WiFi.persistent(false); // Reduce flash writes
   
   // Ensure AP is always active for web access
-  WiFi.softAP("ESP32-AGV-Config", "12345678");
+  const char* ap_ssid = "ESP32-AGV-Config";
+  const char* ap_password = "12345678";
+  WiFi.softAP(ap_ssid, ap_password);
   WiFi.softAPConfig(IPAddress(192, 168, 121, 14), IPAddress(192, 168, 121, 14), IPAddress(255, 255, 255, 0));
 }
 
@@ -49,7 +51,7 @@ void loopWifi() {
     unsigned long currentTime = millis();
     static unsigned long lastReconnectAttempt = 0;
     
-    if (currentTime - lastReconnectAttempt > 5000) { // Try reconnect every 5 seconds
+    if (currentTime - lastReconnectAttempt > 2000) { // Try reconnect every 5 seconds
       lastReconnectAttempt = currentTime;
       startWifiConnection();
     }

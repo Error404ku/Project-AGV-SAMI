@@ -95,7 +95,6 @@ void agvTerminalDrop() {
 void agvTerminalPickup() {
   static bool isHookUp = false;
   modeDisplayTerminalPickup(isHookUp);
-
   saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_PICKUP);
 
   if (!stopCalledPickup) {
@@ -306,7 +305,7 @@ String agvStateToString(AgvState state) {
     case AGV_STATE_NULL:
       return "NULL";
     default:
-      return "STOP";
+      return "NULL";
   }
 }
 

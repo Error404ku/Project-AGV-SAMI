@@ -17,6 +17,7 @@
 #include <algorithm>
 #include "menu.h"
 #include <Wiegand.h>
+#include <esp_task_wdt.h>
 
 enum AgvState {
   AGV_STATE_MOVE_FORWARD,
@@ -266,7 +267,7 @@ extern int currentPinStop;
 #define sdaPin 3
 #define sclPin 8
 // LCD I2C
-#define LCD_COLUMNS 16    // Jumlah kolom LCD
+#define LCD_COLUMNS 20    // Jumlah kolom LCD
 #define LCD_ROWS 4        // Jumlah baris LCD
 #define LCD_ADDRESS 0x27  // Alamat I2C LCD (biasanya 0x27 atau 0x3F)
 LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
@@ -421,7 +422,7 @@ int baseSpeed = 2000;
 Wiegand wiegand;
 
 // RFID Station Management
-const int MAX_RFID_STATIONS = 100;
+const int MAX_RFID_STATIONS = 50;
 struct RfidStation {
   int stationId;
   String rfidId;
@@ -431,8 +432,8 @@ RfidStation rfidStations[MAX_RFID_STATIONS];
 int rfidStationCount = 0;
 
 // RFID Ujung and Warehouse Management
-const int MAX_RFID_UJUNG = 10;
-const int MAX_RFID_WAREHOUSE = 10;
+const int MAX_RFID_UJUNG = 1;
+const int MAX_RFID_WAREHOUSE = 1;
 
 struct RfidUjung {
   int ujungId;
@@ -451,15 +452,7 @@ RfidWarehouse rfidWarehouseList[MAX_RFID_WAREHOUSE];
 int rfidUjungCount = 0;
 int rfidWarehouseCount = 0;
 
-// Auto input station data
-struct AutoInputStation {
-  int stationId;
-  String rfidId;
-  bool isActive;
-};
-const int MAX_AUTO_STATIONS = 20;
-AutoInputStation autoStations[MAX_AUTO_STATIONS];
-int autoStationCount = 0;
+// Auto input station removed - using existing RfidStation structure
 
 // RFID scanning variables
 bool isScanning = false;
@@ -535,7 +528,7 @@ void preTransmissionUltrasonic();
 void postTransmissionUltrasonic();
 
 // ===== MAGNET SENSOR FUNCTIONS =====
-void loopMagneticSensor(int slaveId);
+void loopMagneticSensor();
 void switchMagnetSensor(bool useFrontSensor);
 int getCurrentMagnetSlaveId();
 void setMagnetSlaveId(int slaveId);
@@ -665,8 +658,6 @@ void setupAll();
 // Auto Input Station functions
 void displayAutoInputStation();
 void handleAutoInputStation();
-void saveAutoStationsToPreferences();
-void loadAutoStationsFromPreferences();
 bool isStationExists(String rfidData);
 
 // Menu initialization function
@@ -725,4 +716,5 @@ int getStationFromLastRfid();
 void clearAllRfidStations();
 bool deleteRfidStation(int stationId);
 bool addRfidStation(int stationId, String rfidId);
+int findRfidStationByRfidId(String rfidId);
 #endif

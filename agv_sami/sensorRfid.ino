@@ -1,18 +1,26 @@
 void loopRfid() {
-  // Only process RFID when in RFID Settings menu or in Station mode
   if (!(currentMenu == MENU_RFID_SETTINGS)) {
     return;
   }
 
+  // Feed watchdog to prevent reset
+  esp_task_wdt_reset();
+  
   noInterrupts();
   wiegand.flush();
   interrupts();
-  //Sleep a little -- this doesn't have to run very often.
-  // delay(100);
 }
+
 void pinStateChanged() {
-  wiegand.setPin0State(digitalRead(PIN_D0));
-  wiegand.setPin1State(digitalRead(PIN_D1));
+  // Keep interrupt handler as minimal as possible
+  static unsigned long lastInterruptTime = 0;
+  unsigned long currentTime = micros();
+  
+  if (currentTime - lastInterruptTime > 100) { // 100 microseconds debounce
+    wiegand.setPin0State(digitalRead(PIN_D0));
+    wiegand.setPin1State(digitalRead(PIN_D1));
+    lastInterruptTime = currentTime;
+  }
 }
 
 // Notifies when a reader has been connected or disconnected.
@@ -25,42 +33,34 @@ void stateChanged(bool plugged, const char* message) {
 // Notifies when a card was read.
 // Instead of a message, the seconds parameter can be anything you want -- Whatever you specify on `wiegand.onReceive()`
 void receivedData(uint8_t* data, uint8_t bits, const char* message) {
-  Serial.print(message);
-  Serial.print(bits);
-  Serial.print("bits / ");
-
-  // Convert RFID data to optimized char array for storage
+  static unsigned long lastRfidTime = 0;
+  unsigned long currentTime = millis();
+  
+  // Debounce: ignore RFID reads within 500ms
+  if (currentTime - lastRfidTime < 300) {
+    return;
+  }
+  lastRfidTime = currentTime;
+  
+  // Minimize serial prints in interrupt context
+  // Move heavy processing to main loop
+  
+  // Only essential processing here
   char rfidBuffer[32] = "";
   uint8_t bytes = (bits + 7) / 8;
   int bufferIndex = 0;
 
   for (int i = 0; i < bytes && bufferIndex < 30; i++) {
-    // Convert to hex with proper formatting
     char hexChar1 = (data[i] >> 4) < 10 ? '0' + (data[i] >> 4) : 'A' + (data[i] >> 4) - 10;
     char hexChar2 = (data[i] & 0xF) < 10 ? '0' + (data[i] & 0xF) : 'A' + (data[i] & 0xF) - 10;
-
     rfidBuffer[bufferIndex++] = hexChar1;
     rfidBuffer[bufferIndex++] = hexChar2;
   }
   rfidBuffer[bufferIndex] = '\0';
 
-  // Store the scanned RFID for menu use (optimized)
   strncpy(lastScannedRfidOptimized, rfidBuffer, sizeof(lastScannedRfidOptimized) - 1);
   lastScannedRfidOptimized[sizeof(lastScannedRfidOptimized) - 1] = '\0';
   newRfidScanned = true;
-
-  //Print value in HEX
-  for (int i = 0; i < bytes; i++) {
-    Serial.print(data[i] >> 4, 16);
-    Serial.print(data[i] & 0xF, 16);
-  }
-  Serial.println();
-
-  // Different feedback based on current mode (optimized)
-  if (currentMenu == MENU_RFID_SETTINGS) {
-    Serial.print("RFID Scanned for Settings: ");
-    Serial.println(rfidBuffer);
-  }
 }
 
 // Notifies when an invalid transmission is detected
@@ -129,6 +129,16 @@ void saveRfidStations() {
 int findRfidStation(int stationId) {
   for (int i = 0; i < rfidStationCount; i++) {
     if (rfidStations[i].stationId == stationId && rfidStations[i].isActive) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+// Function to find RFID station by RFID ID string
+int findRfidStationByRfidId(String rfidId) {
+  for (int i = 0; i < rfidStationCount; i++) {
+    if (rfidStations[i].rfidId == rfidId && rfidStations[i].isActive) {
       return i;
     }
   }
