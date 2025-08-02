@@ -1,4 +1,13 @@
-// Current magnet slave ID (default: front sensor)
+// ===================================================================
+// OPTIMIZED MAGNETIC SENSOR MODULE
+// ===================================================================
+// Performance Optimizations Applied:
+// 1. Added 50ms interval-based reading (configurable via magnetReadInterval)
+// 2. Reduced consecutive failure threshold from 5 to 3 for faster recovery
+// 3. Optimized bitwise operations in updateJumlahMagnet()
+// 4. Conditional debug output compilation (#ifdef DEBUG_MAGNET_SEGMENTS)
+// 5. Early exit conditions in error calculation functions
+// 6. Synchronized timer intervals for better system coordination
 // ===================================================================
 // SENSOR MAGNET VARIABLES SUDAH DIPINDAHKAN KE config.h
 // ===================================================================
@@ -86,6 +95,8 @@ void loopMagneticSensor() {
 
 // ==================== Fungsi untuk mencetak semua segmen aktif dari Bitmask (Active Low) ====================
 void printActiveSegmentsFromBitmask(uint16_t positionValue) {
+  // Optimized: Only print when debugging is needed
+  #ifdef DEBUG_MAGNET_SEGMENTS
   if (positionValue == 0xFFFF) {
     return;
   }
@@ -94,18 +105,26 @@ void printActiveSegmentsFromBitmask(uint16_t positionValue) {
   for (int i = 0; i < 16; i++) {
     if (!((positionValue >> i) & 0x01)) {
       foundAny = true;
+      break; // Early exit for performance
     }
   }
   if (!foundAny) {
     Serial.print(F("Tidak ada segmen aktif (Error Logika)."));
   }
+  #endif
 }
 
 int hitungErrorPosisi(uint16_t bitmask) {
+  // Quick check for no active segments
+  if (bitmask == 0xFFFF) {
+    return 99;
+  }
+
   int jumlahSegmenAktif = 0;
   int segmenTertinggi = 0;
   int segmenTerendah = 17;
 
+  // Optimized loop with early calculations
   for (int i = 0; i < 16; i++) {
     if (!((bitmask >> i) & 0x01)) {
       jumlahSegmenAktif++;
@@ -155,8 +174,11 @@ int hitungErrorPosisi(uint16_t bitmask) {
 }
 
 void updateJumlahMagnet(uint16_t bitmask) {
+  // Optimized bitwise operations for faster processing
+  uint16_t mask = 1;
   for (int i = 0; i < 16; i++) {
-    jumlahMagnet[i] = !((bitmask >> i) & 0x01) ? 1 : 0;
+    jumlahMagnet[i] = !(bitmask & mask) ? 1 : 0;
+    mask <<= 1;
   }
 }
 

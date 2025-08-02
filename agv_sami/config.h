@@ -63,7 +63,7 @@ Preferences stationsPreferences;  // Objek Preferences untuk station yang ditemu
 std::vector<int> targetStationsList;    // Array di RAM untuk menyimpan station yang ditemukan
 
 // --- COMMUNICATION ---
-int BAUDRATE = 9600;
+int BAUDRATE = 115200;
 
 // --- SENSOR MAGNET VARIABLES ---
 int currentMagnetSlaveId = SLAVEID_MAGNET_DEPAN;
@@ -72,6 +72,7 @@ int currentMagnetSlaveId = SLAVEID_MAGNET_DEPAN;
 bool obstacleDetected = false;
 unsigned long lastObstacleCheck = 0;
 const unsigned long obstacleCheckInterval = 100;  // Check every 100ms
+// const unsigned long magnetReadInterval = 50;      // Magnet sensor read interval (50ms for high responsiveness)
 int currentUltrasonicSlaveId = SLAVEID_ULTRASONIK_DEPAN;
 
 // --- TOMBOL/BUTTON VARIABLES ---
@@ -132,7 +133,7 @@ struct Timer {
 // Timer instances for different operations
 Timer stopPelanPelanTimer = {0, 500, false, false};
 Timer ultrasonicSwitchTimer = {0, 100, false, false};
-Timer magnetSwitchTimer = {0, 100, false, false};
+Timer magnetSwitchTimer = {0, 50, false, false};  // Optimized to match magnet read interval
 Timer buttonDebounceTimer = {0, 300, false, false};
 Timer menuDelayTimer = {0, 1500, false, false};
 Timer errorRecoveryTimer = {0, 5000, false, false};
@@ -145,11 +146,11 @@ uint16_t minSafeDistance = 30;            // cm - minimum safe distance
 // --- RFID TERMINAL VARIABLES ---
 String terminalDropRfidId = "";
 String terminalPickUpRfidId = "";
-String ujungRfidId = "";
 bool exceptErrorPosition = false;
 
 // --- WAREHOUSE & UJUNG RFID VARIABLES ---
 String warehouseRfidId = "";
+String ujungRfidId = "";
 
 // --- MENU SYSTEM VARIABLES ---
 int selectedItem = 0;
@@ -459,7 +460,7 @@ bool isScanning = false;
 int currentScanStation = 0;
 // String lastScannedRfid = ""; // Replaced with optimized char array
 extern char lastScannedRfidOptimized[32];  // Optimized RFID storage
-bool newRfidScanned = false;
+extern bool newRfidScanned;  // Flag untuk RFID baru yang terbaca
 
 // Obstacle detection variables
 extern bool obstacleDetected;

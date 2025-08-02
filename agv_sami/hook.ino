@@ -17,10 +17,12 @@ HookPosition hook(HookPositionMode mode) {
     if (digitalRead(pinHook1) == HIGH) {
       digitalWrite(pinMotorHook, HIGH);  // Stop motor
       Serial.println("[HOOK] Reached TOP position - stopping motor");
+      hookPosition = UP_POS;
       return UP_POS;
     } else {
       digitalWrite(pinMotorHook, LOW);   // Move up
       Serial.println("[HOOK] Moving UP - motor activated");
+      hookPosition = STOP_POS;
       return STOP_POS;  // Still moving
     }
   } else if (actualMode == DOWN_HOOK) {
@@ -28,16 +30,19 @@ HookPosition hook(HookPositionMode mode) {
     if (digitalRead(pinHook2) == HIGH) {
       digitalWrite(pinMotorHook, HIGH);  // Stop motor
       Serial.println("[HOOK] Reached BOTTOM position - stopping motor");
+      hookPosition = DOWN_POS;
       return DOWN_POS;
     } else {
       digitalWrite(pinMotorHook, LOW);   // Move down
       Serial.println("[HOOK] Moving DOWN - motor activated");
+      hookPosition = STOP_POS;
       return STOP_POS;  // Still moving
     }
   } else {
     // Stop hook movement
     digitalWrite(pinMotorHook, HIGH);
     Serial.println("[HOOK] STOP mode - motor stopped");
+    hookPosition = STOP_POS;
     return STOP_POS;  
   }
 }

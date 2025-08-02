@@ -24,7 +24,7 @@ void postTransmissionUltrasonic() {
 
 void loopUltrasonik() {
   static unsigned long lastSensorReadTime = 0;
-  const unsigned long ULTRASONIC_READ_INTERVAL_MS = 100;  // Baca setiap 100ms
+  const unsigned long ULTRASONIC_READ_INTERVAL_MS = 50;  // Baca setiap 100ms
 
   unsigned long currentTime = millis();
   // Periksa apakah sudah waktunya untuk membaca sensor ultrasonik lagi

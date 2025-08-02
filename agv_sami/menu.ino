@@ -205,7 +205,7 @@ void handleMenu() {
       isAgvMode = false;
       currentMenu = MENU_MAIN;
       agvMode(AGV_STATE_STOP);
-
+      newRfidScanned = false; // Reset flag RFID saat keluar dari AGV mode
       menuNeedsRefresh = true;
     }
     return;
@@ -226,6 +226,7 @@ void handleMenu() {
           switch (selectedItem) {
             case 0:  // AGV Mode
               isAgvMode = true;
+              newRfidScanned = false; // Reset flag RFID saat masuk ke AGV mode
               lcd.clear(); // Membersihkan tampilan saat masuk ke mode AGV
               menuStartIndex = 0;  // Reset scroll position
               menuNeedsRefresh = true;
@@ -871,15 +872,24 @@ void displayMotorSettings() {
   displayMenuHeader("Motor Settings");
 
   lcd.setCursor(0, 1);
-  lcd.print("Base Speed (PWM):");
+  lcd.print("Base Speed:");
 
   lcd.setCursor(0, 2);
   lcd.print("> ");
+  // Convert PWM (100-4000) to percentage (0-100%)
+  int percentage = map(tempBaseSpeed, 100, 4000, 0, 100);
+  lcd.print(percentage);
+  lcd.print("%");
+  
+  // Show PWM value in smaller text
+  lcd.setCursor(8, 2);
+  lcd.print("(");
   lcd.print(tempBaseSpeed);
+  lcd.print("PWM)");
 
   // Show range indicator
   lcd.setCursor(0, 3);
-  lcd.print("Range: 100-4000");
+  lcd.print("Range: 0-100%");
 
   // Show controls on last row corner
   lcd.setCursor(12, 3);
@@ -961,9 +971,9 @@ void handlePidSettings() {
       pidIncrement = 0.1f;
     }
 
-    // Increase increment based on hold time
+    // Gunakan increment 1.0 setelah ACCELERATION_INTERVAL
     if (currentMillis - pidButtonHoldStart > ACCELERATION_INTERVAL) {
-      pidIncrement = min(MAX_INCREMENT, pidIncrement + 0.1f);
+      pidIncrement = 1.0f;
     }
 
     switch (selectedParam) {
@@ -977,9 +987,9 @@ void handlePidSettings() {
       pidIncrement = 0.1f;
     }
 
-    // Increase increment based on hold time
+    // Gunakan increment 1.0 setelah ACCELERATION_INTERVAL
     if (currentMillis - pidButtonHoldStart > ACCELERATION_INTERVAL) {
-      pidIncrement = min(MAX_INCREMENT, pidIncrement + 0.1f);
+      pidIncrement = 1.0f;
     }
 
     switch (selectedParam) {
@@ -1239,9 +1249,15 @@ void handleRfidSettings() {
 
 void handleMotorSettings() {
   if (LEFT()) {
-    tempBaseSpeed = max(100, tempBaseSpeed - 50);  // Minimum 100, decrease by 50
+    // Decrease by 5% (equivalent to ~195 PWM)
+    int currentPercentage = map(tempBaseSpeed, 100, 4000, 0, 100);
+    currentPercentage = max(0, currentPercentage - 5);
+    tempBaseSpeed = map(currentPercentage, 0, 100, 100, 4000);
   } else if (RIGHT()) {
-    tempBaseSpeed = min(4000, tempBaseSpeed + 50);  // Maximum 4000, increase by 50
+    // Increase by 5% (equivalent to ~195 PWM)
+    int currentPercentage = map(tempBaseSpeed, 100, 4000, 0, 100);
+    currentPercentage = min(100, currentPercentage + 5);
+    tempBaseSpeed = map(currentPercentage, 0, 100, 100, 4000);
   } else if (STOP()) {
     // Save motor settings
     baseSpeed = tempBaseSpeed;
@@ -1478,13 +1494,13 @@ void displayUltrasonicCheck() {
 void handleHookTest() {
   if (UP()) {
     hookTestState = 1;  // Set to naik
-    hook(UP_HOOK);
+    hookPosition = hook(UP_HOOK);
   } else if (DOWN()) {
     hookTestState = 2;  // Set to turun
-    hook(DOWN_HOOK);
+    hookPosition = hook(DOWN_HOOK);
   } else if (STOP()) {
     hookTestState = 0;  // Stop
-    hook(STOP_HOOK);       // Stop hook movement
+    hookPosition = hook(STOP_HOOK);       // Stop hook movement
     currentMenu = MENU_MAIN;
     menuStartIndex = 0;
     menuNeedsRefresh = true;
@@ -1492,14 +1508,14 @@ void handleHookTest() {
     // Continue current state
     switch (hookTestState) {
       case 1:  // Continue naik
-        hook(UP_HOOK);
+        hookPosition = hook(UP_HOOK);
         break;
       case 2:  // Continue turun
-        hook(DOWN_HOOK);
+        hookPosition = hook(DOWN_HOOK);
         break;
       case 0:  // Stopped
       default:
-        hook(STOP_HOOK);
+        hookPosition = hook(STOP_HOOK);
         break;
     }
   }

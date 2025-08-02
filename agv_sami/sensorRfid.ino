@@ -1,5 +1,6 @@
 void loopRfid() {
-  if (!(currentMenu == MENU_RFID_SETTINGS)) {
+  // Allow RFID processing in RFID settings menu OR when AGV mode is active
+  if (!(currentMenu == MENU_RFID_SETTINGS || isAgvMode)) {
     return;
   }
 
@@ -9,6 +10,14 @@ void loopRfid() {
   noInterrupts();
   wiegand.flush();
   interrupts();
+  
+  // Process any pending RFID data immediately
+  if (newRfidScanned && strlen(lastScannedRfidOptimized) > 0) {
+    // Data RFID sudah tersimpan di lastScannedRfidOptimized oleh receivedData()
+    // Flag newRfidScanned sudah di-set true
+    // Pemrosesan akan dilakukan oleh logika AGV atau menu yang memanggil
+    // Tidak perlu reset flag di sini karena akan di-reset oleh pemroses
+  }
 }
 
 void pinStateChanged() {
@@ -220,11 +229,13 @@ int getStationFromLastRfid(){
 
   for (int i = 0; i < rfidStationCount; i++) {
     if (rfidStations[i].isActive && rfidStations[i].rfidId.equals(lastScannedRfidOptimized)) {
-      newRfidScanned = false;  // Reset flag to prevent repeated processing
+      newRfidScanned = false;  // Reset flag when station match found
       return rfidStations[i].stationId;
     }
   }
 
-  newRfidScanned = false;  // Reset flag even if no match found
+  // Reset flag jika tidak ada station yang cocok untuk mencegah
+  // RFID yang tidak dikenal mempengaruhi scan berikutnya
+  newRfidScanned = false;
   return 0;                // RFID scanned but no matching station found
 }

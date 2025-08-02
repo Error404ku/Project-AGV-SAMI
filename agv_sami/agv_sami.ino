@@ -39,7 +39,7 @@ void loop() {
     }
     else if (currentStateAgv == AGV_STATE_NULL){
       if (hookPosition != DOWN_POS){
-        hook(DOWN_HOOK);
+        hookPosition = hook(DOWN_HOOK);
       }else{
         lcd.clear(); // Membersihkan tampilan sebelum menampilkan mode AGV
         displayPrint();
@@ -50,6 +50,7 @@ void loop() {
     if (STOP()) {
       agvMode(AGV_STATE_STOP);
       isAgvMode = false;
+      newRfidScanned = false; // Reset flag RFID saat keluar dari AGV mode
       agvStopCalled = false; // Reset agvStopCalled when exiting AGV mode
       buttonStep = 0;  // Reset button step
     }

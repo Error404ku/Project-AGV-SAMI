@@ -46,6 +46,8 @@
     "list": "cpp",
     "xhash": "cpp",
     "xstring": "cpp",
-    "xutility": "cpp"
+    "xutility": "cpp",
+    "optional": "cpp",
+    "xmemory": "cpp"
   }
 }

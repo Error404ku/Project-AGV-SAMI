@@ -35,17 +35,19 @@ void agvMode(AgvState state) {
 
 // Fungsi ini menangani logika AGV saat berada di gudang.
 void agvWarehouse() {
-  bool trigger = false;
+  static bool trigger = false;
   saveCurrentStateAGVToPreferences(AGV_STATE_WAREHOUSE);
-  agvStop();
-  modeDisplayWarehouse();
-
+  
   if (START()) {
     trigger = true;
   }
-  if (trigger) {
+  if (!trigger) {
+    agvStop();
+    modeDisplayWarehouse();
+  }else{
     stopCalledPickup = false; // Reset flag untuk penggunaan berikutnya
     agvMode(AGV_STATE_MOVE_FORWARD);
+    return;
   }
 }
 
@@ -80,7 +82,8 @@ void agvTerminalDrop() {
       agvStop();
       break;
     case 1: 
-      if (hook(DOWN_HOOK) == DOWN_POS) {
+      hookPosition = hook(DOWN_HOOK);
+      if (hookPosition == DOWN_POS) {
         dropProcessStep = 2; 
       }
       break;
@@ -95,8 +98,9 @@ void agvTerminalDrop() {
 void agvTerminalPickup() {
   static bool isHookUp = false;
   modeDisplayTerminalPickup(isHookUp);
-  saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_PICKUP);
-
+  if (currentStateAgv != AGV_STATE_NULL){
+    saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_PICKUP);
+  }
   if (!stopCalledPickup) {
     agvStop();
     stopCalledPickup = true;
@@ -106,8 +110,11 @@ void agvTerminalPickup() {
     bool triggerNaikManual = (currentStateAgv == AGV_STATE_NULL && START());
 
     if (triggerNaikOtomatis || triggerNaikManual) {
-      hook(UP_HOOK);
-      isHookUp = true;
+      saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_PICKUP);
+      hookPosition = hook(UP_HOOK);
+      if (hookPosition == UP_POS){
+        isHookUp = true;
+      }
     }
   } else {
     if (START()) {
@@ -130,7 +137,39 @@ void agvMoveForward() {
   checkObstacles();
   modeDisplayMoveForward();
   moveStateAGV(AGV_STATE_MOVE_FORWARD);
-  // Cek apakah ada RFID yang terbaca
+  // Cek RFID yang terdeteksi untuk mode switching (harus dilakukan sebelum getStationFromLastRfid)
+  String currentRfid = String(lastScannedRfidOptimized);
+  if (currentRfid.length() > 0 && newRfidScanned) {
+    if (isRfidMatch(currentRfid, ujungRfidId)) {
+      newRfidScanned = false; // Reset flag
+      // Interrupt motor sebelum mengubah mode
+      pwmMotor(0, 0);
+      delay(2000);
+      agvMode(AGV_STATE_MOVE_BACKWARD);
+      return;
+    } else if (isRfidMatch(currentRfid, terminalDropRfidId)) {
+      newRfidScanned = false; // Reset flag
+      agvMode(AGV_STATE_TERMINAL_DROP);
+      return;
+    } else if (isRfidMatch(currentRfid, terminalPickUpRfidId)) {
+      newRfidScanned = false; // Reset flag
+      exceptErrorPosition = true;
+      saveExceptErrorFlag();
+      agvMode(AGV_STATE_TERMINAL_PICKUP);
+      return;
+    } else if (isRfidMatch(currentRfid, warehouseRfidId)) {
+      newRfidScanned = false; // Reset flag
+      exceptErrorPosition = false;
+      saveExceptErrorFlag();
+      agvMode(AGV_STATE_WAREHOUSE);
+      return;
+    }
+    // Jika RFID tidak cocok dengan ujung, terminal, atau warehouse, reset flag
+    // untuk mencegah RFID yang tidak dikenal mempengaruhi scan berikutnya
+    // Flag akan di-reset oleh getStationFromLastRfid() jika ada station match
+  }
+
+  // Cek apakah ada RFID yang terbaca untuk stasiun
   int currentStation = getStationFromLastRfid();
 
   // Jika ada stasiun yang terdeteksi, cek apakah ada di target list
@@ -142,24 +181,6 @@ void agvMoveForward() {
         agvMode(AGV_STATE_STATION);
         return;
       }
-    }
-  }
-
-  // Cek RFID yang terdeteksi
-  String currentRfid = String(lastScannedRfidOptimized);
-  if (currentRfid.length() > 0) {
-    if (isRfidMatch(currentRfid, ujungRfidId)) {
-      agvMode(AGV_STATE_MOVE_BACKWARD);
-    } else if (isRfidMatch(currentRfid, terminalDropRfidId)) {
-      agvMode(AGV_STATE_TERMINAL_DROP);
-    } else if (isRfidMatch(currentRfid, terminalPickUpRfidId)) {
-      exceptErrorPosition = true;
-      saveExceptErrorFlag();
-      agvMode(AGV_STATE_TERMINAL_PICKUP);
-    } else if (isRfidMatch(currentRfid, warehouseRfidId)) {
-      exceptErrorPosition = false;
-      saveExceptErrorFlag();
-      agvMode(AGV_STATE_WAREHOUSE);
     }
   }
 
@@ -178,11 +199,20 @@ void agvMoveBackward() {
   bool trigger = false;
   saveCurrentStateAGVToPreferences(AGV_STATE_MOVE_BACKWARD);
   modeDisplayMoveBackward();
+  checkObstacles();
   moveStateAGV(AGV_STATE_MOVE_BACKWARD);
   if (START()) {
     trigger = true;
   }
   if (trigger) {
+    // Cek apakah RFID warehouse terdeteksi untuk pertama kali
+    String currentRfid = String(lastScannedRfidOptimized);
+    if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, warehouseRfidId)) {
+      exceptErrorPosition = true;  // Set flag bahwa warehouse RFID pernah terdeteksi
+      saveExceptErrorFlag();       // Simpan flag ke preferences
+      newRfidScanned = false;      // Reset flag
+    }
+
     if (targetStationsList.size() != 0) {
       // Cek apakah ada RFID yang terbaca
       int currentStation = getStationFromLastRfid();
@@ -199,13 +229,6 @@ void agvMoveBackward() {
           }
         }
       }
-    }
-
-    // Cek apakah RFID warehouse terdeteksi untuk pertama kali
-    String currentRfid = String(lastScannedRfidOptimized);
-    if (currentRfid.length() > 0 && isRfidMatch(currentRfid, warehouseRfidId)) {
-      exceptErrorPosition = true;  // Set flag bahwa warehouse RFID pernah terdeteksi
-      saveExceptErrorFlag();       // Simpan flag ke preferences
     }
 
     if (totalSensorAktif > 10) {
