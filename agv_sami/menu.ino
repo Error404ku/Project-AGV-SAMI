@@ -320,12 +320,7 @@ void handleMenu() {
 
     case MENU_PID_SETTINGS:
       displayPidSettings();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handlePidSettings();
-        if (LEFT() || RIGHT() || UP() || DOWN() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      handlePidSettings();
       break;
 
     case MENU_TARGET_SETTINGS:
@@ -705,6 +700,7 @@ void displayPidSettings() {
   else lcd.print("  ");
   lcd.print("Kp: ");
   lcd.print(tempKp);
+  lcd.print("       ");
 
   // Display Ki
   lcd.setCursor(0, 2);
@@ -712,6 +708,7 @@ void displayPidSettings() {
   else lcd.print("  ");
   lcd.print("Ki: ");
   lcd.print(tempKi);
+  lcd.print("       ");
 
   // Display Kd
   lcd.setCursor(0, 3);
@@ -719,6 +716,7 @@ void displayPidSettings() {
   else lcd.print("  ");
   lcd.print("Kd: ");
   lcd.print(tempKd);
+  lcd.print("       ");
 
   // Show controls
   lcd.setCursor(12, 3);
@@ -955,50 +953,80 @@ void handleMotorTest() {
 }
 
 void handlePidSettings() {
+  static unsigned long lastRightPress = 0;
+  static unsigned long lastLeftPress = 0;
+  static unsigned long rightHoldStart = 0;
+  static unsigned long leftHoldStart = 0;
+  static bool rightHolding = false;
+  static bool leftHolding = false;
   unsigned long currentMillis = millis();
 
   if (UP()) {
     selectedParam = (selectedParam - 1 + 3) % 3;
-    pidButtonHoldStart = 0;
   } else if (DOWN()) {
     selectedParam = (selectedParam + 1) % 3;
-    pidButtonHoldStart = 0;
-  } else if (RIGHT()) {
-    if (pidButtonHoldStart == 0) {
-      pidButtonHoldStart = currentMillis;
+  }
+
+  // Check RIGHT button
+  if (digitalRead(rightPin) == HIGH) {
+    if (!rightHolding) {
+      // Button just pressed
+      rightHoldStart = currentMillis;
+      rightHolding = true;
+      
+      // Single click - increment by 0.1
       pidIncrement = 0.1f;
-    }
-
-    // Gunakan increment 1.0 setelah ACCELERATION_INTERVAL
-    if (currentMillis - pidButtonHoldStart > ACCELERATION_INTERVAL) {
-      pidIncrement = 1.0f;
-    }
-
-    switch (selectedParam) {
-      case 0: tempKp += pidIncrement; break;
-      case 1: tempKi += pidIncrement; break;
-      case 2: tempKd += pidIncrement; break;
-    }
-  } else if (LEFT()) {
-    if (pidButtonHoldStart == 0) {
-      pidButtonHoldStart = currentMillis;
-      pidIncrement = 0.1f;
-    }
-
-    // Gunakan increment 1.0 setelah ACCELERATION_INTERVAL
-    if (currentMillis - pidButtonHoldStart > ACCELERATION_INTERVAL) {
-      pidIncrement = 1.0f;
-    }
-
-    switch (selectedParam) {
-      case 0: tempKp = max(0.0f, (float)(tempKp - pidIncrement)); break;
-      case 1: tempKi = max(0.0f, (float)(tempKi - pidIncrement)); break;
-      case 2: tempKd = max(0.0f, (float)(tempKd - pidIncrement)); break;
+      switch (selectedParam) {
+        case 0: tempKp += pidIncrement; break;
+        case 1: tempKi += pidIncrement; break;
+        case 2: tempKd += pidIncrement; break;
+      }
+      lastRightPress = currentMillis;
+    } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
+      // Button is being held - increment by 1.0 every 100ms
+      if (currentMillis - lastRightPress >= 100) {
+        pidIncrement = 1.0f;
+        switch (selectedParam) {
+          case 0: tempKp += pidIncrement; break;
+          case 1: tempKi += pidIncrement; break;
+          case 2: tempKd += pidIncrement; break;
+        }
+        lastRightPress = currentMillis;
+      }
     }
   } else {
-    // Reset when no button is pressed
-    pidButtonHoldStart = 0;
-    pidIncrement = 0.1f;
+    rightHolding = false;
+  }
+
+  // Check LEFT button
+  if (digitalRead(leftPin) == HIGH) {
+    if (!leftHolding) {
+      // Button just pressed
+      leftHoldStart = currentMillis;
+      leftHolding = true;
+      
+      // Single click - decrement by 0.1
+      pidIncrement = 0.1f;
+      switch (selectedParam) {
+        case 0: tempKp = max(0.0f, (float)(tempKp - pidIncrement)); break;
+        case 1: tempKi = max(0.0f, (float)(tempKi - pidIncrement)); break;
+        case 2: tempKd = max(0.0f, (float)(tempKd - pidIncrement)); break;
+      }
+      lastLeftPress = currentMillis;
+    } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
+      // Button is being held - decrement by 1.0 every 100ms
+      if (currentMillis - lastLeftPress >= 100) {
+        pidIncrement = 1.0f;
+        switch (selectedParam) {
+          case 0: tempKp = max(0.0f, (float)(tempKp - pidIncrement)); break;
+          case 1: tempKi = max(0.0f, (float)(tempKi - pidIncrement)); break;
+          case 2: tempKd = max(0.0f, (float)(tempKd - pidIncrement)); break;
+        }
+        lastLeftPress = currentMillis;
+      }
+    }
+  } else {
+    leftHolding = false;
   }
 
   if (STOP()) {
