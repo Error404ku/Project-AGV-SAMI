@@ -777,7 +777,15 @@ void displayTargetSettings() {
 
 void displayRfidSettings() {
   static int lastRemainingTime = -1; // Declare as static to retain value across calls
-  if (menuNeedsRefresh) {
+  static int lastSelectedRfidItem = -1;
+  static int lastSelectedStationId = -1;
+  static bool lastMenuDrawn = false;
+  
+  // Check if we need to refresh the display
+  bool needsRefresh = menuNeedsRefresh || lastSelectedRfidItem != selectedRfidItem || lastSelectedStationId != selectedStationId || !lastMenuDrawn;
+  
+  if (needsRefresh) {
+    lcd.clear();
     displayMenuHeader("RFID Settings");
     menuNeedsRefresh = false;
   }
@@ -805,18 +813,8 @@ void displayRfidSettings() {
     return;
   }
 
-  // If not waiting for RFID, and menu needs refresh, clear and redraw
-  if (menuNeedsRefresh) {
-    lcd.clear(); // Clear only if a full redraw is needed
-    displayMenuHeader("RFID Settings"); // Redraw header
-    menuNeedsRefresh = false; // Reset flag after full redraw
-  }
-
   // Only redraw menu items if refresh is needed
-  static int lastSelectedRfidItem = -1;
-  static bool lastMenuDrawn = false;
-  
-  if (menuNeedsRefresh || lastSelectedRfidItem != selectedRfidItem || !lastMenuDrawn) {
+  if (needsRefresh) {
     // RFID Menu items
     String rfidMenuItems[10] = {
       "Station: " + String(selectedStationId),
@@ -863,8 +861,8 @@ void displayRfidSettings() {
     
     // Update tracking variables
     lastSelectedRfidItem = selectedRfidItem;
+    lastSelectedStationId = selectedStationId;
     lastMenuDrawn = true;
-    menuNeedsRefresh = false;
   }
 }
 
@@ -1112,12 +1110,14 @@ void handleRfidSettings() {
   } else if (RIGHT()) {
     if (selectedRfidItem == 0) {
       // Change station ID
-      selectedStationId = (selectedStationId % 10) + 1;
+      selectedStationId = (selectedStationId % MAX_RFID_STATIONS) + 1;
+      menuNeedsRefresh = true;  // Refresh tampilan setelah perubahan
     }
   } else if (LEFT()) {
     if (selectedRfidItem == 0) {
       // Change station ID
       selectedStationId = selectedStationId == 1 ? MAX_RFID_STATIONS : selectedStationId - 1;
+      menuNeedsRefresh = true;  // Refresh tampilan setelah perubahan
     }
   } else if (START()) {
     switch (selectedRfidItem) {
@@ -1160,12 +1160,13 @@ void handleRfidSettings() {
 
           // Wait for any button press
           while (true) {
-            if (START()) {
+            if (START() || STOP()) {
               delay(200);
               break;
             }
             delay(1);
           }
+          menuNeedsRefresh = true;  // Refresh menu after exiting view all
         }
         break;
 
@@ -1706,10 +1707,6 @@ void handleWifiSettings() {
   }
 }
 
-
-
-
-
 // ===== RFID UJUNG FUNCTIONS =====
 void displayRfidUjung() {
   displayMenuHeader("RFID Ujung");
@@ -1845,7 +1842,7 @@ void handleRfidUjung() {
     }
     
   } else if (STOP()) {
-    currentMenu = MENU_MAIN;
+    currentMenu = MENU_RFID_SETTINGS;
     menuStartIndex = 0;
     menuNeedsRefresh = true;
   }

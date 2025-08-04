@@ -1,6 +1,6 @@
 void loopRfid() {
   // Allow RFID processing in RFID settings menu OR when AGV mode is active
-  if (!(currentMenu == MENU_RFID_SETTINGS || isAgvMode)) {
+  if (!(currentMenu == MENU_RFID_SETTINGS || isAgvMode || MENU_RFID_UJUNG || MENU_RFID_WAREHOUSE || MENU_AUTO_INPUT_STATION || MENU_TERMINAL_DROP || MENU_TERMINAL_PICKUP)) {
     return;
   }
 
