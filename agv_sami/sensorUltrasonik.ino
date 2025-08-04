@@ -7,8 +7,12 @@
 
 // Function to set ultrasonic slave ID dynamically
 void setUltrasonicSlaveId(int slaveId) {
-  currentUltrasonicSlaveId = slaveId;
-  Serial.printf("Ultrasonic slave ID set to: %d\n", slaveId);
+  if (slaveId >= 1 && slaveId <= 247) {  // Valid Modbus RTU range
+    if (currentUltrasonicSlaveId != slaveId) {
+      currentUltrasonicSlaveId = slaveId;
+      Serial.printf("Ultrasonic slave ID set to: %d\n", slaveId);
+    }
+  }
 }
 
 // Pre and post transmission functions for RS485
@@ -23,42 +27,35 @@ void postTransmissionUltrasonic() {
 }
 
 void loopUltrasonik() {
-  static unsigned long lastSensorReadTime = 0;
-  const unsigned long ULTRASONIC_READ_INTERVAL_MS = 50;  // Baca setiap 100ms
-
-  unsigned long currentTime = millis();
-  // Periksa apakah sudah waktunya untuk membaca sensor ultrasonik lagi
-  if (currentTime - lastSensorReadTime >= ULTRASONIC_READ_INTERVAL_MS) {
-    lastSensorReadTime = currentTime;
-
-    // Inisialisasi komunikasi Modbus RTU untuk sensor ultrasonik
+  // Ultra-fast slave ID switching with zero-overhead
+  static int lastUltrasonicSlaveId = -1;
+  if (currentUltrasonicSlaveId != lastUltrasonicSlaveId) {
     node.begin(currentUltrasonicSlaveId, Serial1); // Mengatur ID slave dan port serial
-    node.preTransmission(preTransmissionUltrasonic); // Callback sebelum transmisi
-    node.postTransmission(postTransmissionUltrasonic); // Callback setelah transmisi
+    lastUltrasonicSlaveId = currentUltrasonicSlaveId;
+  }
 
-    // Membaca 5 register penahan (holding registers) dari alamat 0x0000
-    // Register ini berisi data jarak dari Probe 1 hingga Probe 5
-    uint8_t modbusResult = node.readHoldingRegisters(0x0000, 5);
+  // Membaca 5 register penahan (holding registers) dari alamat 0x0000
+  // Register ini berisi data jarak dari Probe 1 hingga Probe 5
+  uint8_t modbusResult = node.readHoldingRegisters(0x0000, 5);
 
-    // Periksa hasil komunikasi Modbus
-    if (modbusResult == node.ku8MBSuccess) {
-      Serial.printf("=== Data Ultrasonik (Slave ID: %d) ===\n", currentUltrasonicSlaveId);
+  // Periksa hasil komunikasi Modbus
+  if (modbusResult == node.ku8MBSuccess) {
+    Serial.printf("=== Data Ultrasonik (Slave ID: %d) ===\n", currentUltrasonicSlaveId);
 
-      // Ekstrak data jarak dari buffer respons Modbus
-      for (int i = 0; i < 5; i++) {
-        ultrasonicDistances[i] = node.getResponseBuffer(i); // Simpan jarak ke array
-        Serial.printf("  Probe %d: %d cm\n", i + 1, ultrasonicDistances[i]); // Cetak jarak
-      }
-
-      // Setelah membaca semua data jarak, periksa apakah ada halangan
-      // checkObstacles();
-
-    } else {
-      // Tangani kesalahan komunikasi Modbus
-      Serial.printf("Error membaca sensor ultrasonik (Slave ID: %d), kode error: 0x%02X\n",currentUltrasonicSlaveId, modbusResult);
-      // Catat kesalahan tetapi jangan hentikan sistem
-      logError(ERROR_ULTRASONIC_COMMUNICATION, "Gagal membaca sensor ultrasonik slave " + String(currentUltrasonicSlaveId));
+    // Ekstrak data jarak dari buffer respons Modbus
+    for (int i = 0; i < 5; i++) {
+      ultrasonicDistances[i] = node.getResponseBuffer(i); // Simpan jarak ke array
+      Serial.printf("  Probe %d: %d cm\n", i + 1, ultrasonicDistances[i]); // Cetak jarak
     }
+
+    // Setelah membaca semua data jarak, periksa apakah ada halangan
+    // checkObstacles();
+
+  } else {
+    // Tangani kesalahan komunikasi Modbus
+    Serial.printf("Error membaca sensor ultrasonik (Slave ID: %d), kode error: 0x%02X\n",currentUltrasonicSlaveId, modbusResult);
+    // Catat kesalahan tetapi jangan hentikan sistem
+    logError(ERROR_ULTRASONIC_COMMUNICATION, "Gagal membaca sensor ultrasonik slave " + String(currentUltrasonicSlaveId));
   }
 }
 
@@ -73,10 +70,15 @@ void initUltrasonicSensor(int slaveId) {
   // Set current slave ID
   setUltrasonicSlaveId(slaveId);
 
-  // Configure node for this slave
+  // Configure node for this slave - set callbacks only once
+  static bool callbacksSet = false;
+  if (!callbacksSet) {
+    node.preTransmission(preTransmissionUltrasonic);
+    node.postTransmission(postTransmissionUltrasonic);
+    callbacksSet = true;
+  }
+  
   node.begin(slaveId, Serial1);
-  node.preTransmission(preTransmissionUltrasonic);
-  node.postTransmission(postTransmissionUltrasonic);
 
   // Set sensor to polling mode (register 0x0007 = 0x0000)
   uint8_t setMode = node.writeSingleRegister(0x0007, 0x0000);
@@ -86,21 +88,6 @@ void initUltrasonicSensor(int slaveId) {
     Serial.printf("Failed to set ultrasonic sensor (Slave ID: %d) mode, error code: 0x%02X\n", slaveId, setMode);
     logError(ERROR_ULTRASONIC_COMMUNICATION,
              "Gagal set mode sensor ultrasonik slave " + String(slaveId));
-  }
-}
-
-
-
-/**
- * Switch between front and back ultrasonic sensors
- */
-void switchUltrasonicSensor(bool useFrontSensor) {
-  if (useFrontSensor) {
-    setUltrasonicSlaveId(SLAVEID_ULTRASONIK_DEPAN);
-    Serial.println("Switched to FRONT ultrasonic sensor");
-  } else {
-    setUltrasonicSlaveId(SLAVEID_ULTRASONIK_BELAKANG);
-    Serial.println("Switched to BACK ultrasonic sensor");
   }
 }
 
