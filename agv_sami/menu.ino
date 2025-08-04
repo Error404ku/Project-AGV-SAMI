@@ -233,71 +233,85 @@ void handleMenu() {
               break;
               
             case 1:  // Reset AGV State
+              lcd.clear();
               currentMenu = MENU_RESET_AGV_STATE; // 25
               menuNeedsRefresh = true;
               break;
               
             case 2:  // Motor Test
+              lcd.clear();
               currentMenu = MENU_MOTOR_TEST; // 2
               menuNeedsRefresh = true;
               break;
               
             case 3:  // PID Settings
+              lcd.clear();
               currentMenu = MENU_PID_SETTINGS; // 3
               menuNeedsRefresh = true;
               break;
               
             case 4:  // Target Settings
+              lcd.clear();
               currentMenu = MENU_TARGET_SETTINGS; // 4
               menuNeedsRefresh = true;
               break;
               
             case 5:  // Reset Settings
+              lcd.clear();
               currentMenu = MENU_RESET; // 5
               menuNeedsRefresh = true;
               break;
               
             case 6:  // RFID Settings
+              lcd.clear();
               currentMenu = MENU_RFID_SETTINGS; // 6
               menuNeedsRefresh = true;
               break;
               
             case 7:  // Motor Settings
+              lcd.clear();
               currentMenu = MENU_MOTOR_SETTINGS; // 18
               menuNeedsRefresh = true;
               break;
               
             case 8:  // Motor Invert
+              lcd.clear();
               currentMenu = MENU_MOTOR_INVERT; // 19
               menuNeedsRefresh = true;
               break;
               
             case 9:  // Music Settings
+              lcd.clear();
               currentMenu = MENU_MUSIC_SETTINGS; // 20
               menuNeedsRefresh = true;
               break;
               
             case 10:  // Music Test
+              lcd.clear();
               currentMenu = MENU_MUSIC_TEST; // 21
               menuNeedsRefresh = true;
               break;
               
             case 11:  // Hook Test
+              lcd.clear();
               currentMenu = MENU_HOOK_TEST; // 22
               menuNeedsRefresh = true;
               break;
               
             case 12:  // Magnet Check
+              lcd.clear();
               currentMenu = MENU_MAGNET_CHECK; // 23
               menuNeedsRefresh = true;
               break;
               
             case 13:  // Ultrasonic Check
+              lcd.clear();
               currentMenu = MENU_ULTRASONIC_CHECK; // 24
               menuNeedsRefresh = true;
               break;
               
             case 14:  // WiFi Settings
+              lcd.clear();
               currentMenu = MENU_WIFI_SETTINGS; // 14
               menuNeedsRefresh = true;
               break;
@@ -1571,18 +1585,24 @@ void handleMagnetCheck() {
 }
 
 void handleUltrasonicCheck() {
+  static unsigned long lastSwitchTime = 0;
+  const unsigned long SWITCH_DEBOUNCE = 200; // 200ms debounce for switching
+  
   loopUltrasonik();
+  checkObstacles();
 
-  if (LEFT() && !isTimerActive(&ultrasonicSwitchTimer)) {
+  unsigned long currentTime = millis();
+  
+  if (LEFT() && (currentTime - lastSwitchTime >= SWITCH_DEBOUNCE)) {
     Serial.println("[INFO] Switching to FRONT ultrasonic sensor");
     // Switch to front ultrasonic sensor
-    switchUltrasonicSensor(true);
-    startTimer(&ultrasonicSwitchTimer, 100);  // Non-blocking delay to prevent multiple triggers
-  } else if (RIGHT() && !isTimerActive(&ultrasonicSwitchTimer)) {
+    setUltrasonicSlaveId(SLAVEID_ULTRASONIK_DEPAN);
+    lastSwitchTime = currentTime;
+  } else if (RIGHT() && (currentTime - lastSwitchTime >= SWITCH_DEBOUNCE)) {
     Serial.println("[INFO] Switching to BACK ultrasonic sensor");
     // Switch to back ultrasonic sensor
-    switchUltrasonicSensor(false);
-    startTimer(&ultrasonicSwitchTimer, 100);  // Non-blocking delay to prevent multiple triggers
+    setUltrasonicSlaveId(SLAVEID_ULTRASONIK_BELAKANG);
+    lastSwitchTime = currentTime;
   } else if (STOP()) {
     currentMenu = MENU_MAIN;
     menuStartIndex = 0;

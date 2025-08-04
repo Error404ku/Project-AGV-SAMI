@@ -4,12 +4,13 @@
 // PID CONTROLLER VARIABLES SUDAH DIPINDAHKAN KE config.h
 // ===================================================================
 void pidLinefollower(int errorPosisi, PidMode mode) {
-  // kalo sensor jarak mendeteksi ada benda di depan maka berhenti dulu
-  if (obstacleDetected && mode != PID_MODE_BERHENTI) {
-    // Emergency stop - obstacle detected
+  // Check for magnet loss error (errorValue = 99)
+  if (errorPosisi == 99 && mode != PID_MODE_BERHENTI) {
+    // Emergency stop - no magnet detected for 5 seconds
     pwmMotor(0, 0);
-    Serial.println("MOTOR STOPPED - Obstacle detected!");
-    // buzzerError();
+    #ifdef DEBUG_PID
+    #endif
+    Serial.println("[AGV] MOTOR STOPPED - No magnet detected for 5 seconds (errorValue=99)!");
     music(MUSIC_MODE_ERROR);
     return;  // Exit function early
   }

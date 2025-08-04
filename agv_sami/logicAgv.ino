@@ -47,6 +47,7 @@ void agvWarehouse() {
   }else{
     stopCalledPickup = false; // Reset flag untuk penggunaan berikutnya
     agvMode(AGV_STATE_MOVE_FORWARD);
+    trigger = false;
     return;
   }
 }
@@ -66,6 +67,7 @@ void agvStation() {
     } else if (moveStateAgv == AGV_STATE_MOVE_BACKWARD) {
       agvMode(AGV_STATE_MOVE_BACKWARD);
     }
+    trigger = false;
     return;
   }
 }
@@ -227,11 +229,6 @@ void agvMoveBackward() {
         }
       }
     }
-  }
-  if (totalSensorAktif > 10) {
-    exceptErrorPosition = false;
-    saveExceptErrorFlag();
-    agvMode(AGV_STATE_MOVE_FORWARD);
   }
   // Kembali ke mode maju ketika mencapai jalur lurus (10+ sensor aktif)
   if (totalSensorAktif > 10) {

@@ -486,6 +486,12 @@ bool invertMotorKanan = false;  // Invers motor kanan individual
 bool invertMotorKiri = false;   // Invers motor kiri individual
 bool invertHook = false;        // Invers hook naik-turun
 
+// Debug configuration - uncomment to enable debug output
+#define DEBUG_MAGNET          // Enable magnet sensor debug output
+#define DEBUG_PID             // Enable PID controller debug output
+// #define DEBUG_ULTRASONIC      // Enable ultrasonic sensor debug output
+// #define DEBUG_OBSTACLES       // Enable obstacle detection debug output
+
 // Music pin mapping settings (0=pinMusic1, 1=pinMusic2, 2=pinMusic3, 3=pinMusic4)
 int musicStationPin = 0;   // Default: pinMusic1 untuk station
 int musicErrorPin = 1;     // Default: pinMusic2 untuk error
@@ -521,7 +527,6 @@ enum moveStateAGV {
 // ===== ULTRASONIC SENSOR FUNCTIONS =====
 void setUltrasonicSlaveId(int slaveId);
 void initUltrasonicSensor(int slaveId);
-void switchUltrasonicSensor(bool useFrontSensor);
 int getCurrentUltrasonicSlaveId();
 void loopUltrasonik();
 void checkObstacles();

@@ -67,7 +67,6 @@ void initializeDisplay() {
 void setupDisplay() {
   // Initialize I2C SDA 3, SCL 8
   Wire.begin(sdaPin, sclPin);
-  Wire.setClock(100000);
   delay(100);
   // Initialize display
   initializeDisplay();
@@ -76,20 +75,24 @@ void setupDisplay() {
 void setupWebServer() {
   // Muat daftar stasiun dari Preferences saat startup
   loadTargetStationsListFromPreferences();
-  
-  // Muat konfigurasi WiFi dari Preferences
-  
+
   lcd.setCursor(0, 0);
   lcd.print("SETUP WIFI");
  
   int wifiAttempts = 0;
   bool wifiConnected = false;
   
-  while (WiFi.status() != WL_CONNECTED && wifiAttempts < 5) {  // Reduced timeout to 10 seconds
-    lcd.setCursor(0, 0);
-    lcd.print("MENCARI WIFI");
-    delay(500);
-    wifiAttempts++;
+  // Try to connect to WiFi with saved credentials
+  if (strlen(ssid) > 0 && strlen(password) > 0) {
+    Serial.printf("Connecting to WiFi: %s\n", ssid);
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED && wifiAttempts < 5) { // Increased attempts for initial connection
+      lcd.setCursor(0, 0);
+      lcd.print("MENCARI WIFI");
+      Serial.print(".");
+      delay(1000);
+      wifiAttempts++;
+    }
   }
   
   if (WiFi.status() == WL_CONNECTED) {
@@ -103,6 +106,7 @@ void setupWebServer() {
     lcd.print("IP: ");
     lcd.print(WiFi.localIP());
   } else {
+    Serial.println("\nKoneksi Wi-Fi gagal. Memulai sebagai Access Point.");
     lcd.setCursor(0, 1);
     lcd.print("Wi-Fi Gagal!");
     delay(1000);
@@ -136,7 +140,6 @@ void setupWebServer() {
 void setupUltrasonikWithParams(int slaveId) {
   // Initialize ultrasonic sensor with ModbusMaster
   initUltrasonicSensor(slaveId);
-  Serial.printf("--- Setup Ultrasonik Slave ID: %d ---\n", slaveId);
 }
 
 void setupRS485(int baudrate) {
@@ -301,7 +304,8 @@ void setupAll() {
   setupDisplay();
   setupMenu();  // Initialize menu system
   setupRS485(BAUDRATE);
-  setupSensorMagnet(SLAVEID_MAGNET_DEPAN);
+  delay(200);
+  setupSensorMagnet(SLAVEID_MAGNET_DEPAN);  
   setupUltrasonikWithParams(SLAVEID_ULTRASONIK_DEPAN);
   setupHook();  // setupBuzzer();
   setupWifi();  // Setup WiFi configuration

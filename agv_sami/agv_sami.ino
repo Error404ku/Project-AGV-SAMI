@@ -13,6 +13,12 @@ void setup() {
   loadAllAGVStatesFromPreferences();
   Serial.println("SETUP SELESAI - Performance Optimization Active");
 
+  // Initialize ultrasonic sensor if not already done
+  static bool ultrasonicSensorInitialized = false;
+  if (!ultrasonicSensorInitialized) {
+    setupUltrasonikWithParams(SLAVEID_ULTRASONIK_DEPAN);
+    ultrasonicSensorInitialized = true;
+  }
 
 }
 
@@ -22,9 +28,9 @@ void loop() {
   loopRfid();  // Handle RFID scanning - now controlled internally by conditions
 
   if (isAgvMode) {
-    // AGV Mode - Run normal AGV operation    
-    loopMagneticSensor();
+
     loopUltrasonik();
+    loopMagneticSensor();
     lamp_flip_flop();
     if (currentStateAgv != AGV_STATE_NULL){
       // --- Pembacaan sensor sesuai mode ---

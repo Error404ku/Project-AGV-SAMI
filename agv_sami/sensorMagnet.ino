@@ -26,24 +26,34 @@ void postTransmissionMagnet() {
 
 // Fungsi bacaSensorGaris dihapus karena tidak digunakan dan kosong
 
+// ==================== TIMER VARIABLES FOR 5-SECOND DETECTION ====================
+static int lastErrorValue = 99;
+static unsigned long lastDetectionTime = 0;
+
 // ==================== HIGHLY OPTIMIZED SENSOR READING ====================
 void loopMagneticSensor() {
   // Fast validation - exit early if Serial1 not ready
   if (!Serial1) {
-    static bool serialErrorShown = false;
-    if (!serialErrorShown) {
-      Serial.println("[ERROR] Serial1 tidak terinisialisasi untuk sensor magnet!");
-      serialErrorShown = true;
-    }
-    return;
+    Serial.println("[ERROR] Serial1 tidak terinisialisasi untuk sensor magnet!");
+    return; // Keluar dari fungsi jika Serial1 belum siap
   }
 
+  
+  // Ensure magnet slave ID is initialized on first call
+  // static bool firstRun = true;
+  // if (firstRun) {
+  //   if (currentMagnetSlaveId == 0) {
+  //     currentMagnetSlaveId = SLAVEID_MAGNET_DEPAN; // default to front sensor
+  //   }
+  //   firstRun = false;
+  // }
+
   // Ultra-fast slave ID switching with zero-overhead
-  static int lastSlaveId = -1;
-  if (currentMagnetSlaveId != lastSlaveId) {
-    node.begin(currentMagnetSlaveId, Serial1);
-    lastSlaveId = currentMagnetSlaveId;
-  }
+  // static int lastSlaveId = -1;
+  // if (currentMagnetSlaveId != lastSlaveId) {
+  node.begin(currentMagnetSlaveId, Serial1);
+  //   lastSlaveId = currentMagnetSlaveId;
+  // }
 
   // Enhanced error handling with exponential backoff
   static int consecutiveFailures[2] = {0, 0};  // [front, back]
@@ -73,14 +83,52 @@ void loopMagneticSensor() {
     // Fast processing with bit manipulation
     if (positionBitmask == 0xFFFF) {
       totalSensorAktif = 0;
-      errorValue = 99;
+      // Check if no magnet detected for 5 seconds
+      if (lastDetectionTime == 0) {
+        lastDetectionTime = currentMillis; // Start timer
+        #ifdef DEBUG_MAGNET
+        Serial.println("[MAGNET] No magnet detected - starting 5s timer");
+        #endif
+      }
+      
+      unsigned long noMagnetDuration = currentMillis - lastDetectionTime;
+      if (noMagnetDuration >= 5000) { // 5 seconds
+        if (errorValue != 99) {
+          #ifdef DEBUG_MAGNET
+          Serial.println("[MAGNET] 5 seconds elapsed - setting errorValue to 99");
+          #endif
+        }
+        errorValue = 99; // Set error to 99 after 5 seconds
+        lastErrorValue = 99;
+      } else {
+        errorValue = lastErrorValue; // Keep last valid error value
+        #ifdef DEBUG_MAGNET
+        if (noMagnetDuration % 1000 < 100) { // Print every second
+          Serial.printf("[MAGNET] No magnet for %lu ms, keeping last error: %d\n", noMagnetDuration, lastErrorValue);
+        }
+        #endif
+      }
     } else {
+        // Magnet detected - reset timer and update error
+        if (lastDetectionTime != 0) {
+          #ifdef DEBUG_MAGNET
+          Serial.println("[MAGNET] Magnet detected again - resetting timer");
+          #endif
+        }
+        lastDetectionTime = 0;
+      
       // Optimized bit counting using built-in functions
       uint16_t activeBits = ~positionBitmask & 0xFFFF;
       totalSensorAktif = __builtin_popcount(activeBits);
       
       // Fast error calculation
       errorValue = hitungErrorPosisi(positionBitmask);
+      if (currentMagnetSlaveId == SLAVEID_MAGNET_BELAKANG){
+        errorValue = errorValue * -1;
+      }
+      
+      // Store last valid error value
+      lastErrorValue = errorValue;
     }
     
     // Update magnet array efficiently
@@ -99,39 +147,34 @@ void loopMagneticSensor() {
 }
 
 // ==================== ULTRA-FAST ERROR CALCULATION ====================
-static int lastErrorValue = 99;
-static unsigned long lastDetectionTime = 0;
-
 int hitungErrorPosisi(uint16_t bitmask) {
-  // Fast return for no active segments
+  // Quick check for no active segments
   if (bitmask == 0xFFFF) {
-    // Check 5-second timeout for no detection
-    if (millis() - lastDetectionTime >= 5000) {
-      lastErrorValue = 99;
-    }
-    return lastErrorValue;
+    return 99;
   }
-  
-  // Optimized bit scanning with lookup table approach
-  uint16_t activeBits = ~bitmask & 0xFFFF;
-  if (activeBits == 0) {
-    // Check 5-second timeout for no detection
-    if (millis() - lastDetectionTime >= 5000) {
-      lastErrorValue = 99;
+
+  int jumlahSegmenAktif = 0;
+  int segmenTertinggi = 0;
+  int segmenTerendah = 17;
+
+  // Optimized loop with early calculations
+  for (int i = 0; i < 16; i++) {
+    if (!((bitmask >> i) & 0x01)) {
+      jumlahSegmenAktif++;
+      int segmenSaatIni = i + 1;
+      if (segmenSaatIni < segmenTerendah)
+        segmenTerendah = segmenSaatIni;
+      if (segmenSaatIni > segmenTertinggi)
+        segmenTertinggi = segmenSaatIni;
     }
-    return lastErrorValue;
   }
-  
-  // Update last detection time when segments are detected
-  lastDetectionTime = millis();
-  
-  // Find first and last active bits efficiently
-  int segmenTerendah = __builtin_ctz(activeBits) + 1;        // Convert to 1-based position
-  int segmenTertinggi = 16 - __builtin_clz(activeBits);      // Convert to 1-based position
-  
+
+  if (jumlahSegmenAktif == 0)
+    return 99;
+
+  // Logika baru: cek dua-duanya lalu ambil dominasi
   int errorKiri = 0, errorKanan = 0;
-  
-  // Calculate error based on lowest segment (left side)
+
   if (segmenTerendah < 7) {
     switch (segmenTerendah) {
       case 6: errorKiri = -1; break;
@@ -142,8 +185,7 @@ int hitungErrorPosisi(uint16_t bitmask) {
       case 1: errorKiri = -6; break;
     }
   }
-  
-  // Calculate error based on highest segment (right side)
+
   if (segmenTertinggi > 10) {
     switch (segmenTertinggi) {
       case 11: errorKanan = 1; break;
@@ -154,23 +196,14 @@ int hitungErrorPosisi(uint16_t bitmask) {
       case 16: errorKanan = 6; break;
     }
   }
-  
-  // Combine errors - prioritize center alignment
-  int totalError = errorKiri + errorKanan;
-  
-  // If both sides have error, use the stronger signal
-  if (errorKiri != 0 && errorKanan != 0) {
-    // Use the error with larger magnitude
-    if (abs(errorKiri) > abs(errorKanan)) {
-      totalError = errorKiri;
-    } else {
-      totalError = errorKanan;
-    }
-  }
-  
-  // Save last error value
-  lastErrorValue = totalError;
-  return totalError;
+
+  // Bandingkan dominasi sisi kiri vs kanan
+  if (abs(errorKiri) > abs(errorKanan))
+    return errorKiri;
+  else if (abs(errorKanan) > abs(errorKiri))
+    return errorKanan;
+  else
+    return 0;  // tengah atau seimbang
 }
 
 void updateJumlahMagnet(uint16_t bitmask) {
@@ -235,6 +268,11 @@ void switchMagnetSensor(bool useFrontSensor) {
 void setMagnetSlaveId(int slaveId) {
   if (slaveId >= 1 && slaveId <= 247) {  // Valid Modbus RTU range
     currentMagnetSlaveId = slaveId;
+    
+    // Ensure Modbus is properly reinitialized when slave ID changes
+    // if (Serial1) {
+    //   node.begin(currentMagnetSlaveId, Serial1);
+    // }
   }
 }
 
