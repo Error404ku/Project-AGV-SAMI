@@ -40,7 +40,7 @@ HookPosition hook(HookPositionMode mode) {
     }
   } else {
     // Stop hook movement
-    digitalWrite(pinMotorHook, HIGH);
+    digitalWrite(pinMotorHook, HIGH); 
     Serial.println("[HOOK] STOP mode - motor stopped");
     hookPosition = STOP_POS;
     return STOP_POS;  

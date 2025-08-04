@@ -196,56 +196,58 @@ void agvMoveForward() {
 
 // Fungsi ini menangani logika AGV saat bergerak mundur.
 void agvMoveBackward() {
-  bool trigger = false;
   saveCurrentStateAGVToPreferences(AGV_STATE_MOVE_BACKWARD);
   modeDisplayMoveBackward();
   checkObstacles();
   moveStateAGV(AGV_STATE_MOVE_BACKWARD);
-  if (START()) {
-    trigger = true;
+  
+  // AGV bergerak mundur otomatis tanpa perlu menekan START
+  // Logika pergerakan mundur:
+  // Cek apakah RFID warehouse terdeteksi untuk mengabaikan error saat mundur
+  String currentRfid = String(lastScannedRfidOptimized);
+  if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, warehouseRfidId)) {
+    exceptErrorPosition = true;  // Set flag untuk mengabaikan error saat mundur
+    saveExceptErrorFlag();       // Simpan flag ke preferences
+    newRfidScanned = false;      // Reset flag
   }
-  if (trigger) {
-    // Cek apakah RFID warehouse terdeteksi untuk pertama kali
-    String currentRfid = String(lastScannedRfidOptimized);
-    if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, warehouseRfidId)) {
-      exceptErrorPosition = true;  // Set flag bahwa warehouse RFID pernah terdeteksi
-      saveExceptErrorFlag();       // Simpan flag ke preferences
-      newRfidScanned = false;      // Reset flag
-    }
 
-    if (targetStationsList.size() != 0) {
-      // Cek apakah ada RFID yang terbaca
-      int currentStation = getStationFromLastRfid();
+  if (targetStationsList.size() != 0) {
+    // Cek apakah ada RFID yang terbaca
+    int currentStation = getStationFromLastRfid();
 
-      // Jika ada stasiun yang terdeteksi, cek apakah ada di target list
-      if (currentStation != -1) {
-        // Cari apakah stasiun ini ada di targetStationsList
-        for (int i = 0; i < targetStationsList.size(); i++) {
-          if (targetStationsList[i] == currentStation) {
-            removeTargetStationById(currentStation);
-            moveStateAGV(AGV_STATE_MOVE_BACKWARD);
-            agvMode(AGV_STATE_STATION);
-            return;
-          }
+    // Jika ada stasiun yang terdeteksi, cek apakah ada di target list
+    if (currentStation != -1) {
+      // Cari apakah stasiun ini ada di targetStationsList
+      for (int i = 0; i < targetStationsList.size(); i++) {
+        if (targetStationsList[i] == currentStation) {
+          removeTargetStationById(currentStation);
+          moveStateAGV(AGV_STATE_MOVE_BACKWARD);
+          agvMode(AGV_STATE_STATION);
+          return;
         }
       }
     }
-
-    if (totalSensorAktif > 10) {
-      exceptErrorPosition = false;
-      saveExceptErrorFlag();
-      agvMode(AGV_STATE_MOVE_FORWARD);
-    }
-    // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
-    if (!obstacleDetected) {
-      // Abaikan error jika warehouse RFID pernah terdeteksi dan segment aktif >5
-      if (exceptErrorPosition && totalSensorAktif > 5) {
-        pidLinefollower(0, PID_MODE_MUNDUR);  // Error = 0
-      } else {
-        pidLinefollower(errorValue, PID_MODE_MUNDUR);  // Error normal
-      }
-    }
+  }
+  if (totalSensorAktif > 10) {
+    exceptErrorPosition = false;
+    saveExceptErrorFlag();
+    agvMode(AGV_STATE_MOVE_FORWARD);
+  }
+  // Kembali ke mode maju ketika mencapai jalur lurus (10+ sensor aktif)
+  if (totalSensorAktif > 10) {
+    exceptErrorPosition = false;
+    saveExceptErrorFlag();
+    agvMode(AGV_STATE_MOVE_FORWARD);
     return;
+  }
+  // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
+  if (!obstacleDetected) {
+    // Abaikan error jika warehouse RFID pernah terdeteksi dan segment aktif >5
+    if (exceptErrorPosition && totalSensorAktif > 5) {
+      pidLinefollower(0, PID_MODE_MUNDUR);  // Error = 0
+    } else {
+      pidLinefollower(errorValue, PID_MODE_MUNDUR);  // Error normal
+    }
   }
 }
 
