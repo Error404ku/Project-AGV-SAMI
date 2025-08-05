@@ -52,11 +52,16 @@ void loop() {
       agvMode(currentStateAgv);
     }
     else if (currentStateAgv == AGV_STATE_NULL){
+      static bool displayUpdated = false;
       if (hookPosition != DOWN_POS){
         hookPosition = hook(DOWN_HOOK);
+        displayUpdated = false; // Reset flag ketika hook masih bergerak
       }else{
-        lcd.clear(); // Membersihkan tampilan sebelum menampilkan mode AGV
-        displayPrint();
+        if (!displayUpdated) {
+          lcd.clear(); // Membersihkan tampilan sebelum menampilkan mode AGV
+          displayPrint();
+          displayUpdated = true; // Set flag agar tidak update lagi
+        }
         agvMode(AGV_STATE_TERMINAL_PICKUP);
       }
     }
@@ -64,6 +69,7 @@ void loop() {
     if (STOP()) {
       agvMode(AGV_STATE_STOP);
       isAgvMode = false;
+      resetDisplayFlags(); // Reset semua flag display
       newRfidScanned = false; // Reset flag RFID saat keluar dari AGV mode
       agvStopCalled = false; // Reset agvStopCalled when exiting AGV mode
       buttonStep = 0;  // Reset button step

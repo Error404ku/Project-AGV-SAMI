@@ -685,6 +685,7 @@ void loadExceptErrorFlag();
 // void inTerminal();
 void displayPrint();
 void displaySensorData();
+void resetDisplayFlags(); // Reset semua flag display
 void lamp_flip_flop();
 void handleMenu();
 void loopRfid();

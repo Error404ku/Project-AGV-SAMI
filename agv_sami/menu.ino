@@ -238,6 +238,7 @@ void handleMenu() {
       isAgvMode = false;
       currentMenu = MENU_MAIN;
       agvMode(AGV_STATE_STOP);
+      resetDisplayFlags(); // Reset semua flag display
       newRfidScanned = false; // Reset flag RFID saat keluar dari AGV mode
       menuNeedsRefresh = true;
     }
@@ -418,45 +419,69 @@ void handleMenu() {
 
     case MENU_MOTOR_INVERT:
       {
-        displayMenuHeader("Motor Invert");
+        static bool displayInitialized = false;
+        static int lastSelectedInvertItem = -1;
+        static bool lastInvertValues[5] = {false, false, false, false, false};
+        
+        // Check if display needs refresh
+        bool needsRefresh = !displayInitialized || 
+                           selectedInvertItem != lastSelectedInvertItem ||
+                           tempInvertY != lastInvertValues[0] ||
+                           tempInvertX != lastInvertValues[1] ||
+                           tempInvertKanan != lastInvertValues[2] ||
+                           tempInvertKiri != lastInvertValues[3] ||
+                           tempInvertHook != lastInvertValues[4];
+        
+        if (needsRefresh) {
+          displayMenuHeader("Motor Invert");
 
-        // Calculate what items to show (3 items max, with scrolling)
-        int startIdx = max(0, min(selectedInvertItem - 1, maxInvertItems - 3));
+          // Calculate what items to show (3 items max, with scrolling)
+          int startIdx = max(0, min(selectedInvertItem - 1, maxInvertItems - 3));
 
-        String invertLabels[5] = { "Y-Axis", "X-Axis", "M-Kanan", "M-Kiri", "Hook" };
-        bool* invertValues[5] = { &tempInvertY, &tempInvertX, &tempInvertKanan, &tempInvertKiri, &tempInvertHook };
+          String invertLabels[5] = { "Y-Axis", "X-Axis", "M-Kanan", "M-Kiri", "Hook" };
+          bool* invertValues[5] = { &tempInvertY, &tempInvertX, &tempInvertKanan, &tempInvertKiri, &tempInvertHook };
 
-        for (int i = 0; i < 3 && (startIdx + i) < maxInvertItems; i++) {
-          int itemIndex = startIdx + i;
-          lcd.setCursor(0, i + 1);
+          for (int i = 0; i < 3 && (startIdx + i) < maxInvertItems; i++) {
+            int itemIndex = startIdx + i;
+            lcd.setCursor(0, i + 1);
 
-          // Clear line first
-          lcd.print("                    ");
-          lcd.setCursor(0, i + 1);
+            // Clear line first
+            lcd.print("                    ");
+            lcd.setCursor(0, i + 1);
 
-          // Show cursor for selected item
-          if (itemIndex == selectedInvertItem) {
-            lcd.print("> ");
-          } else {
-            lcd.print("  ");
+            // Show cursor for selected item
+            if (itemIndex == selectedInvertItem) {
+              lcd.print("> ");
+            } else {
+              lcd.print("  ");
+            }
+
+            // Show label and value
+            lcd.print(invertLabels[itemIndex]);
+            lcd.print(": ");
+            lcd.print(*invertValues[itemIndex] ? "Yes" : "No");
+
+            // Show controls on the right
+            if (i == 0) {
+              lcd.setCursor(12, i + 1);
+              lcd.print("UP/DN:Nav");
+            } else if (i == 1) {
+              lcd.setCursor(12, i + 1);
+              lcd.print("LF/RT:Set");
+            } else if (i == 2) {
+              lcd.setCursor(12, i + 1);
+              lcd.print("A:OK B:Back");
+            }
           }
-
-          // Show label and value
-          lcd.print(invertLabels[itemIndex]);
-          lcd.print(": ");
-          lcd.print(*invertValues[itemIndex] ? "Yes" : "No");
-
-          // Show controls on the right
-          if (i == 0) {
-            lcd.setCursor(12, i + 1);
-            lcd.print("UP/DN:Nav");
-          } else if (i == 1) {
-            lcd.setCursor(12, i + 1);
-            lcd.print("LF/RT:Set");
-          } else if (i == 2) {
-            lcd.setCursor(12, i + 1);
-            lcd.print("A:OK B:Back");
-          }
+          
+          // Update tracking variables
+          displayInitialized = true;
+          lastSelectedInvertItem = selectedInvertItem;
+          lastInvertValues[0] = tempInvertY;
+          lastInvertValues[1] = tempInvertX;
+          lastInvertValues[2] = tempInvertKanan;
+          lastInvertValues[3] = tempInvertKiri;
+          lastInvertValues[4] = tempInvertHook;
         }
 
         if (currentMillis - lastButtonPress >= buttonDelay) {
@@ -484,6 +509,8 @@ void handleMenu() {
             invertMotorKiri = tempInvertKiri;
             invertHook = tempInvertHook;
             saveSettings();
+            // Reset display cache
+            displayInitialized = false;
             currentMenu = MENU_MAIN;
             selectedInvertItem = 0;
             menuStartIndex = 0;
@@ -496,6 +523,8 @@ void handleMenu() {
             tempInvertKanan = invertMotorKanan;
             tempInvertKiri = invertMotorKiri;
             tempInvertHook = invertHook;
+            // Reset display cache
+            displayInitialized = false;
             currentMenu = MENU_MAIN;
             selectedInvertItem = 0;
             menuStartIndex = 0;
@@ -508,54 +537,76 @@ void handleMenu() {
 
     case MENU_MUSIC_SETTINGS:
       {
-        displayMenuHeader("Music Settings");
+        static bool displayInitialized = false;
+        static int lastSelectedMusicItem = -1;
+        static int lastMusicPins[4] = {-1, -1, -1, -1};
+        
+        // Check if display needs refresh
+        bool needsRefresh = !displayInitialized || 
+                           selectedMusicItem != lastSelectedMusicItem ||
+                           tempMusicStationPin != lastMusicPins[0] ||
+                           tempMusicErrorPin != lastMusicPins[1] ||
+                           tempMusicDetectPin != lastMusicPins[2] ||
+                           tempMusicKomputerPin != lastMusicPins[3];
+        
+        if (needsRefresh) {
+          displayMenuHeader("Music Settings");
 
-        // Music mode labels and their assigned pins
-        String musicModes[4] = { "Station", "Error", "Detect", "Komputer" };
-        int* musicPins[4] = { &tempMusicStationPin, &tempMusicErrorPin, &tempMusicDetectPin, &tempMusicKomputerPin };
+          // Music mode labels and their assigned pins
+          String musicModes[4] = { "Station", "Error", "Detect", "Komputer" };
+          int* musicPins[4] = { &tempMusicStationPin, &tempMusicErrorPin, &tempMusicDetectPin, &tempMusicKomputerPin };
 
-        for (int i = 0; i < 3 && i < maxMusicItems; i++) {
-          lcd.setCursor(0, i + 1);
+          for (int i = 0; i < 3 && i < maxMusicItems; i++) {
+            lcd.setCursor(0, i + 1);
 
-          // Clear line first
-          lcd.print("                    ");
-          lcd.setCursor(0, i + 1);
+            // Clear line first
+            lcd.print("                    ");
+            lcd.setCursor(0, i + 1);
 
-          // Show cursor for selected item
-          if (i == selectedMusicItem) {
-            lcd.print("> ");
-          } else {
-            lcd.print("  ");
+            // Show cursor for selected item
+            if (i == selectedMusicItem) {
+              lcd.print("> ");
+            } else {
+              lcd.print("  ");
+            }
+
+            // Show mode and pin assignment
+            lcd.print(musicModes[i]);
+            lcd.print(":");
+            lcd.print("Pin");
+            lcd.print(*musicPins[i] + 1);  // +1 to show 1-4 instead of 0-3
+
+            // Show controls on the right
+            if (i == 0) {
+              lcd.setCursor(12, i + 1);
+              lcd.print("UP/DN:Nav");
+            } else if (i == 1) {
+              lcd.setCursor(12, i + 1);
+              lcd.print("LF/RT:Set");
+            } else if (i == 2) {
+              lcd.setCursor(12, i + 1);
+              lcd.print("A:OK B:Back");
+            }
           }
 
-          // Show mode and pin assignment
-          lcd.print(musicModes[i]);
-          lcd.print(":");
-          lcd.print("Pin");
-          lcd.print(*musicPins[i] + 1);  // +1 to show 1-4 instead of 0-3
-
-          // Show controls on the right
-          if (i == 0) {
-            lcd.setCursor(12, i + 1);
-            lcd.print("UP/DN:Nav");
-          } else if (i == 1) {
-            lcd.setCursor(12, i + 1);
-            lcd.print("LF/RT:Set");
-          } else if (i == 2) {
-            lcd.setCursor(12, i + 1);
+          // Show 4th item (Komputer) if selected
+          if (selectedMusicItem == 3) {
+            lcd.setCursor(0, 3);
+            lcd.print("                    ");
+            lcd.setCursor(0, 3);
+            lcd.print("> Komputer:Pin");
+            lcd.print(tempMusicKomputerPin + 1);
+            lcd.setCursor(12, 3);
             lcd.print("A:OK B:Back");
           }
-        }
-
-        // Show 4th item (Komputer) if selected
-        if (selectedMusicItem == 3) {
-          lcd.setCursor(0, 3);
-          lcd.print("                    ");
-          lcd.setCursor(0, 3);
-          lcd.print("> Komputer:Pin");
-          lcd.print(tempMusicKomputerPin + 1);
-          lcd.setCursor(12, 3);
-          lcd.print("A:OK B:Back");
+          
+          // Update tracking variables
+          displayInitialized = true;
+          lastSelectedMusicItem = selectedMusicItem;
+          lastMusicPins[0] = tempMusicStationPin;
+          lastMusicPins[1] = tempMusicErrorPin;
+          lastMusicPins[2] = tempMusicDetectPin;
+          lastMusicPins[3] = tempMusicKomputerPin;
         }
 
         if (currentMillis - lastButtonPress >= buttonDelay) {
@@ -590,6 +641,8 @@ void handleMenu() {
             musicDetectPin = tempMusicDetectPin;
             musicKomputerPin = tempMusicKomputerPin;
             saveSettings();
+            // Reset display cache
+            displayInitialized = false;
             currentMenu = MENU_MAIN;
             selectedMusicItem = 0;
             menuStartIndex = 0;
@@ -601,6 +654,8 @@ void handleMenu() {
             tempMusicErrorPin = musicErrorPin;
             tempMusicDetectPin = musicDetectPin;
             tempMusicKomputerPin = musicKomputerPin;
+            // Reset display cache
+            displayInitialized = false;
             currentMenu = MENU_MAIN;
             selectedMusicItem = 0;
             menuStartIndex = 0;

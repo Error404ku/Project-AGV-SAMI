@@ -1,8 +1,38 @@
+// Global flag untuk mereset display
+bool resetDisplayRequested = false;
+
+// Fungsi untuk mereset semua flag display
+void resetDisplayFlags() {
+  resetDisplayRequested = true;
+}
+
 void displayPrint() {
-  lcd.setCursor(0, 0);
-  lcd.print("AGV Mode: ");
-  lcd.setCursor(0, 1);
-  lcd.print(agvStateToString(currentStateAgv));
+  static AgvState lastDisplayedState = AGV_STATE_STOP;
+  static bool displayInitialized = false;
+  
+  // Reset flag jika diminta
+  if (resetDisplayRequested) {
+    displayInitialized = false;
+  }
+  
+  // Hanya update display jika state berubah atau belum diinisialisasi
+  if (!displayInitialized || currentStateAgv != lastDisplayedState) {
+    lcd.setCursor(0, 0);
+    lcd.print("AGV Mode:           "); // Tambah spasi untuk clear sisa karakter
+    lcd.setCursor(0, 1);
+    String stateString = agvStateToString(currentStateAgv);
+    stateString += "                "; // Tambah spasi untuk clear sisa karakter
+    lcd.print(stateString);
+    
+    // Update state tracking
+    lastDisplayedState = currentStateAgv;
+    displayInitialized = true;
+  }
+  
+  // Reset global flag setelah digunakan
+  if (resetDisplayRequested) {
+    resetDisplayRequested = false;
+  }
 }
 
 struct ScrollState {
@@ -45,8 +75,19 @@ void scrollText(int row, String message, int delayTime) {
 }
 
 void modeDisplayWarehouse(){
-  lcd.setCursor(0,0);
-  lcd.print("Mode: Warehouse");
+  static bool displayInitialized = false;
+  
+  // Reset flag jika diminta
+  if (resetDisplayRequested) {
+    displayInitialized = false;
+  }
+  
+  // Hanya update baris pertama sekali saja
+  if (!displayInitialized) {
+    lcd.setCursor(0,0);
+    lcd.print("Mode: Warehouse     "); // Tambah spasi untuk clear sisa karakter
+    displayInitialized = true;
+  }
   scrollText(1, "Tekan Start untuk jalan", 500);
 }
 
@@ -66,19 +107,35 @@ void modeDisplayMoveBackward(){
  * Fungsi ini menerima parameter 'hookIsUp' untuk menentukan teks yang ditampilkan.
 */
 void modeDisplayTerminalPickup(bool hookIsUp) {
-  lcd.setCursor(0, 0);
-  lcd.print("Mode: Pickup"); 
-  lcd.setCursor(0, 1);
-  if (!hookIsUp) {
-    if (currentStateAgv == AGV_STATE_NULL) {
-      lcd.print("Start u/ Naikkan"); 
-    } else {
-      lcd.print("Hook naik auto..");
-    }
-  } else {
-    lcd.print("START untuk jln");
+  static bool lastHookIsUp = false;
+  static AgvState lastCurrentStateAgv = AGV_STATE_STOP;
+  static bool displayInitialized = false;
+  
+  // Reset flag jika diminta
+  if (resetDisplayRequested) {
+    displayInitialized = false;
   }
-  lcd.print("   ");
+  
+  // Hanya update display jika ada perubahan atau belum diinisialisasi
+  if (!displayInitialized || hookIsUp != lastHookIsUp || currentStateAgv != lastCurrentStateAgv) {
+    lcd.setCursor(0, 0);
+    lcd.print("Mode: Pickup        "); // Tambah spasi untuk clear sisa karakter
+    lcd.setCursor(0, 1);
+    if (!hookIsUp) {
+      if (currentStateAgv == AGV_STATE_NULL) {
+        lcd.print("Start u/ Naikkan    "); 
+      } else {
+        lcd.print("Hook naik auto..    ");
+      }
+    } else {
+      lcd.print("START untuk jln     ");
+    }
+    
+    // Update state tracking
+    lastHookIsUp = hookIsUp;
+    lastCurrentStateAgv = currentStateAgv;
+    displayInitialized = true;
+  }
 }
 
 void modeDisplayTerminalDrop(){
