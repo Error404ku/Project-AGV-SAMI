@@ -149,20 +149,23 @@ void agvMoveForward() {
       delay(2000);
       agvMode(AGV_STATE_MOVE_BACKWARD);
       return;
-    } else if (isRfidMatch(currentRfid, terminalDropRfidId)) {
+    } else if (isRfidMatch(currentRfid, terminalDropRfidId) && currentRFID != AGV_STATE_TERMINAL_DROP) {
       newRfidScanned = false; // Reset flag
+      currentRFID = AGV_STATE_TERMINAL_DROP;
       agvMode(AGV_STATE_TERMINAL_DROP);
       return;
-    } else if (isRfidMatch(currentRfid, terminalPickUpRfidId)) {
+    } else if (isRfidMatch(currentRfid, terminalPickUpRfidId) && currentRFID != AGV_STATE_TERMINAL_PICKUP) {
       newRfidScanned = false; // Reset flag
       exceptErrorPosition = true;
       saveExceptErrorFlag();
+      currentRFID = AGV_STATE_TERMINAL_PICKUP;
       agvMode(AGV_STATE_TERMINAL_PICKUP);
       return;
-    } else if (isRfidMatch(currentRfid, warehouseRfidId)) {
+    } else if (isRfidMatch(currentRfid, warehouseRfidId) && currentRFID != AGV_STATE_WAREHOUSE) {
       newRfidScanned = false; // Reset flag
       exceptErrorPosition = false;
       saveExceptErrorFlag();
+      currentRFID = AGV_STATE_WAREHOUSE;
       agvMode(AGV_STATE_WAREHOUSE);
       return;
     }

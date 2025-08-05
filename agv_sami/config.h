@@ -121,6 +121,7 @@ size_t minFreeHeap = 0;
 // AGV State variables
 AgvState currentStateAgv = AGV_STATE_NULL;
 AgvState moveStateAgv = AGV_STATE_MOVE_FORWARD;
+AgvState currentRFID = AGV_STATE_NULL;
 
 // Timer system structure
 struct Timer {
