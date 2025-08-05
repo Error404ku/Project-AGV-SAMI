@@ -82,14 +82,14 @@ void saveSettings() {
   preferences.putDouble("kdLinefollower", tempKd);
   
   // Save Forward PID values
-  preferences.putDouble("kpLinefollowerForward", tempKpForward);
-  preferences.putDouble("kiLinefollowerForward", tempKiForward);
-  preferences.putDouble("kdLinefollowerForward", tempKdForward);
+  preferences.putDouble("kpForward", tempKpForward);
+  preferences.putDouble("kiForward", tempKiForward);
+  preferences.putDouble("kdForward", tempKdForward);
   
   // Save Backward PID values
-  preferences.putDouble("kpLinefollowerBackward", tempKpBackward);
-  preferences.putDouble("kiLinefollowerBackward", tempKiBackward);
-  preferences.putDouble("kdLinefollowerBackward", tempKdBackward);
+  preferences.putDouble("kpBackward", tempKpBackward);
+  preferences.putDouble("kiBackward", tempKiBackward);
+  preferences.putDouble("kdBackward", tempKdBackward);
 
   // Save Motor values
   preferences.putInt("baseSpeed", tempBaseSpeed);
@@ -103,7 +103,7 @@ void saveSettings() {
 
   // Save Music mapping values
   preferences.putInt("musicStation", tempMusicStationPin);
-  preferences.putInt("musicError", tempMusicErrorPin);
+ preferences.putInt("musicError", tempMusicErrorPin);
   preferences.putInt("musicDetect", tempMusicDetectPin);
   preferences.putInt("musicKomputer", tempMusicKomputerPin);
 
@@ -147,47 +147,7 @@ void saveSettings() {
   preferences.end();
 }
 
-void saveForwardPidSettings() {
-  preferences.begin("agv-settings", false);
-  delay(50);
-  // Save Forward PID values
-  preferences.putDouble("kpLinefollowerForward", tempKpForward);
-  preferences.putDouble("kiLinefollowerForward", tempKiForward);
-  preferences.putDouble("kdLinefollowerForward", tempKdForward);
 
-  // Apply Forward PID values
-  kpLinefollowerForward = tempKpForward;
-  kiLinefollowerForward = tempKiForward;
-  kdLinefollowerForward = tempKdForward;
-
-  // Debug: Print saved values
-  Serial.println("=== Forward PID Saved to Preferences ===");
-  Serial.println("Saved Forward PID - Kp: " + String(tempKpForward) + ", Ki: " + String(tempKiForward) + ", Kd: " + String(tempKdForward));
-
-  // End preferences session
-  preferences.end();
-}
-
-void saveBackwardPidSettings() {
-  preferences.begin("agv-settings", false);
-  delay(50);
-  // Save Backward PID values
-  preferences.putDouble("kpLinefollowerBackward", tempKpBackward);
-  preferences.putDouble("kiLinefollowerBackward", tempKiBackward);
-  preferences.putDouble("kdLinefollowerBackward", tempKdBackward);
-
-  // Apply Backward PID values
-  kpLinefollowerBackward = tempKpBackward;
-  kiLinefollowerBackward = tempKiBackward;
-  kdLinefollowerBackward = tempKdBackward;
-
-  // Debug: Print saved values
-  Serial.println("=== Backward PID Saved to Preferences ===");
-  Serial.println("Saved Backward PID - Kp: " + String(tempKpBackward) + ", Ki: " + String(tempKiBackward) + ", Kd: " + String(tempKdBackward));
-
-  // End preferences session
-  preferences.end();
-}
 
 void displayMainMenu() {
   // Menu items array
@@ -1286,11 +1246,10 @@ void handlePidForwardSettings() {
         case 1: tempKiForward += pidIncrement; break;
         case 2: tempKdForward += pidIncrement; break;
       }
-      // Auto-save to preferences immediately
+      // Update values in memory (save on exit only for efficiency)
       kpLinefollowerForward = tempKpForward;
       kiLinefollowerForward = tempKiForward;
       kdLinefollowerForward = tempKdForward;
-      saveForwardPidSettings();
       lastRightPress = currentMillis;
     } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
       // Button is being held - increment by 1.0 every 100ms
@@ -1301,11 +1260,10 @@ void handlePidForwardSettings() {
           case 1: tempKiForward += pidIncrement; break;
           case 2: tempKdForward += pidIncrement; break;
         }
-        // Auto-save to preferences immediately
+        // Update values in memory (save on exit only for efficiency)
         kpLinefollowerForward = tempKpForward;
         kiLinefollowerForward = tempKiForward;
         kdLinefollowerForward = tempKdForward;
-        saveForwardPidSettings();
         lastRightPress = currentMillis;
       }
     }
@@ -1327,11 +1285,10 @@ void handlePidForwardSettings() {
         case 1: tempKiForward = max(0.0f, (float)(tempKiForward - pidIncrement)); break;
         case 2: tempKdForward = max(0.0f, (float)(tempKdForward - pidIncrement)); break;
       }
-      // Auto-save to preferences immediately
+      // Update values in memory (save on exit only for efficiency)
       kpLinefollowerForward = tempKpForward;
       kiLinefollowerForward = tempKiForward;
       kdLinefollowerForward = tempKdForward;
-      saveForwardPidSettings();
       lastLeftPress = currentMillis;
     } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
       // Button is being held - decrement by 1.0 every 100ms
@@ -1342,11 +1299,10 @@ void handlePidForwardSettings() {
           case 1: tempKiForward = max(0.0f, (float)(tempKiForward - pidIncrement)); break;
           case 2: tempKdForward = max(0.0f, (float)(tempKdForward - pidIncrement)); break;
         }
-        // Auto-save to preferences immediately
+        // Update values in memory (save on exit only for efficiency)
         kpLinefollowerForward = tempKpForward;
         kiLinefollowerForward = tempKiForward;
         kdLinefollowerForward = tempKdForward;
-        saveForwardPidSettings();
         lastLeftPress = currentMillis;
       }
     }
@@ -1358,7 +1314,7 @@ void handlePidForwardSettings() {
     kpLinefollowerForward = tempKpForward;
     kiLinefollowerForward = tempKiForward;
     kdLinefollowerForward = tempKdForward;
-    saveForwardPidSettings();
+    saveSettings();
     currentMenu = MENU_PID_SETTINGS;
     selectedParam = 0;
     menuNeedsRefresh = true;
@@ -1394,11 +1350,10 @@ void handlePidBackwardSettings() {
         case 1: tempKiBackward += pidIncrement; break;
         case 2: tempKdBackward += pidIncrement; break;
       }
-      // Auto-save to preferences immediately
+      // Update values in memory (save on exit only for efficiency)
       kpLinefollowerBackward = tempKpBackward;
       kiLinefollowerBackward = tempKiBackward;
       kdLinefollowerBackward = tempKdBackward;
-      saveBackwardPidSettings();
       lastRightPress = currentMillis;
     } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
       // Button is being held - increment by 1.0 every 100ms
@@ -1409,11 +1364,10 @@ void handlePidBackwardSettings() {
           case 1: tempKiBackward += pidIncrement; break;
           case 2: tempKdBackward += pidIncrement; break;
         }
-        // Auto-save to preferences immediately
+        // Update values in memory (save on exit only for efficiency)
         kpLinefollowerBackward = tempKpBackward;
         kiLinefollowerBackward = tempKiBackward;
         kdLinefollowerBackward = tempKdBackward;
-        saveBackwardPidSettings();
         lastRightPress = currentMillis;
       }
     }
@@ -1435,11 +1389,10 @@ void handlePidBackwardSettings() {
         case 1: tempKiBackward = max(0.0f, (float)(tempKiBackward - pidIncrement)); break;
         case 2: tempKdBackward = max(0.0f, (float)(tempKdBackward - pidIncrement)); break;
       }
-      // Auto-save to preferences immediately
+      // Update values in memory (save on exit only for efficiency)
       kpLinefollowerBackward = tempKpBackward;
       kiLinefollowerBackward = tempKiBackward;
       kdLinefollowerBackward = tempKdBackward;
-      saveBackwardPidSettings();
       lastLeftPress = currentMillis;
     } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
       // Button is being held - decrement by 1.0 every 100ms
@@ -1450,11 +1403,10 @@ void handlePidBackwardSettings() {
           case 1: tempKiBackward = max(0.0f, (float)(tempKiBackward - pidIncrement)); break;
           case 2: tempKdBackward = max(0.0f, (float)(tempKdBackward - pidIncrement)); break;
         }
-        // Auto-save to preferences immediately
+        // Update values in memory (save on exit only for efficiency)
         kpLinefollowerBackward = tempKpBackward;
         kiLinefollowerBackward = tempKiBackward;
         kdLinefollowerBackward = tempKdBackward;
-        saveBackwardPidSettings();
         lastLeftPress = currentMillis;
       }
     }
@@ -1466,7 +1418,7 @@ void handlePidBackwardSettings() {
     kpLinefollowerBackward = tempKpBackward;
     kiLinefollowerBackward = tempKiBackward;
     kdLinefollowerBackward = tempKdBackward;
-    saveBackwardPidSettings();
+    saveSettings();
     currentMenu = MENU_PID_SETTINGS;
     selectedParam = 0;
     menuNeedsRefresh = true;

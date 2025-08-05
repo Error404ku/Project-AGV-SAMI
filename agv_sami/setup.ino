@@ -218,22 +218,22 @@ void setupRfid() {
 }
 
 void setupMenu() {
-  preferences.begin("agv-settings", false);
+  preferences.begin("agv-settings", true);
 
   // Load PID settings
-  tempKp = preferences.getDouble("kpLinefollower", 70.0);
+  tempKp = preferences.getDouble("kpLinefollower", 0.0);
   tempKi = preferences.getDouble("kiLinefollower", 0.0);
   tempKd = preferences.getDouble("kdLinefollower", 0.0);
   
   // Load Forward PID settings
-  tempKpForward = preferences.getDouble("kpLinefollowerForward", 70.0);
-  tempKiForward = preferences.getDouble("kiLinefollowerForward", 0.0);
-  tempKdForward = preferences.getDouble("kdLinefollowerForward", 0.0);
+  tempKpForward = preferences.getDouble("kpForward", 0.0);
+  tempKiForward = preferences.getDouble("kiForward", 0.0);
+  tempKdForward = preferences.getDouble("kdForward", 0.0);
   
   // Load Backward PID settings
-  tempKpBackward = preferences.getDouble("kpLinefollowerBackward", 70.0);
-  tempKiBackward = preferences.getDouble("kiLinefollowerBackward", 0.0);
-  tempKdBackward = preferences.getDouble("kdLinefollowerBackward", 0.0);
+  tempKpBackward = preferences.getDouble("kpBackward", 0.0);
+  tempKiBackward = preferences.getDouble("kiBackward", 0.0);
+  tempKdBackward = preferences.getDouble("kdBackward", 0.0);
   
   // Debug: Print loaded values
   Serial.println("=== PID Values Loaded from Preferences ===");

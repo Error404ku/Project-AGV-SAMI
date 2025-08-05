@@ -2,7 +2,7 @@
 
 // Fungsi untuk setup WiFi - dipanggil di setup()
 void setupWifi() {
-  // Load WiFi config from Preferences
+  // Load WiFi config from   Preferences
   loadWifiConfig();
   
   // Setup WiFi mode

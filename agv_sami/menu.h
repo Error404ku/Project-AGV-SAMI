@@ -55,8 +55,7 @@ void handlePidForwardSettings();
 void handlePidBackwardSettings();
 void handleTargetSettings();
 void handleWifiSettings();
-void saveForwardPidSettings();
-void saveBackwardPidSettings();
+
 void displayPidSubmenu();
 void displayPidForwardSettings();
 void displayPidBackwardSettings();
