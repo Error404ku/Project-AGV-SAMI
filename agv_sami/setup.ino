@@ -345,6 +345,10 @@ void setupAll() {
   loadRfidWarehouseFromPreferences();
   // loadAutoStationsFromPreferences(); // Function removed - using existing RFID station management
   loadTerminalRfid();
+  
+  // Initialize performance optimization
+  resetSensorTimers();
+  
   lcd.clear();
   lcd.setCursor(0, 1);
   lcd.println("SETUP ALL SELESAI");

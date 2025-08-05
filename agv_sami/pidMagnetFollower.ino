@@ -10,7 +10,7 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
     pwmMotor(0, 0);
     #ifdef DEBUG_PID
     #endif
-    Serial.println("[AGV] MOTOR STOPPED - No magnet detected for 5 seconds (errorValue=99)!");
+    // Debug removed for performance
     music(MUSIC_MODE_ERROR);
     return;  // Exit function early
   }

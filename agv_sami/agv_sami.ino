@@ -1,4 +1,5 @@
 #include "config.h"
+#include "performance_linefollower.h"
 extern bool modeMaju;
 extern bool modeMundur;
 
@@ -25,12 +26,19 @@ void setup() {
 void loop() {
   server.handleClient();
   loopWifi();  // Handle WiFi connection monitoring
-  loopRfid();  // Handle RFID scanning - now controlled internally by conditions
+  
+  // Rate-limited sensor readings to reduce delays
+  if (shouldReadRfid()) {
+    loopRfid();  // Handle RFID scanning
+  }
 
   if (isAgvMode) {
-
-    loopUltrasonik();
-    loopMagneticSensor();
+    if (shouldReadUltrasonic()) {
+      loopUltrasonik();
+    }
+    if (shouldReadMagnet()) {
+      loopMagneticSensor();
+    }
     lamp_flip_flop();
     if (currentStateAgv != AGV_STATE_NULL){
       // --- Pembacaan sensor sesuai mode ---

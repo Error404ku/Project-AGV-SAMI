@@ -529,7 +529,7 @@ enum MusicMode {
   MUSIC_MODE_KOMPUTER
 };
 
-
+static bool forceLeft = false;
 enum moveStateAGV {
   LAST_STATE_MOVE_FORWARD,
   LAST_STATE_MOVE_BACKWARD

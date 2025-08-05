@@ -32,6 +32,13 @@ void postTransmissionUltrasonic() {
 }
 
 void loopUltrasonik() {
+  // Rate limiting check
+  static unsigned long lastReadTime = 0;
+  unsigned long currentTime = millis();
+  if (currentTime - lastReadTime < 100) {  // 100ms minimum interval
+    return;
+  }
+  lastReadTime = currentTime;
   // Ensure ultrasonic slave ID is initialized on first run
   // static bool firstRun = true;
   // if (firstRun) {
@@ -51,11 +58,6 @@ void loopUltrasonik() {
 
   // Skip if Serial1 not ready
   if (!Serial1) {
-    static bool serialErrorShown = false;
-    if (!serialErrorShown) {
-      Serial.println("[ERROR] Serial1 tidak terinisialisasi untuk sensor ultrasonik!");
-      serialErrorShown = true;
-    }
     return;
   }
 
@@ -65,16 +67,9 @@ void loopUltrasonik() {
 
   // Periksa hasil komunikasi Modbus
   if (modbusResult == node.ku8MBSuccess) {
-    #ifdef DEBUG_ULTRASONIC
-    Serial.printf("=== Data Ultrasonik (Slave ID: %d) ===\n", currentUltrasonicSlaveId);
-    #endif
-
     // Ekstrak data jarak dari buffer respons Modbus
     for (int i = 0; i < 5; i++) {
       ultrasonicDistances[i] = node.getResponseBuffer(i); // Simpan jarak ke array
-      #ifdef DEBUG_ULTRASONIC
-      Serial.printf("  Probe %d: %d cm\n", i + 1, ultrasonicDistances[i]); // Cetak jarak
-      #endif
     }
 
     // Reset error counter on successful read
@@ -84,23 +79,13 @@ void loopUltrasonik() {
   } else {
     // Tangani kesalahan komunikasi Modbus dengan retry mechanism
     static int consecutiveFailures = 0;
-    static unsigned long lastErrorLog = 0;
     
     consecutiveFailures++;
     
-    if (millis() - lastErrorLog > 1000) { // Log error max 1x per detik
-      #ifdef DEBUG_ULTRASONIC
-      Serial.printf("Error ultrasonik (ID: %d), kode: 0x%02X, failures: %d\n", 
-                    currentUltrasonicSlaveId, modbusResult, consecutiveFailures);
-      #endif
-      
-      // Reset communication on too many failures
-      if (consecutiveFailures >= 5) {
-        setupRS485(BAUDRATE);
-        consecutiveFailures = 0;
-      }
-      
-      lastErrorLog = millis();
+    // Reset communication on too many failures
+    if (consecutiveFailures >= 5) {
+      setupRS485(BAUDRATE);
+      consecutiveFailures = 0;
     }
     
     // Set default values on communication failure
@@ -162,8 +147,6 @@ void checkObstacles() {
   for (int i = 1; i < 4; i++) {
     if (ultrasonicDistances[i] > 0 && ultrasonicDistances[i] < minSafeDistance) {
       obstacleDetected = true;
-      Serial.printf("OBSTACLE DETECTED! Probe %d: %d cm (Slave ID: %d)\n",
-                    i + 1, ultrasonicDistances[i], currentUltrasonicSlaveId);
       break;
     }
   }
@@ -181,9 +164,6 @@ void checkObstacles() {
       stopMusic();
       musicAlreadyPlaying = false;
     }
-    #ifdef DEBUG_OBSTACLES
-    Serial.println("Path clear - obstacle removed");
-    #endif
   } else if (!obstacleDetected) {
     musicAlreadyPlaying = false;
   }

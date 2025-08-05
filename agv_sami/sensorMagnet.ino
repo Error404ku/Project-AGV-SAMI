@@ -32,9 +32,9 @@ static unsigned long lastDetectionTime = 0;
 
 // ==================== HIGHLY OPTIMIZED SENSOR READING ====================
 void loopMagneticSensor() {
+  // Real-time reading - no rate limiting for maximum responsiveness
   // Fast validation - exit early if Serial1 not ready
   if (!Serial1) {
-    Serial.println("[ERROR] Serial1 tidak terinisialisasi untuk sensor magnet!");
     return; // Keluar dari fungsi jika Serial1 belum siap
   }
 
@@ -86,35 +86,17 @@ void loopMagneticSensor() {
       // Check if no magnet detected for 5 seconds
       if (lastDetectionTime == 0) {
         lastDetectionTime = currentMillis; // Start timer
-        #ifdef DEBUG_MAGNET
-        Serial.println("[MAGNET] No magnet detected - starting 5s timer");
-        #endif
       }
       
       unsigned long noMagnetDuration = currentMillis - lastDetectionTime;
       if (noMagnetDuration >= 5000) { // 5 seconds
-        if (errorValue != 99) {
-          #ifdef DEBUG_MAGNET
-          Serial.println("[MAGNET] 5 seconds elapsed - setting errorValue to 99");
-          #endif
-        }
         errorValue = 99; // Set error to 99 after 5 seconds
         lastErrorValue = 99;
       } else {
         errorValue = lastErrorValue; // Keep last valid error value
-        #ifdef DEBUG_MAGNET
-        if (noMagnetDuration % 1000 < 100) { // Print every second
-          Serial.printf("[MAGNET] No magnet for %lu ms, keeping last error: %d\n", noMagnetDuration, lastErrorValue);
-        }
-        #endif
       }
     } else {
         // Magnet detected - reset timer and update error
-        if (lastDetectionTime != 0) {
-          #ifdef DEBUG_MAGNET
-          Serial.println("[MAGNET] Magnet detected again - resetting timer");
-          #endif
-        }
         lastDetectionTime = 0;
       
       // Optimized bit counting using built-in functions

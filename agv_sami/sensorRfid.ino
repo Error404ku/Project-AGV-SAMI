@@ -74,21 +74,7 @@ void receivedData(uint8_t* data, uint8_t bits, const char* message) {
 
 // Notifies when an invalid transmission is detected
 void receivedDataError(Wiegand::DataError error, uint8_t* rawData, uint8_t rawBits, const char* message) {
-  Serial.print(message);
-  Serial.print(Wiegand::DataErrorStr(error));
-  Serial.print(" - Raw data: ");
-  Serial.print(rawBits);
-  Serial.print("bits / ");
-
-  //Print value in HEX
-  uint8_t bytes = (rawBits + 7) / 8;
-  for (int i = 0; i < bytes; i++) {
-    Serial.print(rawData[i] >> 4, 16);
-    Serial.print(rawData[i] & 0xF, 16);
-  }
-  Serial.println();
-
-  // Count RFID errors
+  // Count RFID errors silently
   static int rfidErrorCount = 0;
   rfidErrorCount++;
 

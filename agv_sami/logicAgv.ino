@@ -190,7 +190,17 @@ void agvMoveForward() {
   if (!obstacleDetected) {
     if (exceptErrorPosition && totalSensorAktif > 5) {
       pidLinefollower(0, PID_MODE_MAJU);  // Error = 0
-    } else {
+    } else if(!exceptErrorPosition && totalSensorAktif > 5 && forceLeft){
+      static unsigned long currentTime = millis();
+      static unsigned long lastReadTime = 0;
+      if (currentTime - lastReadTime < 500) {  // 500ms interval
+        pwmMotor(500,1000);
+      }else if (currentTime - lastReadTime > 500){
+        forceLeft = false;
+      }else{
+        lastReadTime = currentTime;
+      }
+    }else {
       pidLinefollower(errorValue, PID_MODE_MAJU);  // Error dari sensor magnet
     }
   }
@@ -234,6 +244,7 @@ void agvMoveBackward() {
   if (totalSensorAktif > 10) {
     exceptErrorPosition = false;
     saveExceptErrorFlag();
+    forceLeft = true;
     agvMode(AGV_STATE_MOVE_FORWARD);
     return;
   }
