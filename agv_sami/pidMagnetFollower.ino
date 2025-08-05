@@ -11,8 +11,13 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
     #ifdef DEBUG_PID
     #endif
     // Debug removed for performance
-    music(MUSIC_MODE_ERROR);
+    music(MUSIC_MODE_STATION);
     return;  // Exit function early
+  }
+  
+  // Check if AGV is back on track and stop music if it's STATION mode (magnet loss music)
+  if (errorPosisi != 99 && statusMusic && currentMusicMode == MUSIC_MODE_STATION) {
+    stopMusic();
   }
 
   pidError = errorPosisi;

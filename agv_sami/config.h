@@ -522,6 +522,7 @@ int musicErrorPin = 1;     // Default: pinMusic2 untuk error
 int musicDetectPin = 2;    // Default: pinMusic3 untuk detect
 int musicKomputerPin = 3;  // Default: pinMusic4 untuk komputer
 
+static bool playMusic = true;
 // Enum for music modes
 enum MusicMode {
   MUSIC_MODE_STATION,
@@ -530,7 +531,11 @@ enum MusicMode {
   MUSIC_MODE_KOMPUTER
 };
 
+// Variable to track current music mode
+MusicMode currentMusicMode = MUSIC_MODE_STATION;
+
 static bool forceLeft = false;
+static bool inLine = true;
 enum moveStateAGV {
   LAST_STATE_MOVE_FORWARD,
   LAST_STATE_MOVE_BACKWARD

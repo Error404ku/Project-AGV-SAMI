@@ -37,9 +37,24 @@ void agvMode(AgvState state) {
 void agvWarehouse() {
   static bool trigger = false;
   saveCurrentStateAGVToPreferences(AGV_STATE_WAREHOUSE);
-  
+  static unsigned long lastReadTime = 0;
+  unsigned long currentTime = millis();
+  if (playMusic) {
+    music(MUSIC_MODE_KOMPUTER);
+    if (lastReadTime == 0) {
+      lastReadTime = currentTime;
+    }
+    if (currentTime - lastReadTime > 5000) {
+      stopMusic();
+      playMusic = false;
+      lastReadTime = 0;
+    }
+  }
   if (START()) {
+    stopMusic();
+    lastReadTime = 0;
     trigger = true;
+    playMusic = true;
   }
   if (!trigger) {
     agvStop();
@@ -57,9 +72,24 @@ void agvStation() {
   bool trigger = false;
   saveCurrentStateAGVToPreferences(AGV_STATE_STATION);
   modeDisplayStation();
-
+  static unsigned long lastReadTime = 0;
+  unsigned long currentTime = millis();
+  if (playMusic) {
+    music(MUSIC_MODE_DETECT);
+    if (lastReadTime == 0) {
+      lastReadTime = currentTime;
+    }
+    if (currentTime - lastReadTime > 5000) {
+      stopMusic();
+      playMusic = false;
+      lastReadTime = 0;
+    }
+  }
   if (START()) {
+    stopMusic();
+    lastReadTime = 0;
     trigger = true;
+    playMusic = true;
   }
   if (trigger) {
     if (moveStateAgv == AGV_STATE_MOVE_FORWARD) {
@@ -119,10 +149,12 @@ void agvTerminalPickup() {
       }
     }
   } else {
+    music(MUSIC_MODE_KOMPUTER);
     if (START()) {
-      agvMode(AGV_STATE_MOVE_FORWARD);
+      stopMusic();
       isHookUp = false;
       stopCalledPickup = false;
+      agvMode(AGV_STATE_MOVE_FORWARD);
     }
   }
 }
@@ -193,15 +225,14 @@ void agvMoveForward() {
   if (!obstacleDetected) {
     if (exceptErrorPosition && totalSensorAktif > 5) {
       pidLinefollower(0, PID_MODE_MAJU);  // Error = 0
-    } else if(!exceptErrorPosition && totalSensorAktif > 5 && forceLeft){
-      static unsigned long currentTime = millis();
-      static unsigned long lastReadTime = 0;
-      if (currentTime - lastReadTime < 500) {  // 500ms interval
-        pwmMotor(500,1000);
-      }else if (currentTime - lastReadTime > 500){
+    }else if(forceLeft){
+      pwmMotor(baseSpeed, baseSpeed);
+      if (totalSensorAktif == 0){
+        inLine = false;
+      }
+      if (totalSensorAktif > 0 && !inLine){
+        inLine = true;
         forceLeft = false;
-      }else{
-        lastReadTime = currentTime;
       }
     }else {
       pidLinefollower(errorValue, PID_MODE_MAJU);  // Error dari sensor magnet
@@ -244,10 +275,10 @@ void agvMoveBackward() {
     }
   }
   // Kembali ke mode maju ketika mencapai jalur lurus (10+ sensor aktif)
-  if (totalSensorAktif > 10) {
+  if (totalSensorAktif > 13) {
     exceptErrorPosition = false;
-    saveExceptErrorFlag();
     forceLeft = true;
+    saveExceptErrorFlag();
     agvMode(AGV_STATE_MOVE_FORWARD);
     return;
   }

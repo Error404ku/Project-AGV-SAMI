@@ -8,6 +8,7 @@ void music(MusicMode mode) {
   }
 
   statusMusic = true;
+  currentMusicMode = mode; // Store current music mode
 
   // Reset all relays (OFF)
   digitalWrite(pinMusic1, HIGH);
