@@ -25,7 +25,24 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
   integral += pidError;
   derivative = pidError - lastError;
 
-  float koreksi = kpLinefollower * pidError + kiLinefollower * integral + kdLinefollower * derivative;
+  // Select PID parameters based on movement mode
+  float currentKp, currentKi, currentKd;
+  if (mode == PID_MODE_MAJU || mode == PID_MODE_FORCEMAJU) {
+    currentKp = kpLinefollowerForward;
+    currentKi = kiLinefollowerForward;
+    currentKd = kdLinefollowerForward;
+  } else if (mode == PID_MODE_MUNDUR || mode == PID_MODE_FORCEMUNDUR) {
+    currentKp = kpLinefollowerBackward;
+    currentKi = kiLinefollowerBackward;
+    currentKd = kdLinefollowerBackward;
+  } else {
+    // Default to legacy values for other modes
+    currentKp = kpLinefollower;
+    currentKi = kiLinefollower;
+    currentKd = kdLinefollower;
+  }
+
+  float koreksi = currentKp * pidError + currentKi * integral + currentKd * derivative;
 
   int motorKiri = baseSpeed - koreksi;
   int motorKanan = baseSpeed + koreksi;

@@ -224,6 +224,21 @@ void setupMenu() {
   tempKp = preferences.getDouble("kpLinefollower", 70.0);
   tempKi = preferences.getDouble("kiLinefollower", 0.0);
   tempKd = preferences.getDouble("kdLinefollower", 0.0);
+  
+  // Load Forward PID settings
+  tempKpForward = preferences.getDouble("kpLinefollowerForward", 70.0);
+  tempKiForward = preferences.getDouble("kiLinefollowerForward", 0.0);
+  tempKdForward = preferences.getDouble("kdLinefollowerForward", 0.0);
+  
+  // Load Backward PID settings
+  tempKpBackward = preferences.getDouble("kpLinefollowerBackward", 70.0);
+  tempKiBackward = preferences.getDouble("kiLinefollowerBackward", 0.0);
+  tempKdBackward = preferences.getDouble("kdLinefollowerBackward", 0.0);
+  
+  // Debug: Print loaded values
+  Serial.println("=== PID Values Loaded from Preferences ===");
+  Serial.println("Forward PID - Kp: " + String(tempKpForward) + ", Ki: " + String(tempKiForward) + ", Kd: " + String(tempKdForward));
+  Serial.println("Backward PID - Kp: " + String(tempKpBackward) + ", Ki: " + String(tempKiBackward) + ", Kd: " + String(tempKdBackward));
 
   // Load Motor settings
   tempBaseSpeed = preferences.getInt("baseSpeed", 1000);
@@ -245,6 +260,21 @@ void setupMenu() {
   kpLinefollower = tempKp;
   kiLinefollower = tempKi;
   kdLinefollower = tempKd;
+  
+  // Apply Forward PID values
+  kpLinefollowerForward = tempKpForward;
+  kiLinefollowerForward = tempKiForward;
+  kdLinefollowerForward = tempKdForward;
+  
+  // Apply Backward PID values
+  kpLinefollowerBackward = tempKpBackward;
+  kiLinefollowerBackward = tempKiBackward;
+  kdLinefollowerBackward = tempKdBackward;
+  
+  // Debug: Print applied values
+  Serial.println("=== PID Values Applied to Global Variables ===");
+  Serial.println("Forward PID Global - Kp: " + String(kpLinefollowerForward) + ", Ki: " + String(kiLinefollowerForward) + ", Kd: " + String(kdLinefollowerForward));
+  Serial.println("Backward PID Global - Kp: " + String(kpLinefollowerBackward) + ", Ki: " + String(kiLinefollowerBackward) + ", Kd: " + String(kdLinefollowerBackward));
 
   // Apply Motor values
   baseSpeed = tempBaseSpeed;
@@ -280,9 +310,6 @@ void setupMenu() {
 
   // Load stations list from HTTP preferences
   loadTargetStationsListFromPreferences();
-
-  // Initialize menu temporary variables
-  initMenuTempVariables();
 
   Serial.print("Loaded targetStationsList size: ");
   Serial.println(targetStationsList.size());

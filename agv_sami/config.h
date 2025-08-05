@@ -179,7 +179,18 @@ int lastSelectedItem = -1;
 int lastMenuStartIndex = -1;
 
 // Temporary variables for settings
-double tempKp = 70.0;          // Will be initialized from kpLinefollower
+// Temporary variables for Forward PID settings
+double tempKpForward = 0.0;   // Will be initialized from preferences in setupMenu()
+double tempKiForward = 0.0;    // Will be initialized from preferences in setupMenu()
+double tempKdForward = 0.0;    // Will be initialized from preferences in setupMenu()
+
+// Temporary PID variables untuk gerakan mundur (backward)
+double tempKpBackward = 0.0;  // Will be initialized from preferences in setupMenu()
+double tempKiBackward = 0.0;   // Will be initialized from preferences in setupMenu()
+double tempKdBackward = 0.0;   // Will be initialized from preferences in setupMenu()
+
+// Legacy temporary variables (for backward compatibility)
+double tempKp = 0.0;          // Will be initialized from preferences in setupMenu()
 double tempKi = 0.0;           // Will be initialized from kiLinefollower
 double tempKd = 0.0;           // Will be initialized from kdLinefollower
 int tempBaseSpeed = 2000;      // Will be initialized from baseSpeed
@@ -393,9 +404,21 @@ int pwmKanan, pwmKiri;
 
 // K 0.5 1.5 0.0
 double kp = 0.2, ki = 0.4, kd = 0.0;
-float kpLinefollower = 70.0;  // Sesuaikan dengan kebutuhan
-float kiLinefollower = 0.0;
-float kdLinefollower = 0.0;
+
+// PID Parameters for Forward Movement
+float kpLinefollowerForward = 0.0;  // Kp untuk gerakan maju - will be loaded from preferences
+float kiLinefollowerForward = 0.0;   // Ki untuk gerakan maju - will be loaded from preferences
+float kdLinefollowerForward = 0.0;   // Kd untuk gerakan maju - will be loaded from preferences
+
+// PID parameters untuk gerakan mundur (backward)
+float kpLinefollowerBackward = 0.0; // Kp untuk gerakan mundur - will be loaded from preferences
+float kiLinefollowerBackward = 0.0;  // Ki untuk gerakan mundur - will be loaded from preferences
+float kdLinefollowerBackward = 0.0;  // Kd untuk gerakan mundur - will be loaded from preferences
+
+// Legacy PID variables (for backward compatibility)
+float kpLinefollower = 0.0;  // Will be initialized from preferences in setupMenu()
+float kiLinefollower = 0.0;   // Will be initialized from preferences in setupMenu()
+float kdLinefollower = 0.0;   // Will be initialized from preferences in setupMenu()
 // int pwm_min = -1023;
 // int pwm_zero = 0;
 // int pwm_max = 1023;

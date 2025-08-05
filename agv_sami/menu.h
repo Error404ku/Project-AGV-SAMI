@@ -22,6 +22,8 @@
 #define MENU_MAGNET_CHECK 23
 #define MENU_ULTRASONIC_CHECK 24
 #define MENU_RESET_AGV_STATE 25
+#define MENU_PID_FORWARD 28
+#define MENU_PID_BACKWARD 29
 
 // External variables from other files
 extern int targetStation[2];
@@ -48,7 +50,15 @@ void displayTargetSettings();
 void displayWifiSettings();
 void handleMotorTest();
 void handlePidSettings();
+void handlePidSubmenu();
+void handlePidForwardSettings();
+void handlePidBackwardSettings();
 void handleTargetSettings();
 void handleWifiSettings();
+void saveForwardPidSettings();
+void saveBackwardPidSettings();
+void displayPidSubmenu();
+void displayPidForwardSettings();
+void displayPidBackwardSettings();
 
 #endif

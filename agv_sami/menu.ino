@@ -35,6 +35,12 @@ void initMenuTempVariables() {
   tempKp = kpLinefollower;
   tempKi = kiLinefollower;
   tempKd = kdLinefollower;
+  tempKpForward = kpLinefollowerForward;
+  tempKiForward = kiLinefollowerForward;
+  tempKdForward = kdLinefollowerForward;
+  tempKpBackward = kpLinefollowerBackward;
+  tempKiBackward = kiLinefollowerBackward;
+  tempKdBackward = kdLinefollowerBackward;
   tempBaseSpeed = baseSpeed;
   tempInvertY = invertMotorY;
   tempInvertX = invertMotorX;
@@ -74,6 +80,16 @@ void saveSettings() {
   preferences.putDouble("kpLinefollower", tempKp);
   preferences.putDouble("kiLinefollower", tempKi);
   preferences.putDouble("kdLinefollower", tempKd);
+  
+  // Save Forward PID values
+  preferences.putDouble("kpLinefollowerForward", tempKpForward);
+  preferences.putDouble("kiLinefollowerForward", tempKiForward);
+  preferences.putDouble("kdLinefollowerForward", tempKdForward);
+  
+  // Save Backward PID values
+  preferences.putDouble("kpLinefollowerBackward", tempKpBackward);
+  preferences.putDouble("kiLinefollowerBackward", tempKiBackward);
+  preferences.putDouble("kdLinefollowerBackward", tempKdBackward);
 
   // Save Motor values
   preferences.putInt("baseSpeed", tempBaseSpeed);
@@ -95,6 +111,21 @@ void saveSettings() {
   kpLinefollower = tempKp;
   kiLinefollower = tempKi;
   kdLinefollower = tempKd;
+  
+  // Apply Forward PID values
+  kpLinefollowerForward = tempKpForward;
+  kiLinefollowerForward = tempKiForward;
+  kdLinefollowerForward = tempKdForward;
+  
+  // Apply Backward PID values
+  kpLinefollowerBackward = tempKpBackward;
+  kiLinefollowerBackward = tempKiBackward;
+  kdLinefollowerBackward = tempKdBackward;
+
+  // Debug: Print saved values in saveSettings
+  Serial.println("=== All PID Values Saved in saveSettings() ===");
+  Serial.println("Forward PID - Kp: " + String(tempKpForward) + ", Ki: " + String(tempKiForward) + ", Kd: " + String(tempKdForward));
+  Serial.println("Backward PID - Kp: " + String(tempKpBackward) + ", Ki: " + String(tempKiBackward) + ", Kd: " + String(tempKdBackward));
 
   // Apply Motor values
   baseSpeed = tempBaseSpeed;
@@ -111,6 +142,48 @@ void saveSettings() {
   musicErrorPin = tempMusicErrorPin;
   musicDetectPin = tempMusicDetectPin;
   musicKomputerPin = tempMusicKomputerPin;
+
+  // End preferences session
+  preferences.end();
+}
+
+void saveForwardPidSettings() {
+  preferences.begin("agv-settings", false);
+  delay(50);
+  // Save Forward PID values
+  preferences.putDouble("kpLinefollowerForward", tempKpForward);
+  preferences.putDouble("kiLinefollowerForward", tempKiForward);
+  preferences.putDouble("kdLinefollowerForward", tempKdForward);
+
+  // Apply Forward PID values
+  kpLinefollowerForward = tempKpForward;
+  kiLinefollowerForward = tempKiForward;
+  kdLinefollowerForward = tempKdForward;
+
+  // Debug: Print saved values
+  Serial.println("=== Forward PID Saved to Preferences ===");
+  Serial.println("Saved Forward PID - Kp: " + String(tempKpForward) + ", Ki: " + String(tempKiForward) + ", Kd: " + String(tempKdForward));
+
+  // End preferences session
+  preferences.end();
+}
+
+void saveBackwardPidSettings() {
+  preferences.begin("agv-settings", false);
+  delay(50);
+  // Save Backward PID values
+  preferences.putDouble("kpLinefollowerBackward", tempKpBackward);
+  preferences.putDouble("kiLinefollowerBackward", tempKiBackward);
+  preferences.putDouble("kdLinefollowerBackward", tempKdBackward);
+
+  // Apply Backward PID values
+  kpLinefollowerBackward = tempKpBackward;
+  kiLinefollowerBackward = tempKiBackward;
+  kdLinefollowerBackward = tempKdBackward;
+
+  // Debug: Print saved values
+  Serial.println("=== Backward PID Saved to Preferences ===");
+  Serial.println("Saved Backward PID - Kp: " + String(tempKpBackward) + ", Ki: " + String(tempKiBackward) + ", Kd: " + String(tempKdBackward));
 
   // End preferences session
   preferences.end();
@@ -246,6 +319,7 @@ void handleMenu() {
               
             case 3:  // PID Settings
               lcd.clear();
+              initMenuTempVariables();  // Initialize temporary variables from global values
               currentMenu = MENU_PID_SETTINGS; // 3
               menuNeedsRefresh = true;
               break;
@@ -333,8 +407,23 @@ void handleMenu() {
       break;
 
     case MENU_PID_SETTINGS:
-      displayPidSettings();
-      handlePidSettings();
+      displayPidSubmenu();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handlePidSubmenu();
+        if (UP() || DOWN() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_PID_FORWARD:
+      displayPidForwardSettings();
+      handlePidForwardSettings();
+      break;
+
+    case MENU_PID_BACKWARD:
+      displayPidBackwardSettings();
+      handlePidBackwardSettings();
       break;
 
     case MENU_TARGET_SETTINGS:
@@ -737,6 +826,120 @@ void displayPidSettings() {
   lcd.print("B:OK");
 }
 
+// PID Submenu Functions
+void displayPidSubmenu() {
+  displayMenuHeader("PID Settings");
+
+  // Display Forward option
+  lcd.setCursor(0, 1);
+  if (selectedParam == 0) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Forward PID");
+
+  // Display Backward option
+  lcd.setCursor(0, 2);
+  if (selectedParam == 1) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Backward PID");
+
+  // Show controls
+  lcd.setCursor(0, 3);
+  lcd.print("A:Select B:Back");
+}
+
+void handlePidSubmenu() {
+  if (UP()) {
+    selectedParam = (selectedParam - 1 + 2) % 2;
+  } else if (DOWN()) {
+    selectedParam = (selectedParam + 1) % 2;
+  } else if (START()) {
+    if (selectedParam == 0) {
+      // Forward PID
+      lcd.clear();
+      initMenuTempVariables();  // Initialize temporary variables from global values
+      currentMenu = MENU_PID_FORWARD;
+      selectedParam = 0; // Reset for PID parameter selection
+      menuNeedsRefresh = true;
+    } else if (selectedParam == 1) {
+      // Backward PID
+      lcd.clear();
+      initMenuTempVariables();  // Initialize temporary variables from global values
+      currentMenu = MENU_PID_BACKWARD;
+      selectedParam = 0; // Reset for PID parameter selection
+      menuNeedsRefresh = true;
+    }
+  } else if (STOP()) {
+    currentMenu = MENU_MAIN;
+    selectedParam = 0;
+    menuStartIndex = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+void displayPidForwardSettings() {
+  displayMenuHeader("PID Forward");
+
+  // Display Kp
+  lcd.setCursor(0, 1);
+  if (selectedParam == 0) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Kp: ");
+  lcd.print(tempKpForward);
+  lcd.print("       ");
+
+  // Display Ki
+  lcd.setCursor(0, 2);
+  if (selectedParam == 1) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Ki: ");
+  lcd.print(tempKiForward);
+  lcd.print("       ");
+
+  // Display Kd
+  lcd.setCursor(0, 3);
+  if (selectedParam == 2) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Kd: ");
+  lcd.print(tempKdForward);
+  lcd.print("       ");
+
+  // Show controls
+  lcd.setCursor(12, 3);
+  lcd.print("B:OK");
+}
+
+void displayPidBackwardSettings() {
+  displayMenuHeader("PID Backward");
+
+  // Display Kp
+  lcd.setCursor(0, 1);
+  if (selectedParam == 0) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Kp: ");
+  lcd.print(tempKpBackward);
+  lcd.print("       ");
+
+  // Display Ki
+  lcd.setCursor(0, 2);
+  if (selectedParam == 1) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Ki: ");
+  lcd.print(tempKiBackward);
+  lcd.print("       ");
+
+  // Display Kd
+  lcd.setCursor(0, 3);
+  if (selectedParam == 2) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Kd: ");
+  lcd.print(tempKdBackward);
+  lcd.print("       ");
+
+  // Show controls
+  lcd.setCursor(12, 3);
+  lcd.print("B:OK");
+}
+
 void displayTargetSettings() {
   displayMenuHeader("Target Settings");
 
@@ -1054,6 +1257,222 @@ void handlePidSettings() {
   }
 }
 
+void handlePidForwardSettings() {
+  static unsigned long lastRightPress = 0;
+  static unsigned long lastLeftPress = 0;
+  static unsigned long rightHoldStart = 0;
+  static unsigned long leftHoldStart = 0;
+  static bool rightHolding = false;
+  static bool leftHolding = false;
+  unsigned long currentMillis = millis();
+
+  if (UP()) {
+    selectedParam = (selectedParam - 1 + 3) % 3;
+  } else if (DOWN()) {
+    selectedParam = (selectedParam + 1) % 3;
+  }
+
+  // Check RIGHT button
+  if (digitalRead(rightPin) == HIGH) {
+    if (!rightHolding) {
+      // Button just pressed
+      rightHoldStart = currentMillis;
+      rightHolding = true;
+      
+      // Single click - increment by 0.1
+      pidIncrement = 0.1f;
+      switch (selectedParam) {
+        case 0: tempKpForward += pidIncrement; break;
+        case 1: tempKiForward += pidIncrement; break;
+        case 2: tempKdForward += pidIncrement; break;
+      }
+      // Auto-save to preferences immediately
+      kpLinefollowerForward = tempKpForward;
+      kiLinefollowerForward = tempKiForward;
+      kdLinefollowerForward = tempKdForward;
+      saveForwardPidSettings();
+      lastRightPress = currentMillis;
+    } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
+      // Button is being held - increment by 1.0 every 100ms
+      if (currentMillis - lastRightPress >= 100) {
+        pidIncrement = 1.0f;
+        switch (selectedParam) {
+          case 0: tempKpForward += pidIncrement; break;
+          case 1: tempKiForward += pidIncrement; break;
+          case 2: tempKdForward += pidIncrement; break;
+        }
+        // Auto-save to preferences immediately
+        kpLinefollowerForward = tempKpForward;
+        kiLinefollowerForward = tempKiForward;
+        kdLinefollowerForward = tempKdForward;
+        saveForwardPidSettings();
+        lastRightPress = currentMillis;
+      }
+    }
+  } else {
+    rightHolding = false;
+  }
+
+  // Check LEFT button
+  if (digitalRead(leftPin) == HIGH) {
+    if (!leftHolding) {
+      // Button just pressed
+      leftHoldStart = currentMillis;
+      leftHolding = true;
+      
+      // Single click - decrement by 0.1
+      pidIncrement = 0.1f;
+      switch (selectedParam) {
+        case 0: tempKpForward = max(0.0f, (float)(tempKpForward - pidIncrement)); break;
+        case 1: tempKiForward = max(0.0f, (float)(tempKiForward - pidIncrement)); break;
+        case 2: tempKdForward = max(0.0f, (float)(tempKdForward - pidIncrement)); break;
+      }
+      // Auto-save to preferences immediately
+      kpLinefollowerForward = tempKpForward;
+      kiLinefollowerForward = tempKiForward;
+      kdLinefollowerForward = tempKdForward;
+      saveForwardPidSettings();
+      lastLeftPress = currentMillis;
+    } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
+      // Button is being held - decrement by 1.0 every 100ms
+      if (currentMillis - lastLeftPress >= 100) {
+        pidIncrement = 1.0f;
+        switch (selectedParam) {
+          case 0: tempKpForward = max(0.0f, (float)(tempKpForward - pidIncrement)); break;
+          case 1: tempKiForward = max(0.0f, (float)(tempKiForward - pidIncrement)); break;
+          case 2: tempKdForward = max(0.0f, (float)(tempKdForward - pidIncrement)); break;
+        }
+        // Auto-save to preferences immediately
+        kpLinefollowerForward = tempKpForward;
+        kiLinefollowerForward = tempKiForward;
+        kdLinefollowerForward = tempKdForward;
+        saveForwardPidSettings();
+        lastLeftPress = currentMillis;
+      }
+    }
+  } else {
+    leftHolding = false;
+  }
+
+  if (STOP()) {
+    kpLinefollowerForward = tempKpForward;
+    kiLinefollowerForward = tempKiForward;
+    kdLinefollowerForward = tempKdForward;
+    saveForwardPidSettings();
+    currentMenu = MENU_PID_SETTINGS;
+    selectedParam = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+void handlePidBackwardSettings() {
+  static unsigned long lastRightPress = 0;
+  static unsigned long lastLeftPress = 0;
+  static unsigned long rightHoldStart = 0;
+  static unsigned long leftHoldStart = 0;
+  static bool rightHolding = false;
+  static bool leftHolding = false;
+  unsigned long currentMillis = millis();
+
+  if (UP()) {
+    selectedParam = (selectedParam - 1 + 3) % 3;
+  } else if (DOWN()) {
+    selectedParam = (selectedParam + 1) % 3;
+  }
+
+  // Check RIGHT button
+  if (digitalRead(rightPin) == HIGH) {
+    if (!rightHolding) {
+      // Button just pressed
+      rightHoldStart = currentMillis;
+      rightHolding = true;
+      
+      // Single click - increment by 0.1
+      pidIncrement = 0.1f;
+      switch (selectedParam) {
+        case 0: tempKpBackward += pidIncrement; break;
+        case 1: tempKiBackward += pidIncrement; break;
+        case 2: tempKdBackward += pidIncrement; break;
+      }
+      // Auto-save to preferences immediately
+      kpLinefollowerBackward = tempKpBackward;
+      kiLinefollowerBackward = tempKiBackward;
+      kdLinefollowerBackward = tempKdBackward;
+      saveBackwardPidSettings();
+      lastRightPress = currentMillis;
+    } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
+      // Button is being held - increment by 1.0 every 100ms
+      if (currentMillis - lastRightPress >= 100) {
+        pidIncrement = 1.0f;
+        switch (selectedParam) {
+          case 0: tempKpBackward += pidIncrement; break;
+          case 1: tempKiBackward += pidIncrement; break;
+          case 2: tempKdBackward += pidIncrement; break;
+        }
+        // Auto-save to preferences immediately
+        kpLinefollowerBackward = tempKpBackward;
+        kiLinefollowerBackward = tempKiBackward;
+        kdLinefollowerBackward = tempKdBackward;
+        saveBackwardPidSettings();
+        lastRightPress = currentMillis;
+      }
+    }
+  } else {
+    rightHolding = false;
+  }
+
+  // Check LEFT button
+  if (digitalRead(leftPin) == HIGH) {
+    if (!leftHolding) {
+      // Button just pressed
+      leftHoldStart = currentMillis;
+      leftHolding = true;
+      
+      // Single click - decrement by 0.1
+      pidIncrement = 0.1f;
+      switch (selectedParam) {
+        case 0: tempKpBackward = max(0.0f, (float)(tempKpBackward - pidIncrement)); break;
+        case 1: tempKiBackward = max(0.0f, (float)(tempKiBackward - pidIncrement)); break;
+        case 2: tempKdBackward = max(0.0f, (float)(tempKdBackward - pidIncrement)); break;
+      }
+      // Auto-save to preferences immediately
+      kpLinefollowerBackward = tempKpBackward;
+      kiLinefollowerBackward = tempKiBackward;
+      kdLinefollowerBackward = tempKdBackward;
+      saveBackwardPidSettings();
+      lastLeftPress = currentMillis;
+    } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
+      // Button is being held - decrement by 1.0 every 100ms
+      if (currentMillis - lastLeftPress >= 100) {
+        pidIncrement = 1.0f;
+        switch (selectedParam) {
+          case 0: tempKpBackward = max(0.0f, (float)(tempKpBackward - pidIncrement)); break;
+          case 1: tempKiBackward = max(0.0f, (float)(tempKiBackward - pidIncrement)); break;
+          case 2: tempKdBackward = max(0.0f, (float)(tempKdBackward - pidIncrement)); break;
+        }
+        // Auto-save to preferences immediately
+        kpLinefollowerBackward = tempKpBackward;
+        kiLinefollowerBackward = tempKiBackward;
+        kdLinefollowerBackward = tempKdBackward;
+        saveBackwardPidSettings();
+        lastLeftPress = currentMillis;
+      }
+    }
+  } else {
+    leftHolding = false;
+  }
+
+  if (STOP()) {
+    kpLinefollowerBackward = tempKpBackward;
+    kiLinefollowerBackward = tempKiBackward;
+    kdLinefollowerBackward = tempKdBackward;
+    saveBackwardPidSettings();
+    currentMenu = MENU_PID_SETTINGS;
+    selectedParam = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
 void handleTargetSettings() {
   unsigned long currentMillis = millis();
 
@@ -1330,6 +1749,21 @@ void handleResetMenu() {
     tempKp = 70.0;
     tempKi = 0.0;
     tempKd = 0.0;
+    
+    // Reset Forward PID values to defaults
+    tempKpForward = 70.0;
+    tempKiForward = 0.0;
+    tempKdForward = 0.0;
+    
+    // Reset Backward PID values to defaults
+    tempKpBackward = 70.0;
+    tempKiBackward = 0.0;
+    tempKdBackward = 0.0;
+    
+    // Debug: Print reset values
+    Serial.println("=== PID Values Reset to Defaults ===");
+    Serial.println("Reset Forward PID - Kp: " + String(tempKpForward) + ", Ki: " + String(tempKiForward) + ", Kd: " + String(tempKdForward));
+    Serial.println("Reset Backward PID - Kp: " + String(tempKpBackward) + ", Ki: " + String(tempKiBackward) + ", Kd: " + String(tempKdBackward));
 
     // Reset Motor values to defaults
     tempBaseSpeed = 1000;
