@@ -5,22 +5,19 @@
 
 // Konstanta yang tidak dipindahkan // Check every 100ms
 
-// Function to set ultrasonic slave ID dynamically
+// Function to set ultrasonic slave ID dynamically - INDUSTRY STANDARD
+// No need to call begin() here - it will be called automatically in loop when ID changes
 void setUltrasonicSlaveId(int slaveId) {
   if (slaveId >= 1 && slaveId <= 247) {  // Valid Modbus RTU range
     if (currentUltrasonicSlaveId != slaveId) {
       currentUltrasonicSlaveId = slaveId;
       Serial.printf("Ultrasonic slave ID set to: %d\n", slaveId);
-      
-      // Force reinitialization when slave ID changes
-      if (Serial1) {
-        node.begin(currentUltrasonicSlaveId, Serial1);
-      }
+      // begin() will be called automatically in loopUltrasonik() when ID changes
     }
   }
 }
 
-// Pre and post transmission functions for RS485
+// Pre and post transmission functions for RS485 Serial2
 void preTransmissionUltrasonic() {
   digitalWrite(MAX485_RE, HIGH);
   digitalWrite(MAX485_DE, HIGH);
@@ -42,34 +39,34 @@ void loopUltrasonik() {
   // Ensure ultrasonic slave ID is initialized on first run
   // static bool firstRun = true;
   // if (firstRun) {
-  //   node.begin( SLAVEID_ULTRASONIK_DEPAN, Serial1); // Mengatur ID slave dan port serial
+  //   ultrasonicNode.begin( SLAVEID_ULTRASONIK_DEPAN, Serial1); // Mengatur ID slave dan port serial
   //   delay(50); // Allow initialization to complete
   //   firstRun = false;
   // }
   
-  // Ultra-fast slave ID switching with zero-overhead
-  // static int lastUltrasonicSlaveId = -1;
-  // if (currentUltrasonicSlaveId != lastUltrasonicSlaveId) {
-  //   node.begin(currentUltrasonicSlaveId, Serial1); // Mengatur ID slave dan port serial
-  //   lastUltrasonicSlaveId = currentUltrasonicSlaveId;
-  //   delay(10); // Small delay for stability
-  // }
-  node.begin(currentUltrasonicSlaveId, Serial1); // Mengatur ID slave dan port serial
+  // Ultra-fast slave ID switching with zero-overhead - INDUSTRY STANDARD
+  // Only call begin() when slave ID changes - most efficient approach
+  static int lastUltrasonicSlaveId = -1;
+  if (currentUltrasonicSlaveId != lastUltrasonicSlaveId) {
+    ultrasonicNode.begin(currentUltrasonicSlaveId, Serial2); // Mengatur ID slave dan port serial
+    lastUltrasonicSlaveId = currentUltrasonicSlaveId;
+    delay(10); // Small delay for stability
+  }
 
-  // Skip if Serial1 not ready
-  if (!Serial1) {
+  // Skip if Serial2 not ready
+  if (!Serial2) {
     return;
   }
 
   // Membaca 5 register penahan (holding registers) dari alamat 0x0000
   // Register ini berisi data jarak dari Probe 1 hingga Probe 5
-  uint8_t modbusResult = node.readHoldingRegisters(0x0000, 5);
+  uint8_t modbusResult = ultrasonicNode.readHoldingRegisters(0x0000, 5);
 
   // Periksa hasil komunikasi Modbus
-  if (modbusResult == node.ku8MBSuccess) {
+  if (modbusResult == ultrasonicNode.ku8MBSuccess) {
     // Ekstrak data jarak dari buffer respons Modbus
     for (int i = 0; i < 5; i++) {
-      ultrasonicDistances[i] = node.getResponseBuffer(i); // Simpan jarak ke array
+      ultrasonicDistances[i] = ultrasonicNode.getResponseBuffer(i); // Simpan jarak ke array
     }
 
     // Reset error counter on successful read
@@ -84,7 +81,7 @@ void loopUltrasonik() {
     
     // Reset communication on too many failures
     if (consecutiveFailures >= 5) {
-      setupRS485(BAUDRATE);
+      setupRS485_Serial2(BAUDRATE);
       consecutiveFailures = 0;
     }
     
@@ -98,36 +95,8 @@ void loopUltrasonik() {
 
 // ------------------- FUNGSI-FUNGSI BANTUAN -------------------
 
-/**
- * Initialize ultrasonic sensor to polling mode
- * Call this during setup for each ultrasonic sensor
- */
-void initUltrasonicSensor(int slaveId) {
-  // Set current slave ID
-  // setUltrasonicSlaveId(slaveId);
-  node.begin(slaveId, Serial1);
-  
-  currentUltrasonicSlaveId = slaveId;
-  // Add small delay to ensure initialization
-  delay(50);
-
-  // Test basic communication first
-  uint8_t testResult = node.readHoldingRegisters(0x0000, 1);
-  if (testResult != node.ku8MBSuccess) {
-    Serial.printf("[WARNING] Initial ultrasonic test failed for slave %d, error: 0x%02X\n", slaveId, testResult);
-    // Don't fail setup, let it retry in loop
-    return;
-  }
-
-  // Set sensor to polling mode (register 0x0007 = 0x0000)
-  uint8_t setMode = node.writeSingleRegister(0x0007, 0x0000);
-  if (setMode == node.ku8MBSuccess) {
-    Serial.printf("Ultrasonic sensor (Slave ID: %d) set to polling mode successfully.\n", slaveId);
-  } else {
-    Serial.printf("Failed to set ultrasonic sensor (Slave ID: %d) mode, error code: 0x%02X\n", slaveId, setMode);
-    // Don't log as error, let it continue working in default mode
-  }
-}
+// Fungsi initUltrasonicSensor dihapus karena tidak digunakan
+// Setup sensor ultrasonik menggunakan setupSensorUltrasonic() di setup.ino
 
 /**
  * Get current ultrasonic sensor slave ID
@@ -143,9 +112,19 @@ void checkObstacles() {
   bool previousObstacleState = obstacleDetected;
   obstacleDetected = false;
 
+  // Determine which safe distance to use based on current sensor
+  uint16_t currentMinSafeDistance;
+  if (currentUltrasonicSlaveId == SLAVEID_ULTRASONIK_DEPAN) {
+    currentMinSafeDistance = minSafeDistanceFront;
+  } else if (currentUltrasonicSlaveId == SLAVEID_ULTRASONIK_BELAKANG) {
+    currentMinSafeDistance = minSafeDistanceBack;
+  } else {
+    currentMinSafeDistance = minSafeDistanceFront; // Default to front
+  }
+
   // Check each probe for obstacles
   for (int i = 1; i < 4; i++) {
-    if (ultrasonicDistances[i] > 0 && ultrasonicDistances[i] < minSafeDistance) {
+    if (ultrasonicDistances[i] > 0 && ultrasonicDistances[i] < currentMinSafeDistance) {
       obstacleDetected = true;
       break;
     }

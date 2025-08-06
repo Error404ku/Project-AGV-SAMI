@@ -65,14 +65,66 @@ void loop() {
         agvMode(AGV_STATE_TERMINAL_PICKUP);
       }
     }
-    // Check for B button to exit AGV mode
+    // Check for double click STOP button to exit AGV mode
+    static bool firstStopClick = false;
+    static unsigned long firstStopTime = 0;
+    const unsigned long doubleClickInterval = 2000; // 2 seconds
+    
     if (STOP()) {
-      agvMode(AGV_STATE_STOP);
-      isAgvMode = false;
-      resetDisplayFlags(); // Reset semua flag display
-      newRfidScanned = false; // Reset flag RFID saat keluar dari AGV mode
-      agvStopCalled = false; // Reset agvStopCalled when exiting AGV mode
-      buttonStep = 0;  // Reset button step
+      unsigned long currentTime = millis();
+      
+      if (!firstStopClick) {
+        // First click detected
+        firstStopClick = true;
+        firstStopTime = currentTime;
+        Serial.println("[AGV_EXIT] First STOP click detected. Click again within 2 seconds to exit AGV mode.");
+        
+        // Show message on LCD
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("STOP 1x detected");
+        lcd.setCursor(0, 1);
+        lcd.print("Click again to exit");
+      } else {
+        // Check if second click is within interval
+        if (currentTime - firstStopTime <= doubleClickInterval) {
+          // Valid double click - exit AGV mode
+          Serial.println("[AGV_EXIT] Double click confirmed. Exiting AGV mode.");
+          agvMode(AGV_STATE_STOP);
+          isAgvMode = false;
+          resetDisplayFlags(); // Reset semua flag display
+          newRfidScanned = false; // Reset flag RFID saat keluar dari AGV mode
+          agvStopCalled = false; // Reset agvStopCalled when exiting AGV mode
+          buttonStep = 0;  // Reset button step
+          
+          // Reset double click variables
+          firstStopClick = false;
+          firstStopTime = 0;
+        } else {
+          // Second click too late, treat as new first click
+          firstStopClick = true;
+          firstStopTime = currentTime;
+          Serial.println("[AGV_EXIT] Second click too late. Starting new double click sequence.");
+          
+          // Show message on LCD
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("STOP 1x detected");
+          lcd.setCursor(0, 1);
+          lcd.print("Click again to exit");
+        }
+      }
+    } else {
+      // Check if first click has timed out
+      if (firstStopClick && (millis() - firstStopTime > doubleClickInterval)) {
+        firstStopClick = false;
+        firstStopTime = 0;
+        Serial.println("[AGV_EXIT] Double click timeout. Reset to normal AGV display.");
+        
+        // Reset display to normal AGV mode
+        lcd.clear();
+        displayPrint();
+      }
     }
   } else {
     // Menu Mode

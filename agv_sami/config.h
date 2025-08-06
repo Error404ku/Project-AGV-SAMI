@@ -142,7 +142,8 @@ Timer performanceTimer = {0, 5000, false, false};
 
 // Sensor distances array
 uint16_t ultrasonicDistances[5] = { 0 };  // Store distances from 5 probes
-uint16_t minSafeDistance = 30;            // cm - minimum safe distance
+uint16_t minSafeDistanceFront = 30;       // cm - minimum safe distance for front sensor
+uint16_t minSafeDistanceBack = 20;        // cm - minimum safe distance for back sensor
 
 // --- RFID TERMINAL VARIABLES ---
 String terminalDropRfidId = "";
@@ -152,6 +153,7 @@ bool exceptErrorPosition = false;
 // --- WAREHOUSE & UJUNG RFID VARIABLES ---
 String warehouseRfidId = "";
 String ujungRfidId = "";
+String pertigaanRfidId = "";
 
 // --- MENU SYSTEM VARIABLES ---
 int selectedItem = 0;
@@ -234,6 +236,10 @@ int tempMusicErrorPin = 1;     // Will be initialized from musicErrorPin
 int tempMusicDetectPin = 2;    // Will be initialized from musicDetectPin
 int tempMusicKomputerPin = 3;  // Will be initialized from musicKomputerPin
 
+// Ultrasonic settings (temporary)
+uint16_t tempMinSafeDistanceFront = 30;  // Will be initialized from minSafeDistanceFront
+uint16_t tempMinSafeDistanceBack = 20;   // Will be initialized from minSafeDistanceBack
+
 // Motor invert menu variables
 int selectedInvertItem = 0;  // 0=Y-axis, 1=X-axis, 2=Motor Kanan, 3=Motor Kiri, 4=Hook
 
@@ -254,9 +260,9 @@ unsigned long wifiConnectStartTime = 0;
 // WiFi menu scroll variables
 int wifiScrollIndex = 0;
 
-void setupSensorMagnet(int slaveId);
 void setupUltrasonikWithParams(int slaveId);
 void setupRS485(int baudrate);
+void setupRS485_Serial2(int baudrate);
 
 // ### DEFINE ###
 // # TOMBOL
@@ -304,9 +310,14 @@ LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 // #Inisialisasi Sensor Magnet dan ultrasonik
 #define MAX485_DE 36
 #define MAX485_RE 36
-// RS485 Serial Pins (shared for all sensors)
+// RS485 Serial Pins for Magnet sensors (Serial1)
 #define RS485_RX 18
 #define RS485_TX 17
+
+// RS485 Serial Pins for Ultrasonic sensors (Serial2)
+#define RS485_RX2 11  // Pin 11 untuk RX Serial2
+#define RS485_TX2 46  // Pin 46 untuk TX Serial2
+// MAX485_DE2 dan MAX485_RE2 dihapus - menggunakan MAX485_DE dan MAX485_RE yang sama
 
 // Mapping Slave ID ke Sensor - definitions moved to top of file
 
@@ -336,7 +347,8 @@ bool inPacket = false;
 
 int jumlahMagnet[16];
 
-ModbusMaster node;
+ModbusMaster magnetNode;     // ModbusMaster untuk sensor magnet (Serial1)
+ModbusMaster ultrasonicNode; // ModbusMaster untuk sensor ultrasonik (Serial2)
 
 // ## VARIABLE ##
 // # variable Web Server
@@ -534,6 +546,10 @@ enum MusicMode {
 // Variable to track current music mode
 MusicMode currentMusicMode = MUSIC_MODE_STATION;
 
+// ===== MUSIC FUNCTIONS =====
+void music(MusicMode mode);
+void stopMusic();
+
 static bool forceLeft = false;
 static bool inLine = true;
 enum moveStateAGV {
@@ -555,7 +571,8 @@ enum moveStateAGV {
 
 // ===== ULTRASONIC SENSOR FUNCTIONS =====
 void setUltrasonicSlaveId(int slaveId);
-void initUltrasonicSensor(int slaveId);
+// void initUltrasonicSensor(int slaveId); // Dihapus - tidak digunakan
+void setupSensorUltrasonic(int slaveId);
 int getCurrentUltrasonicSlaveId();
 void loopUltrasonik();
 void checkObstacles();
@@ -565,8 +582,11 @@ void postTransmissionUltrasonic();
 // ===== MAGNET SENSOR FUNCTIONS =====
 void loopMagneticSensor();
 void switchMagnetSensor(bool useFrontSensor);
+void setupSensorMagnet(int slaveId);
 int getCurrentMagnetSlaveId();
 void setMagnetSlaveId(int slaveId);
+void preTransmissionMagnet();
+void postTransmissionMagnet();
 
 // ===== WIFI CONFIGURATION FUNCTIONS =====
 bool saveWifiConfig(const String& ssid, const String& password, const String& staticIP, const String& gateway, const String& subnet, const String& dns);
@@ -604,10 +624,17 @@ void handleRfidWarehouse();
 void saveRfidWarehouseToPreferences();
 void loadRfidWarehouseFromPreferences();
 
+// RFID Pertigaan functions
+void displayRfidPertigaan();
+void handleRfidPertigaan();
+void saveRfidPertigaanToPreferences();
+void loadRfidPertigaanFromPreferences();
+
 // Warehouse & Ujung RFID sync functions
 void loadWarehouseUjungRfid();
 void saveWarehouseRfid(String rfidId);
 void saveUjungRfid(String rfidId);
+void savePertigaanRfid(String rfidId);
 
 // Terminal Drop & Pickup RFID functions
 void loadTerminalRfid();

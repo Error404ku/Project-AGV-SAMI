@@ -9,10 +9,19 @@ extern int totalSensorAktif;  // counter sensor aktif
 /***********************************************************
  *  WAREHOUSE & UJUNG RFID FUNCTIONS                     *
  ***********************************************************/
+
+// Load RFID Pertigaan from preferences
+void loadRfidPertigaanFromPreferences() {
+  preferences.begin("rfid_pertigaan", false);
+  pertigaanRfidId = preferences.getString("pertigaanRfid", "");
+  preferences.end();
+}
+
 void loadWarehouseUjungRfid() {
   preferences.begin("warehouse-ujung", false);
   warehouseRfidId = preferences.getString("warehouseRfid", "");
   ujungRfidId = preferences.getString("ujungRfid", "");
+  pertigaanRfidId = preferences.getString("pertigaanRfid", "");
   preferences.end();
   
   // Sinkronisasi dengan data dari rfidWarehouseList dan rfidUjungList
@@ -28,6 +37,7 @@ void loadWarehouseUjungRfid() {
   
   Serial.println("Loaded Warehouse RFID: " + warehouseRfidId);
   Serial.println("Loaded Ujung RFID: " + ujungRfidId);
+  Serial.println("Loaded Pertigaan RFID: " + pertigaanRfidId);
 }
 
 void saveWarehouseRfid(String rfidId) {
@@ -44,6 +54,14 @@ void saveUjungRfid(String rfidId) {
   preferences.end();
   ujungRfidId = rfidId;
   Serial.println("Ujung RFID saved: " + rfidId);
+}
+
+void savePertigaanRfid(String rfidId) {
+  preferences.begin("warehouse-ujung", false);
+  preferences.putString("pertigaanRfid", rfidId);
+  preferences.end();
+  pertigaanRfidId = rfidId;
+  Serial.println("Pertigaan RFID saved: " + rfidId);
 }
 
 /***********************************************************

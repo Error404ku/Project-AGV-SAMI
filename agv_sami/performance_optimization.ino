@@ -227,13 +227,23 @@ bool attemptErrorRecovery(int errorCode) {
 }
 
 bool recoverSensorCommunication() {
-  // Reinitialize ModbusMaster
-  node.begin(1, Serial1);
-  delay(100); // Small delay for initialization
+  // Reinitialize ModbusMaster untuk sensor magnet (Serial1) dengan current slave ID
+  magnetNode.begin(getCurrentMagnetSlaveId(), Serial1);
+  delay(50); // Small delay for initialization
 
-  // Test communication
-  uint8_t result = node.readHoldingRegisters(0x0000, 1);
-  return (result == node.ku8MBSuccess);
+  // Reinitialize ModbusMaster untuk sensor ultrasonik (Serial2) dengan current slave ID
+  ultrasonicNode.begin(getCurrentUltrasonicSlaveId(), Serial2);
+  delay(50); // Small delay for initialization
+
+  // Test communication untuk sensor magnet
+  uint8_t resultMagnet = magnetNode.readHoldingRegisters(0x0000, 1);
+  bool magnetOk = (resultMagnet == magnetNode.ku8MBSuccess);
+
+  // Test communication untuk sensor ultrasonik
+  uint8_t resultUltrasonic = ultrasonicNode.readHoldingRegisters(0x0000, 1);
+  bool ultrasonicOk = (resultUltrasonic == ultrasonicNode.ku8MBSuccess);
+
+  return (magnetOk && ultrasonicOk);
 }
 
 bool recoverMotorControl() {
@@ -246,14 +256,14 @@ bool recoverMotorControl() {
   return true;
 }
 
-bool recoverRfidCommunication() {
-  // Reinitialize RFID serial communication
-  Serial2.end();
-  delay(100);
-  Serial2.begin(9600);
-  delay(100);
-  return true;
-}
+// bool recoverRfidCommunication() {
+//   // Reinitialize RFID serial communication
+//   Serial2.end();
+//   delay(100);
+//   Serial2.begin(9600);
+//   delay(100);
+//   return true;
+// }
 
 bool recoverWifiConnection() {
   // Attempt WiFi reconnection

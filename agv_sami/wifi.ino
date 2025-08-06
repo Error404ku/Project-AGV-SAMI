@@ -51,7 +51,7 @@ void loopWifi() {
     unsigned long currentTime = millis();
     static unsigned long lastReconnectAttempt = 0;
     
-    if (currentTime - lastReconnectAttempt > 2000) { // Try reconnect every 5 seconds
+    if (currentTime - lastReconnectAttempt > 5000) { // Try reconnect every 5 seconds
       lastReconnectAttempt = currentTime;
       startWifiConnection();
     }

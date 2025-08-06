@@ -22,6 +22,7 @@
 #define MENU_RFID_UJUNG 15
 #define MENU_RFID_WAREHOUSE 16
 #define MENU_AUTO_INPUT_STATION 17
+#define MENU_RFID_PERTIGAAN 33
 #define MENU_TERMINAL_DROP 26
 #define MENU_TERMINAL_PICKUP 27
 // ===================================================================
@@ -51,6 +52,8 @@ void initMenuTempVariables() {
   tempMusicErrorPin = musicErrorPin;
   tempMusicDetectPin = musicDetectPin;
   tempMusicKomputerPin = musicKomputerPin;
+  tempMinSafeDistanceFront = minSafeDistanceFront;
+  tempMinSafeDistanceBack = minSafeDistanceBack;
 }
 
 // Global display functions
@@ -106,6 +109,10 @@ void saveSettings() {
  preferences.putInt("musicError", tempMusicErrorPin);
   preferences.putInt("musicDetect", tempMusicDetectPin);
   preferences.putInt("musicKomputer", tempMusicKomputerPin);
+  
+  // Save Ultrasonic settings
+  preferences.putUShort("SafeDistFront", tempMinSafeDistanceFront);
+  preferences.putUShort("SafeDistBack", tempMinSafeDistanceBack);
 
   // Apply PID values
   kpLinefollower = tempKp;
@@ -142,6 +149,10 @@ void saveSettings() {
   musicErrorPin = tempMusicErrorPin;
   musicDetectPin = tempMusicDetectPin;
   musicKomputerPin = tempMusicKomputerPin;
+  
+  // Apply Ultrasonic settings
+  minSafeDistanceFront = tempMinSafeDistanceFront;
+  minSafeDistanceBack = tempMinSafeDistanceBack;
 
   // End preferences session
   preferences.end();
@@ -151,7 +162,7 @@ void saveSettings() {
 
 void displayMainMenu() {
   // Menu items array
-  String menuItems[15] = {
+  String menuItems[16] = {
     "AGV Mode",           // selectedItem 0 -> MENU_AGV_MODE (1)
     "Reset AGV State",    // selectedItem 1 -> MENU_RESET_AGV_STATE (25)
     "Motor Test",         // selectedItem 2 -> MENU_MOTOR_TEST (2)
@@ -166,7 +177,8 @@ void displayMainMenu() {
     "Hook Test",          // selectedItem 11 -> MENU_HOOK_TEST (22)
     "Magnet Check",       // selectedItem 12 -> MENU_MAGNET_CHECK (23)
     "Ultrasonic Check",   // selectedItem 13 -> MENU_ULTRASONIC_CHECK (24)
-    "WiFi Settings"       // selectedItem 14 -> MENU_WIFI_SETTINGS (14)
+    "Ultrasonic Settings", // selectedItem 14 -> MENU_ULTRASONIC_SETTINGS (30)
+    "WiFi Settings"       // selectedItem 15 -> MENU_WIFI_SETTINGS (14)
   };
   maxItems = sizeof(menuItems) / sizeof(menuItems[0]);
   // Update scroll position if needed
@@ -248,6 +260,8 @@ void handleMenu() {
   switch (currentMenu) {
     case MENU_MAIN:
       displayMainMenu();
+      pwmMotor(0,0);
+      stopMusic();
       if (currentMillis - lastButtonPress >= buttonDelay) {
         if (UP()) {
           selectedItem = (selectedItem - 1 + maxItems) % maxItems;
@@ -345,7 +359,17 @@ void handleMenu() {
               menuNeedsRefresh = true;
               break;
               
-            case 14:  // WiFi Settings
+            case 14:  // Ultrasonic Settings
+              lcd.clear();
+              initMenuTempVariables();  // Initialize temporary variables
+              tempMinSafeDistanceFront = minSafeDistanceFront;  // Initialize temp variables
+              tempMinSafeDistanceBack = minSafeDistanceBack;
+              selectedItem = 0;  // Reset selection
+              currentMenu = MENU_ULTRASONIC_SETTINGS; // 30
+              menuNeedsRefresh = true;
+              break;
+              
+            case 15:  // WiFi Settings
               lcd.clear();
               currentMenu = MENU_WIFI_SETTINGS; // 14
               menuNeedsRefresh = true;
@@ -726,6 +750,36 @@ void handleMenu() {
       }
       break;
 
+    case MENU_ULTRASONIC_SETTINGS:
+      displayUltrasonicSettings();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleUltrasonicSettings();
+        if (UP() || DOWN() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_ULTRASONIC_FRONT:
+      displayUltrasonicFrontSettings();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleUltrasonicFrontSettings();
+        if (LEFT() || RIGHT() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_ULTRASONIC_BACK:
+      displayUltrasonicBackSettings();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleUltrasonicBackSettings();
+        if (LEFT() || RIGHT() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
     case MENU_WIFI_SETTINGS:
       displayWifiSettings();
       if (currentMillis - lastButtonPress >= buttonDelay) {
@@ -760,6 +814,16 @@ void handleMenu() {
       displayAutoInputStation();
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handleAutoInputStation();
+        if (START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+      
+    case MENU_RFID_PERTIGAAN:
+      displayRfidPertigaan();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleRfidPertigaan();
         if (START() || STOP()) {
           lastButtonPress = currentMillis;
         }
@@ -1046,15 +1110,16 @@ void displayRfidSettings() {
   // Only redraw menu items if refresh is needed
   if (needsRefresh) {
     // RFID Menu items
-    String rfidMenuItems[10] = {
+    String rfidMenuItems[11] = {
       "Station: " + String(selectedStationId),
       "Scan RFID",
+      "Auto Input Station",
+      "RFID Pertigaan",
       "View All",
       "Delete Station",
       "Clear All",
       "RFID Ujung",
       "RFID Warehouse",
-      "Auto Input Station",
       "Terminal Drop",
       "Terminal Pickup"
     };
@@ -1066,9 +1131,9 @@ void displayRfidSettings() {
     }
 
     // Simple display - show items with scrolling if needed
-    int startIdx = max(0, min(selectedRfidItem - 1, 10 - 3));
+    int startIdx = max(0, min(selectedRfidItem - 1, 11 - 3));
 
-    for (int i = 0; i < 3 && (startIdx + i) < 10; i++) {
+    for (int i = 0; i < 3 && (startIdx + i) < 11; i++) {
       int itemIndex = startIdx + i;
       lcd.setCursor(0, i + 1);
 
@@ -1572,9 +1637,9 @@ void handleRfidSettings() {
   }
 
   if (UP()) {
-    selectedRfidItem = (selectedRfidItem - 1 + 10) % 10;
+    selectedRfidItem = (selectedRfidItem - 1 + 11) % 11;
   } else if (DOWN()) {
-    selectedRfidItem = (selectedRfidItem + 1) % 10;
+    selectedRfidItem = (selectedRfidItem + 1) % 11;
   } else if (RIGHT()) {
     if (selectedRfidItem == 0) {
       // Change station ID
@@ -1595,7 +1660,17 @@ void handleRfidSettings() {
         newRfidScanned = false;  // Reset flag
         break;
 
-      case 2:  // View All
+      case 2:  // Auto Input Station
+        currentMenu = MENU_AUTO_INPUT_STATION;
+        menuNeedsRefresh = true;
+        break;
+        
+      case 3:  // RFID Pertigaan
+        currentMenu = MENU_RFID_PERTIGAAN;
+        menuNeedsRefresh = true;
+        break;
+
+      case 4:  // View All
         {
           lcd.clear();
           lcd.setCursor(0, 0);
@@ -1638,7 +1713,7 @@ void handleRfidSettings() {
         }
         break;
 
-      case 3:  // Delete Station
+      case 5:  // Delete Station
         {
           if (deleteRfidStation(selectedStationId)) {
             lcd.clear();
@@ -1656,7 +1731,7 @@ void handleRfidSettings() {
         }
         break;
 
-      case 4:  // Clear All
+      case 6:  // Clear All
         {
           lcd.clear();
           lcd.setCursor(0, 1);
@@ -1683,27 +1758,22 @@ void handleRfidSettings() {
         }
         break;
 
-      case 5:  // RFID Ujung
+      case 7:  // RFID Ujung
         currentMenu = MENU_RFID_UJUNG;
         menuNeedsRefresh = true;
         break;
 
-      case 6:  // RFID Warehouse
+      case 8:  // RFID Warehouse
         currentMenu = MENU_RFID_WAREHOUSE;
         menuNeedsRefresh = true;
         break;
 
-      case 7:  // Auto Input Station
-        currentMenu = MENU_AUTO_INPUT_STATION;
-        menuNeedsRefresh = true;
-        break;
-        
-      case 8:  // Terminal Drop
+      case 9:  // Terminal Drop
         currentMenu = MENU_TERMINAL_DROP;
         menuNeedsRefresh = true;
         break;
         
-      case 9:  // Terminal Pickup
+      case 10:  // Terminal Pickup
         currentMenu = MENU_TERMINAL_PICKUP;
         menuNeedsRefresh = true;
         break;
@@ -1787,6 +1857,10 @@ void handleResetMenu() {
     tempMusicErrorPin = 1;     // pinMusic2
     tempMusicDetectPin = 2;    // pinMusic3
     tempMusicKomputerPin = 3;  // pinMusic4
+    
+    // Reset Ultrasonic settings to defaults
+    tempMinSafeDistanceFront = 30;
+    tempMinSafeDistanceBack = 20;  // Default safe distance
 
     // Save default values
     saveSettings();
@@ -2053,40 +2127,6 @@ void handleUltrasonicCheck() {
 }
 
 void displayWifiSettings() {
-  if (isConnectingWifi) {
-    // Show connecting status
-    lcd.setCursor(0, 0);
-    lcd.print("Mencari WiFi        ");
-    unsigned long elapsed = millis() - wifiConnectStartTime;
-    
-    lcd.setCursor(0, 2);
-    if (WiFi.status() == WL_CONNECTED) {
-      lcd.print("Berhasil!           ");
-      isConnectingWifi = false;
-      wifiConnectionResult = true;
-    } else if (elapsed >= WIFI_CONNECT_TIMEOUT) {
-      lcd.print("Gagal!              ");
-      isConnectingWifi = false;
-      wifiConnectionResult = false;
-    } else {
-      int dots = (elapsed / 500) % 4;
-      lcd.print("Menunggu");
-      for (int i = 0; i < dots; i++) {
-        lcd.print(".");
-      }
-      for (int i = dots; i < 3; i++) {
-        lcd.print(" ");
-      }
-      lcd.print("        ");
-    }
-    
-    lcd.setCursor(0, 1);
-    lcd.print("                    ");
-    lcd.setCursor(0, 3);
-    lcd.print("                    ");
-    return;
-  }
-  
   // Display different info based on scroll index
   switch (wifiScrollIndex) {
     case 0: // Status & Connection Info
@@ -2158,17 +2198,7 @@ void displayWifiSettings() {
 }
 
 void handleWifiSettings() {
-  if (isConnectingWifi) {
-    // Check if connection completed
-    unsigned long elapsed = millis() - wifiConnectStartTime;
-    if (WiFi.status() == WL_CONNECTED || elapsed >= WIFI_CONNECT_TIMEOUT) {
-      isConnectingWifi = false;
-    }
-    return;
-  }
-  
-
-  
+ 
   if (UP()) {
     // Scroll up in main WiFi menu
     wifiScrollIndex--;
@@ -2815,12 +2845,264 @@ void handleTerminalPickup() {
         displayTerminalPickup();
         return;
       }
-      delay(50);
+      delay(100);
     }
     
+    // Timeout
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print("Scan timeout!");
+    delay(1500);
+    displayTerminalPickup();
   } else if (STOP()) {
     currentMenu = MENU_RFID_SETTINGS;
+    menuNeedsRefresh = true;
+  }
+}
+
+// ===== RFID PERTIGAAN FUNCTIONS =====
+void displayRfidPertigaan() {
+  displayMenuHeader("RFID Pertigaan");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Current RFID:");
+  
+  lcd.setCursor(0, 2);
+  if (pertigaanRfidId.length() > 0) {
+    String shortRfid = pertigaanRfidId.substring(0, 12);
+    lcd.print(shortRfid);
+    lcd.print("    ");
+  } else {
+    lcd.print("Not set         ");
+  }
+  
+  lcd.setCursor(0, 3);
+  lcd.print("A:Scan STOP:Back   ");
+}
+
+void handleRfidPertigaan() {
+  if (START()) { // Scan RFID
+    lcd.setCursor(0, 1);
+    lcd.print("Scanning RFID...    ");
+    lcd.setCursor(0, 2);
+    lcd.print("Place card on reader");
+    lcd.setCursor(0, 3);
+    lcd.print("STOP:Cancel         ");
+    
+    unsigned long scanStart = millis();
+    newRfidScanned = false;
+    
+    while (millis() - scanStart < 10000) { // 10 second timeout
+      if (newRfidScanned) {
+        String scannedRfid = String(lastScannedRfidOptimized);
+        savePertigaanRfid(scannedRfid);
+        
+        lcd.clear();
+        lcd.setCursor(0, 1);
+        lcd.print("Pertigaan RFID");
+        lcd.setCursor(0, 2);
+        lcd.print("saved successfully!");
+        delay(2000);
+        
+        newRfidScanned = false;
+        displayRfidPertigaan();
+        return;
+      } else if (LEFT() || STOP()) {
+        displayRfidPertigaan();
+        return;
+      }
+      delay(100);
+    }
+    
+    // Timeout
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print("Scan timeout!");
+    delay(1500);
+    displayRfidPertigaan();
+  } else if (STOP()) {
+    currentMenu = MENU_RFID_SETTINGS;
+    menuNeedsRefresh = true;
+  }
+}
+
+void saveRfidPertigaanToPreferences() {
+  // Implementasi sederhana - hanya simpan satu RFID
+  preferences.begin("rfid_pertigaan", false);
+  preferences.putString("pertigaanRfid", pertigaanRfidId);
+  preferences.end();
+}
+
+void displayUltrasonicSettings() {
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
+  displayMenuHeader("Ultrasonic Settings");
+  
+  // Display Front Sensor option
+  lcd.setCursor(0, 1);
+  if (selectedItem == 0) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Front Sensor");
+  
+  // Display Back Sensor option
+  lcd.setCursor(0, 2);
+  if (selectedItem == 1) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Back Sensor");
+  
+  lcd.setCursor(0, 3);
+  lcd.print("A:Select B:Back");
+}
+
+void handleUltrasonicSettings() {
+  if (UP()) {
+    if (selectedItem > 0) {
+      selectedItem--;
+    }
+  } else if (DOWN()) {
+    if (selectedItem < 1) {  // 0=Front, 1=Back
+      selectedItem++;
+    }
+  } else if (START()) {
+    // Enter selected submenu
+    if (selectedItem == 0) {
+      // Front Sensor Settings
+      currentMenu = MENU_ULTRASONIC_FRONT;
+      menuNeedsRefresh = true;
+    } else if (selectedItem == 1) {
+      // Back Sensor Settings
+      currentMenu = MENU_ULTRASONIC_BACK;
+      menuNeedsRefresh = true;
+    }
+  } else if (STOP()) {
+    // Back to main menu
+    currentMenu = MENU_MAIN;
     menuStartIndex = 0;
+    selectedItem = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+// Ultrasonic Front Settings Functions
+void displayUltrasonicFrontSettings() {
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
+  displayMenuHeader("Front Sensor");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Min Safe Distance:");
+  
+  lcd.setCursor(0, 2);
+  lcd.print(String(tempMinSafeDistanceFront) + " cm");
+  
+  lcd.setCursor(0, 3);
+  lcd.print("L/R:Adj A:Save B:Back");
+}
+
+void handleUltrasonicFrontSettings() {
+  if (LEFT()) {
+    // Decrease by 1 cm
+    if (tempMinSafeDistanceFront > 5) {  // Minimum 5 cm
+      tempMinSafeDistanceFront--;
+    }
+  } else if (RIGHT()) {
+    // Increase by 1 cm
+    if (tempMinSafeDistanceFront < 100) {  // Maximum 100 cm
+      tempMinSafeDistanceFront++;
+    }
+  } else if (START()) {
+    // Save settings
+    minSafeDistanceFront = tempMinSafeDistanceFront;
+    
+    // Save to preferences
+    preferences.begin("agv-settings", false);
+    preferences.putUShort("SafeDistFront", tempMinSafeDistanceFront);
+    preferences.end();
+    
+    // Show confirmation
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print("Front settings saved!");
+    lcd.setCursor(0, 2);
+    lcd.print("Min distance: " + String(tempMinSafeDistanceFront) + "cm");
+    delay(2000);
+    
+    currentMenu = MENU_ULTRASONIC_SETTINGS;
+    selectedItem = 0;
+    menuNeedsRefresh = true;
+  } else if (STOP()) {
+    // Cancel changes
+    tempMinSafeDistanceFront = minSafeDistanceFront;
+    currentMenu = MENU_ULTRASONIC_SETTINGS;
+    selectedItem = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+// Ultrasonic Back Settings Functions
+void displayUltrasonicBackSettings() {
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
+  displayMenuHeader("Back Sensor");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Min Safe Distance:");
+  
+  lcd.setCursor(0, 2);
+  lcd.print(String(tempMinSafeDistanceBack) + " cm");
+  
+  lcd.setCursor(0, 3);
+  lcd.print("L/R:Adj A:Save B:Back");
+}
+
+void handleUltrasonicBackSettings() {
+  if (LEFT()) {
+    // Decrease by 1 cm
+    if (tempMinSafeDistanceBack > 5) {  // Minimum 5 cm
+      tempMinSafeDistanceBack--;
+    }
+  } else if (RIGHT()) {
+    // Increase by 1 cm
+    if (tempMinSafeDistanceBack < 100) {  // Maximum 100 cm
+      tempMinSafeDistanceBack++;
+    }
+  } else if (START()) {
+    // Save settings
+    minSafeDistanceBack = tempMinSafeDistanceBack;
+    
+    // Save to preferences
+    preferences.begin("agv-settings", false);
+    preferences.putUShort("SafeDistBack", tempMinSafeDistanceBack);
+    preferences.end();
+    
+    // Show confirmation
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print("Back settings saved!");
+    lcd.setCursor(0, 2);
+    lcd.print("Min distance: " + String(tempMinSafeDistanceBack) + "cm");
+    delay(2000);
+    
+    currentMenu = MENU_ULTRASONIC_SETTINGS;
+    selectedItem = 1;
+    menuNeedsRefresh = true;
+  } else if (STOP()) {
+    // Cancel changes
+    tempMinSafeDistanceBack = minSafeDistanceBack;
+    currentMenu = MENU_ULTRASONIC_SETTINGS;
+    selectedItem = 1;
     menuNeedsRefresh = true;
   }
 }

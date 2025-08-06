@@ -51,10 +51,21 @@ void agvWarehouse() {
     }
   }
   if (START()) {
-    stopMusic();
-    lastReadTime = 0;
-    trigger = true;
-    playMusic = true;
+    if (targetStationsList.size() == 0){
+      // Tampilkan pesan tidak ada station di warehouse
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Tidak ada station");
+      lcd.setCursor(0, 1);
+      lcd.print("dalam daftar target");
+      delay(2000); // Tampilkan pesan selama 2 detik
+      return; // Kembali tanpa memulai pergerakan
+    } else {
+      stopMusic();
+      lastReadTime = 0;
+      trigger = true;
+      playMusic = true;
+    }
   }
   if (!trigger) {
     agvStop();
@@ -75,6 +86,7 @@ void agvStation() {
   static unsigned long lastReadTime = 0;
   unsigned long currentTime = millis();
   if (playMusic) {
+    agvStop();
     music(MUSIC_MODE_DETECT);
     if (lastReadTime == 0) {
       lastReadTime = currentTime;
@@ -92,10 +104,18 @@ void agvStation() {
     playMusic = true;
   }
   if (trigger) {
-    if (moveStateAgv == AGV_STATE_MOVE_FORWARD) {
-      agvMode(AGV_STATE_MOVE_FORWARD);
-    } else if (moveStateAgv == AGV_STATE_MOVE_BACKWARD) {
+    // Cek apakah masih ada station di StationList
+    if (targetStationsList.size() == 0) {
+      // Tidak ada station tersisa, ubah ke mode backward
+      moveStateAgv = AGV_STATE_MOVE_BACKWARD;
       agvMode(AGV_STATE_MOVE_BACKWARD);
+    } else {
+      // Masih ada station, lanjutkan sesuai arah sebelumnya
+      if (moveStateAgv == AGV_STATE_MOVE_FORWARD) {
+        agvMode(AGV_STATE_MOVE_FORWARD);
+      } else if (moveStateAgv == AGV_STATE_MOVE_BACKWARD) {
+        agvMode(AGV_STATE_MOVE_BACKWARD);
+      }
     }
     trigger = false;
     return;
@@ -107,6 +127,8 @@ void agvTerminalDrop() {
   static int dropProcessStep = 0; 
   saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_DROP);
   modeDisplayTerminalDrop();
+  static unsigned long lastStopTime = 0;
+  static unsigned long currentTime = millis();
 
   switch (dropProcessStep) {
     case 0: 
@@ -116,6 +138,7 @@ void agvTerminalDrop() {
     case 1: 
       hookPosition = hook(DOWN_HOOK);
       if (hookPosition == DOWN_POS) {
+        delay(5000);
         dropProcessStep = 2; 
       }
       break;
@@ -135,13 +158,21 @@ void agvTerminalPickup() {
   }
   if (!stopCalledPickup) {
     agvStop();
+    delay(2000);
     stopCalledPickup = true;
   }
   if (!isHookUp) {
     bool triggerNaikOtomatis = (currentStateAgv != AGV_STATE_NULL);
     bool triggerNaikManual = (currentStateAgv == AGV_STATE_NULL && START());
-
-    if (triggerNaikOtomatis || triggerNaikManual) {
+    currentRFID = AGV_STATE_TERMINAL_PICKUP;
+    if (triggerNaikOtomatis) {
+      saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_PICKUP);
+      hookPosition = hook(UP_HOOK);
+      if (hookPosition == UP_POS){
+        isHookUp = true;
+      }
+    }
+    if (triggerNaikManual) {
       saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_PICKUP);
       hookPosition = hook(UP_HOOK);
       if (hookPosition == UP_POS){
@@ -226,7 +257,7 @@ void agvMoveForward() {
     if (exceptErrorPosition && totalSensorAktif > 5) {
       pidLinefollower(0, PID_MODE_MAJU);  // Error = 0
     }else if(forceLeft){
-      pwmMotor(baseSpeed, baseSpeed);
+      pwmMotor(baseSpeed/2, baseSpeed/2);
       if (totalSensorAktif == 0){
         inLine = false;
       }
@@ -256,6 +287,14 @@ void agvMoveBackward() {
     saveExceptErrorFlag();       // Simpan flag ke preferences
     newRfidScanned = false;      // Reset flag
   }
+  // Kembali ke mode maju ketika mencapai jalur lurus (10+ sensor aktif)
+  if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, pertigaanRfidId)) {
+    exceptErrorPosition = false;
+    forceLeft = true;
+    saveExceptErrorFlag();
+    agvMode(AGV_STATE_MOVE_FORWARD);
+    return;
+  }
 
   if (targetStationsList.size() != 0) {
     // Cek apakah ada RFID yang terbaca
@@ -273,14 +312,6 @@ void agvMoveBackward() {
         }
       }
     }
-  }
-  // Kembali ke mode maju ketika mencapai jalur lurus (10+ sensor aktif)
-  if (totalSensorAktif > 13) {
-    exceptErrorPosition = false;
-    forceLeft = true;
-    saveExceptErrorFlag();
-    agvMode(AGV_STATE_MOVE_FORWARD);
-    return;
   }
   // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
   if (!obstacleDetected) {

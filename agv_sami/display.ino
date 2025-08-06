@@ -9,26 +9,26 @@ void resetDisplayFlags() {
 void displayPrint() {
   static AgvState lastDisplayedState = AGV_STATE_STOP;
   static bool displayInitialized = false;
-  
+
   // Reset flag jika diminta
   if (resetDisplayRequested) {
     displayInitialized = false;
   }
-  
+
   // Hanya update display jika state berubah atau belum diinisialisasi
   if (!displayInitialized || currentStateAgv != lastDisplayedState) {
     lcd.setCursor(0, 0);
-    lcd.print("AGV Mode:           "); // Tambah spasi untuk clear sisa karakter
+    lcd.print("AGV Mode:           ");  // Tambah spasi untuk clear sisa karakter
     lcd.setCursor(0, 1);
     String stateString = agvStateToString(currentStateAgv);
-    stateString += "                "; // Tambah spasi untuk clear sisa karakter
+    stateString += "                ";  // Tambah spasi untuk clear sisa karakter
     lcd.print(stateString);
-    
+
     // Update state tracking
     lastDisplayedState = currentStateAgv;
     displayInitialized = true;
   }
-  
+
   // Reset global flag setelah digunakan
   if (resetDisplayRequested) {
     resetDisplayRequested = false;
@@ -58,9 +58,9 @@ void scrollText(int row, String message, int delayTime) {
   // Tambahkan spasi di awal dan akhir pesan untuk efek scrolling yang mulus
   String paddedMessage = message;
   for (int i = 0; i < 16; i++) {
-    paddedMessage = " " + paddedMessage;  
-  } 
-  paddedMessage = paddedMessage + " "; 
+    paddedMessage = " " + paddedMessage;
+  }
+  paddedMessage = paddedMessage + " ";
 
   // Lakukan scrolling jika waktu yang ditentukan telah berlalu
   if (millis() - lastScrollTime > delayTime) {
@@ -74,29 +74,29 @@ void scrollText(int row, String message, int delayTime) {
   }
 }
 
-void modeDisplayWarehouse(){
+void modeDisplayWarehouse() {
   static bool displayInitialized = false;
-  
+
   // Reset flag jika diminta
   if (resetDisplayRequested) {
     displayInitialized = false;
   }
-  
+
   // Hanya update baris pertama sekali saja
   if (!displayInitialized) {
-    lcd.setCursor(0,0);
-    lcd.print("Mode: Warehouse     "); // Tambah spasi untuk clear sisa karakter
+    lcd.setCursor(0, 0);
+    lcd.print("Mode: Warehouse     ");  // Tambah spasi untuk clear sisa karakter
     displayInitialized = true;
   }
   scrollText(1, "Tekan Start untuk jalan", 500);
 }
 
-void modeDisplayMoveForward(){
+void modeDisplayMoveForward() {
   scrollText(0, "Mode : Move Forward", 500);
   displaySensorData();
 }
 
-void modeDisplayMoveBackward(){
+void modeDisplayMoveBackward() {
   scrollText(0, "Mode : Move Backward", 500);
   displaySensorData();
 }
@@ -110,27 +110,27 @@ void modeDisplayTerminalPickup(bool hookIsUp) {
   static bool lastHookIsUp = false;
   static AgvState lastCurrentStateAgv = AGV_STATE_STOP;
   static bool displayInitialized = false;
-  
+
   // Reset flag jika diminta
   if (resetDisplayRequested) {
     displayInitialized = false;
   }
-  
+
   // Hanya update display jika ada perubahan atau belum diinisialisasi
   if (!displayInitialized || hookIsUp != lastHookIsUp || currentStateAgv != lastCurrentStateAgv) {
     lcd.setCursor(0, 0);
-    lcd.print("Mode: Pickup        "); // Tambah spasi untuk clear sisa karakter
+    lcd.print("Mode: Pickup        ");  // Tambah spasi untuk clear sisa karakter
     lcd.setCursor(0, 1);
     if (!hookIsUp) {
       if (currentStateAgv == AGV_STATE_NULL) {
-        lcd.print("Start u/ Naikkan    "); 
+        lcd.print("Start u/ Naikkan    ");
       } else {
         lcd.print("Hook naik auto..    ");
       }
     } else {
       lcd.print("START untuk jln     ");
     }
-    
+
     // Update state tracking
     lastHookIsUp = hookIsUp;
     lastCurrentStateAgv = currentStateAgv;
@@ -138,14 +138,14 @@ void modeDisplayTerminalPickup(bool hookIsUp) {
   }
 }
 
-void modeDisplayTerminalDrop(){
-  lcd.setCursor(0,0);
+void modeDisplayTerminalDrop() {
+  lcd.setCursor(0, 0);
   scrollText(0, "Mode: Terminal Drop", 500);
   scrollText(1, "Tekan Start untuk jalan", 500);
 }
 
-void modeDisplayStation(){
-  lcd.setCursor(0,0);
+void modeDisplayStation() {
+  lcd.setCursor(0, 0);
   scrollText(0, "Mode: Station", 500);
   scrollText(1, "Tekan Start untuk jalan", 500);
 }

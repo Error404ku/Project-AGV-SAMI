@@ -138,15 +138,15 @@ void setupWebServer() {
 }
 
 void setupUltrasonikWithParams(int slaveId) {
-  // Initialize ultrasonic sensor with ModbusMaster
-  initUltrasonicSensor(slaveId);
+  // Initialize ultrasonic sensor with ModbusMaster (Serial2)
+  setupSensorUltrasonic(slaveId);
 }
 
 void setupRS485(int baudrate) {
   Serial.printf("[DEBUG] setupRS485 dimulai dengan baudrate: %d\n", baudrate);
   Serial.printf("[DEBUG] RS485 pins - RX: %d, TX: %d, RE: %d, DE: %d\n", RS485_RX, RS485_TX, MAX485_RE, MAX485_DE);
 
-  // Initialize Serial1 for RS485 communication
+  // Initialize Serial1 for RS485 communication (Magnet sensors)
   Serial1.begin(baudrate, SERIAL_8N1, RS485_RX, RS485_TX);
 
   // Setup control pins for MAX485
@@ -161,12 +161,39 @@ void setupRS485(int baudrate) {
   delay(100);
 
   if (Serial1) {
-    Serial.println("[SUCCESS] RS485 komunikasi berhasil diinisialisasi!");
+    Serial.println("[SUCCESS] RS485 Serial1 komunikasi berhasil diinisialisasi!");
   } else {
-    Serial.println("[ERROR] Gagal menginisialisasi RS485 komunikasi!");
+    Serial.println("[ERROR] Gagal menginisialisasi RS485 Serial1 komunikasi!");
   }
 
-  Serial.printf("[INFO] setupRS485 selesai dengan baudrate: %d\n", baudrate);
+  Serial.printf("[INFO] setupRS485 Serial1 selesai dengan baudrate: %d\n", baudrate);
+}
+
+void setupRS485_Serial2(int baudrate) {
+  Serial.printf("[DEBUG] setupRS485_Serial2 dimulai dengan baudrate: %d\n", baudrate);
+  Serial.printf("[DEBUG] RS485 Serial2 pins - RX: %d, TX: %d, RE: %d, DE: %d\n", RS485_RX2, RS485_TX2, MAX485_RE, MAX485_DE);
+
+  // Initialize Serial2 for RS485 communication (Ultrasonic sensors)
+  Serial2.begin(baudrate, SERIAL_8N1, RS485_RX2, RS485_TX2);
+
+  // Setup control pins for MAX485 Serial2 (menggunakan pin yang sama dengan Serial1)
+  pinMode(MAX485_RE, OUTPUT);
+  pinMode(MAX485_DE, OUTPUT);
+
+  // Set to receive mode (RE=0, DE=0)
+  digitalWrite(MAX485_RE, 0);
+  digitalWrite(MAX485_DE, 0);
+
+  // Wait for Serial2 to be ready
+  delay(100);
+
+  if (Serial2) {
+    Serial.println("[SUCCESS] RS485 Serial2 komunikasi berhasil diinisialisasi!");
+  } else {
+    Serial.println("[ERROR] Gagal menginisialisasi RS485 Serial2 komunikasi!");
+  }
+
+  Serial.printf("[INFO] setupRS485 Serial2 selesai dengan baudrate: %d\n", baudrate);
 }
 
 void setupSensorMagnet(int slaveId) {
@@ -179,23 +206,52 @@ void setupSensorMagnet(int slaveId) {
   }
 
   Serial.printf("[DEBUG] Menginisialisasi ModbusMaster dengan Slave ID: %d\n", slaveId);
-  node.begin(slaveId, Serial1);  // Slave ID
-  node.preTransmission(preTransmissionMagnet);
-  node.postTransmission(postTransmissionMagnet);
+  magnetNode.begin(slaveId, Serial1);
+  magnetNode.preTransmission(preTransmissionMagnet);
+  magnetNode.postTransmission(postTransmissionMagnet);
 
   Serial.printf("[DEBUG] Mengatur magnet slave ID ke: %d\n", slaveId);
   setMagnetSlaveId(slaveId);
 
   // Test communication
   Serial.println("[DEBUG] Testing komunikasi dengan sensor magnet...");
-  uint8_t testResult = node.readHoldingRegisters(0x0000, 2);
-  if (testResult == node.ku8MBSuccess) {
+  uint8_t testResult = magnetNode.readHoldingRegisters(0x0000, 2);
+  if (testResult == magnetNode.ku8MBSuccess) {
     Serial.println("[SUCCESS] Test komunikasi sensor magnet berhasil!");
   } else {
     Serial.printf("[WARNING] Test komunikasi sensor magnet gagal. Error: 0x%02X\n", testResult);
   }
 
   Serial.printf("[INFO] Inisialisasi Sensor Magnet selesai. Slave ID: %d\n", slaveId);
+}
+
+void setupSensorUltrasonic(int slaveId) {
+  Serial.printf("[DEBUG] setupSensorUltrasonic dimulai dengan Slave ID: %d\n", slaveId);
+
+  // Check if Serial2 is available
+  if (!Serial2) {
+    Serial.println("[ERROR] Serial2 tidak tersedia untuk setup sensor ultrasonik!");
+    return;
+  }
+
+  Serial.printf("[DEBUG] Menginisialisasi ModbusMaster Ultrasonic dengan Slave ID: %d\n", slaveId);
+  ultrasonicNode.begin(slaveId, Serial2);// Slave ID untuk sensor ultrasonik (Serial2)
+  ultrasonicNode.preTransmission(preTransmissionUltrasonic);
+  ultrasonicNode.postTransmission(postTransmissionUltrasonic);
+
+  Serial.printf("[DEBUG] Mengatur ultrasonic slave ID ke: %d\n", slaveId);
+  setUltrasonicSlaveId(slaveId);
+
+  // Test communication
+  Serial.println("[DEBUG] Testing komunikasi dengan sensor ultrasonik...");
+  uint8_t testResult = ultrasonicNode.readHoldingRegisters(0x0000, 5);
+  if (testResult == ultrasonicNode.ku8MBSuccess) {
+    Serial.println("[SUCCESS] Test komunikasi sensor ultrasonik berhasil!");
+  } else {
+    Serial.printf("[WARNING] Test komunikasi sensor ultrasonik gagal. Error: 0x%02X\n", testResult);
+  }
+
+  Serial.printf("[INFO] Inisialisasi Sensor Ultrasonik selesai. Slave ID: %d\n", slaveId);
 }
 
 
@@ -255,6 +311,10 @@ void setupMenu() {
   tempMusicErrorPin = preferences.getInt("musicError", 1);
   tempMusicDetectPin = preferences.getInt("musicDetect", 2);
   tempMusicKomputerPin = preferences.getInt("musicKomputer", 3);
+  
+  // Load Ultrasonic settings
+  tempMinSafeDistanceFront = preferences.getUShort("SafeDistFront", 30);
+  tempMinSafeDistanceBack = preferences.getUShort("SafeDistBack", 20);
 
   // Apply PID values
   kpLinefollower = tempKp;
@@ -291,6 +351,10 @@ void setupMenu() {
   musicErrorPin = tempMusicErrorPin;
   musicDetectPin = tempMusicDetectPin;
   musicKomputerPin = tempMusicKomputerPin;
+  
+  // Apply Ultrasonic settings
+  minSafeDistanceFront = tempMinSafeDistanceFront;
+  minSafeDistanceBack = tempMinSafeDistanceBack;
 
   preferences.end();
 
@@ -300,6 +364,7 @@ void setupMenu() {
   // Load RFID Ujung and Warehouse data
   loadRfidUjungFromPreferences();
   loadRfidWarehouseFromPreferences();
+  loadRfidPertigaanFromPreferences();
   loadWarehouseUjungRfid();
   
   // Load Terminal RFID data
@@ -330,22 +395,17 @@ void setupAll() {
   setupMusic();
   setupDisplay();
   setupMenu();  // Initialize menu system
-  setupRS485(BAUDRATE);
+  // Setup RS485 communication for both Serial1 and Serial2
+  setupRS485(BAUDRATE);        // Serial1 untuk sensor magnet
+  setupRS485_Serial2(BAUDRATE); // Serial2 untuk sensor ultrasonik
   delay(200);
   setupSensorMagnet(SLAVEID_MAGNET_DEPAN);  
-  setupUltrasonikWithParams(SLAVEID_ULTRASONIK_DEPAN);
+  setupSensorUltrasonic(SLAVEID_ULTRASONIK_DEPAN);
   setupHook();  // setupBuzzer();
   setupWifi();  // Setup WiFi configuration
   setupWebServer();
   setupTombol();
   setupRfid();
-  
-  // Load RFID data from preferences
-  loadRfidUjungFromPreferences();
-  loadRfidWarehouseFromPreferences();
-  // loadAutoStationsFromPreferences(); // Function removed - using existing RFID station management
-  loadTerminalRfid();
-  
   // Initialize performance optimization
   resetSensorTimers();
   

@@ -48,12 +48,14 @@ void loopMagneticSensor() {
   //   firstRun = false;
   // }
 
-  // Ultra-fast slave ID switching with zero-overhead
-  // static int lastSlaveId = -1;
-  // if (currentMagnetSlaveId != lastSlaveId) {
-  node.begin(currentMagnetSlaveId, Serial1);
-  //   lastSlaveId = currentMagnetSlaveId;
-  // }
+  // Ultra-fast slave ID switching with zero-overhead - INDUSTRY STANDARD
+  // Only call begin() when slave ID changes - most efficient approach
+  static int lastSlaveId = -1;
+  if (currentMagnetSlaveId != lastSlaveId) {
+    magnetNode.begin(currentMagnetSlaveId, Serial1);
+    lastSlaveId = currentMagnetSlaveId;
+    delay(10);
+  }
 
   // Enhanced error handling with exponential backoff
   static int consecutiveFailures[2] = {0, 0};  // [front, back]
@@ -64,21 +66,21 @@ void loopMagneticSensor() {
   
   // Exponential backoff for failed reads
   if (consecutiveFailures[sensorIndex] > 0) {
-    unsigned long backoffDelay = min(1000, (1 << consecutiveFailures[sensorIndex]) * 50);
+    unsigned long backoffDelay = min(200, (1 << consecutiveFailures[sensorIndex]) * 50);
     if (currentMillis - lastRetryTime[sensorIndex] < backoffDelay) {
       return;  // Skip this cycle for backoff
     }
   }
 
   // Optimized single-read operation
-  uint8_t result = node.readHoldingRegisters(0x0000, 2);
+  uint8_t result = magnetNode.readHoldingRegisters(0x0000, 2);
   
-  if (result == node.ku8MBSuccess) {
+  if (result == magnetNode.ku8MBSuccess) {
     consecutiveFailures[sensorIndex] = 0;
     
     // Cache sensor data
-    uint16_t medianValue = node.getResponseBuffer(0);
-    uint16_t positionBitmask = node.getResponseBuffer(1);
+    uint16_t medianValue = magnetNode.getResponseBuffer(0);
+    uint16_t positionBitmask = magnetNode.getResponseBuffer(1);
     
     // Fast processing with bit manipulation
     if (positionBitmask == 0xFFFF) {
@@ -244,17 +246,14 @@ void switchMagnetSensor(bool useFrontSensor) {
 }
 
 /**
- * Set magnet slave ID with validation and bounds checking
+ * Set magnet slave ID with validation and bounds checking - INDUSTRY STANDARD
+ * No need to call begin() here - it will be called automatically in loop when ID changes
  * @param slaveId Modbus slave ID (1-247)
  */
 void setMagnetSlaveId(int slaveId) {
   if (slaveId >= 1 && slaveId <= 247) {  // Valid Modbus RTU range
     currentMagnetSlaveId = slaveId;
-    
-    // Ensure Modbus is properly reinitialized when slave ID changes
-    // if (Serial1) {
-    //   node.begin(currentMagnetSlaveId, Serial1);
-    // }
+    // begin() will be called automatically in loopMagneticSensor() when ID changes
   }
 }
 

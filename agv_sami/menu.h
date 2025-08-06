@@ -22,6 +22,9 @@
 #define MENU_MAGNET_CHECK 23
 #define MENU_ULTRASONIC_CHECK 24
 #define MENU_RESET_AGV_STATE 25
+#define MENU_ULTRASONIC_SETTINGS 30
+#define MENU_ULTRASONIC_FRONT 31
+#define MENU_ULTRASONIC_BACK 32
 #define MENU_PID_FORWARD 28
 #define MENU_PID_BACKWARD 29
 
@@ -59,5 +62,11 @@ void handleWifiSettings();
 void displayPidSubmenu();
 void displayPidForwardSettings();
 void displayPidBackwardSettings();
+void displayUltrasonicSettings();
+void handleUltrasonicSettings();
+void displayUltrasonicFrontSettings();
+void displayUltrasonicBackSettings();
+void handleUltrasonicFrontSettings();
+void handleUltrasonicBackSettings();
 
 #endif
