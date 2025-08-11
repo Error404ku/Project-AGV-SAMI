@@ -1,7 +1,7 @@
 #include "config.h"
 #include "performance_linefollower.h"
-extern bool modeMaju;
-extern bool modeMundur;
+// extern bool modeMaju; // Removed - not used
+// extern bool modeMundur; // Removed - not used
 
 void setup() {
   Serial.begin(115200);
@@ -24,6 +24,10 @@ void setup() {
 }
 
 void loop() {
+  // ===================================================================
+  //                        BACKGROUND TASKS
+  // ===================================================================
+  
   server.handleClient();
   loopWifi();  // Handle WiFi connection monitoring
   
@@ -33,12 +37,18 @@ void loop() {
   }
 
   if (isAgvMode) {
+    // ===================================================================
+    //                        AGV MODE (ORIGINAL IMPLEMENTATION)
+    // ===================================================================
+    
+    // Original sensor reading
     if (shouldReadUltrasonic()) {
       loopUltrasonik();
     }
     if (shouldReadMagnet()) {
       loopMagneticSensor();
     }
+    
     lamp_flip_flop();
     if (currentStateAgv != AGV_STATE_NULL){
       // --- Pembacaan sensor sesuai mode ---
@@ -132,5 +142,11 @@ void loop() {
     agvMode(AGV_STATE_STOP);
     handleMenu();
   }
+  
+  // Reset watchdog timer to prevent reboot
+  esp_task_wdt_reset();
+  
+  // Small delay to prevent tight loop and allow other tasks to run
+  delay(10);
 
 }

@@ -4,7 +4,6 @@
 #include <Wire.h>
 #include <Arduino.h>
 #include <math.h>
-#include <Wire.h>
 #include <LiquidCrystal_I2C.h>  // ESP32 compatible LCD I2C Library
 #include <ModbusMaster.h>
 #include <WiFi.h>
@@ -19,6 +18,11 @@
 #include <Wiegand.h>
 #include <esp_task_wdt.h>
 
+// ===================================================================
+//                        FREERTOS INCLUDES
+// ===================================================================
+// FreeRTOS includes removed - using original non-FreeRTOS implementation
+
 enum AgvState {
   AGV_STATE_MOVE_FORWARD,
   AGV_STATE_MOVE_BACKWARD,
@@ -27,8 +31,28 @@ enum AgvState {
   AGV_STATE_TERMINAL_DROP,
   AGV_STATE_WAREHOUSE,
   AGV_STATE_STATION,
+  AGV_STATE_SWITCH_FORWARD,
   AGV_STATE_NULL
 };
+
+// ===================================================================
+//                        FREERTOS SHARED DATA STRUCTURES
+// ===================================================================
+
+// PID Mode enumeration
+enum PidMode {
+  PID_MODE_MAJU,
+  PID_MODE_MAJU_MASSA,
+  PID_MODE_MUNDUR,
+  PID_MODE_MUNDUR_MASSA,
+  PID_MODE_FORCEMUNDUR,
+  PID_MODE_FORCEMAJU,
+  PID_MODE_STOPPELANPELAN,
+  PID_MODE_BERHENTI,
+  PID_MODE_DEFAULT
+};
+
+// FreeRTOS structures and variables removed - using original implementation
 
 // ===================================================================
 //                        PIN DEFINITIONS
@@ -155,6 +179,7 @@ bool exceptErrorPosition = false;
 String warehouseRfidId = "";
 String ujungRfidId = "";
 String pertigaanRfidId = "";
+String rfidMajuId = "";
 
 // --- MENU SYSTEM VARIABLES ---
 int selectedItem = 0;
@@ -290,13 +315,8 @@ void setupRS485_Serial2(int baudrate);
 const int availablePins[] = { 39, 40, 41, 42, 2, 1 };
 const int availablePinsCount = 6;
 
-// Current button pin assignments (manual fixed values)
-extern int currentPinUp;
-extern int currentPinLeft;
-extern int currentPinRight;
-extern int currentPinDown;
-extern int currentPinStart;
-extern int currentPinStop;
+// Current button pin assignments (manual fixed values) - using direct pin variables
+// extern declarations removed - using upPin, downPin, etc. directly
 
 #define sdaPin 3
 #define sclPin 8
@@ -323,16 +343,19 @@ LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 // #define encKiriB 48
 
 // #Inisialisasi Sensor Magnet dan ultrasonik
+// RS485 control pins for Magnet sensors (Serial1)
 #define MAX485_DE 36
 #define MAX485_RE 36
 // RS485 Serial Pins for Magnet sensors (Serial1)
 #define RS485_RX 18
 #define RS485_TX 17
 
+// RS485 control pins for Ultrasonic sensors (Serial2) - separate pins to avoid conflict
+#define MAX485_DE2 37
+#define MAX485_RE2 37
 // RS485 Serial Pins for Ultrasonic sensors (Serial2)
 #define RS485_RX2 11  // Pin 11 untuk RX Serial2
 #define RS485_TX2 46  // Pin 46 untuk TX Serial2
-// MAX485_DE2 dan MAX485_RE2 dihapus - menggunakan MAX485_DE dan MAX485_RE yang sama
 
 // Mapping Slave ID ke Sensor - definitions moved to top of file
 
@@ -668,6 +691,8 @@ void loadWarehouseUjungRfid();
 void saveWarehouseRfid(String rfidId);
 void saveUjungRfid(String rfidId);
 void savePertigaanRfid(String rfidId);
+void saveRfidMaju(String rfidId);
+void loadRfidMaju();
 
 // Terminal Drop & Pickup RFID functions
 void loadTerminalRfid();
@@ -711,17 +736,6 @@ HookPositionMode hookPositionMode = STOP_HOOK;
 HookPosition hook(HookPositionMode mode);
 
 // PID and motor control functions
-enum PidMode {
-  PID_MODE_MAJU,
-  PID_MODE_MAJU_MASSA,
-  PID_MODE_MUNDUR,
-  PID_MODE_MUNDUR_MASSA,
-  PID_MODE_FORCEMUNDUR,
-  PID_MODE_FORCEMAJU,
-  PID_MODE_STOPPELANPELAN,
-  PID_MODE_BERHENTI,
-  PID_MODE_DEFAULT
-};
 void pidLinefollower(int error, PidMode mode);
 void pwmMotor(int leftSpeed, int rightSpeed);
 
@@ -815,4 +829,7 @@ void clearAllRfidStations();
 bool deleteRfidStation(int stationId);
 bool addRfidStation(int stationId, String rfidId);
 int findRfidStationByRfidId(String rfidId);
+
+// FreeRTOS function declarations removed - using original implementation
+
 #endif

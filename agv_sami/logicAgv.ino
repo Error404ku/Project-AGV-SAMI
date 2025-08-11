@@ -194,7 +194,7 @@ void agvMoveForward() {
   if (currentRfid.length() > 0 && newRfidScanned) {
     if (isRfidMatch(currentRfid, ujungRfidId)) {
       newRfidScanned = false; // Reset flag
-      // Interrupt motor sebelum mengubah mode
+      // Stop motor sebelum mengubah mode
       pwmMotor(0, 0);
       delay(2000);
       agvMode(AGV_STATE_MOVE_BACKWARD);
@@ -218,6 +218,11 @@ void agvMoveForward() {
       currentRFID = AGV_STATE_WAREHOUSE;
       agvMode(AGV_STATE_WAREHOUSE);
       return;
+    } else if (isRfidMatch(currentRfid, pertigaanRfidId) && currentRFID == AGV_STATE_SWITCH_FORWARD) {
+      newRfidScanned = false; // Reset flag
+      exceptErrorPosition = false;
+      forceLeft = true;
+      saveExceptErrorFlag();
     }
   }
 
@@ -240,7 +245,7 @@ void agvMoveForward() {
   if (!obstacleDetected) {
     music(MUSIC_MODE_ON);
     if (exceptErrorPosition && totalSensorAktif > 5) {
-      pidLinefollower(0, PID_MODE_MAJU_MASSA);  
+      pidLinefollower(0, PID_MODE_MAJU_MASSA);
     }else if(forceLeft){
       pwmMotor(baseSpeed/2, baseSpeed/2);
       if (totalSensorAktif == 0){
@@ -274,15 +279,13 @@ void agvMoveBackward() {
     exceptErrorPosition = true;  // Set flag untuk mengabaikan error saat mundur
     saveExceptErrorFlag();       // Simpan flag ke preferences
     newRfidScanned = false;      // Reset flag
-  }
-  // Kembali ke mode maju ketika mencapai jalur lurus (10+ sensor aktif)
-  if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, pertigaanRfidId)) {
-    exceptErrorPosition = false;
-    forceLeft = true;
-    saveExceptErrorFlag();
+  } else if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, rfidMajuId)) {
+    newRfidScanned = false;      // Reset flag
+    currentRFID = AGV_STATE_SWITCH_FORWARD;
     agvMode(AGV_STATE_MOVE_FORWARD);
     return;
   }
+  
 
   if (targetStationsList.size() != 0) {
     // Cek apakah ada RFID yang terbaca

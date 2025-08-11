@@ -29,6 +29,7 @@
 #define MENU_RFID_PERTIGAAN 33
 #define MENU_TERMINAL_DROP 26
 #define MENU_TERMINAL_PICKUP 27
+#define MENU_RFID_MAJU 38
 // ===================================================================
 // MENU VARIABLES SUDAH DIPINDAHKAN KE config.h
 // ===================================================================
@@ -824,6 +825,16 @@ void handleMenu() {
       displayTerminalPickup();
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handleTerminalPickup();
+        if (START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+      
+    case MENU_RFID_MAJU:
+      displayRfidMaju();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleRfidMaju();
         if (START() || STOP()) {
           lastButtonPress = currentMillis;
         }
@@ -1722,7 +1733,7 @@ void displayRfidSettings() {
   // Only redraw menu items if refresh is needed
   if (needsRefresh) {
     // RFID Menu items
-    String rfidMenuItems[11] = {
+    String rfidMenuItems[12] = {
       "Station: " + String(selectedStationId),
       "Scan RFID",
       "Auto Input Station",
@@ -1733,7 +1744,8 @@ void displayRfidSettings() {
       "RFID Ujung",
       "RFID Warehouse",
       "Terminal Drop",
-      "Terminal Pickup"
+      "Terminal Pickup",
+      "RFID Maju"
     };
 
     // Clear menu area only when needed
@@ -1743,9 +1755,9 @@ void displayRfidSettings() {
     }
 
     // Simple display - show items with scrolling if needed
-    int startIdx = max(0, min(selectedRfidItem - 1, 11 - 3));
+    int startIdx = max(0, min(selectedRfidItem - 1, 12 - 3));
 
-    for (int i = 0; i < 3 && (startIdx + i) < 11; i++) {
+    for (int i = 0; i < 3 && (startIdx + i) < 12; i++) {
       int itemIndex = startIdx + i;
       lcd.setCursor(0, i + 1);
 
@@ -2043,9 +2055,9 @@ void handleRfidSettings() {
   }
 
   if (UP()) {
-    selectedRfidItem = (selectedRfidItem - 1 + 11) % 11;
+    selectedRfidItem = (selectedRfidItem - 1 + 12) % 12;
   } else if (DOWN()) {
-    selectedRfidItem = (selectedRfidItem + 1) % 11;
+    selectedRfidItem = (selectedRfidItem + 1) % 12;
   } else if (RIGHT()) {
     if (selectedRfidItem == 0) {
       // Change station ID
@@ -2181,6 +2193,11 @@ void handleRfidSettings() {
         
       case 10:  // Terminal Pickup
         currentMenu = MENU_TERMINAL_PICKUP;
+        menuNeedsRefresh = true;
+        break;
+        
+      case 11:  // RFID Maju
+        currentMenu = MENU_RFID_MAJU;
         menuNeedsRefresh = true;
         break;
     }
@@ -2490,6 +2507,17 @@ void displayMagnetCheck() {
 }
 
 void displayUltrasonicCheck() {
+  static unsigned long lastDisplayUpdate = 0;
+  const unsigned long DISPLAY_UPDATE_INTERVAL = 200; // 200ms interval for display update
+  
+  unsigned long currentTime = millis();
+  
+  // Rate-limited display update to prevent excessive LCD operations
+  if (currentTime - lastDisplayUpdate < DISPLAY_UPDATE_INTERVAL) {
+    return;
+  }
+  lastDisplayUpdate = currentTime;
+  
   displayMenuHeader("Ultrasonic Check");
 
   lcd.setCursor(0, 1);
@@ -2497,6 +2525,7 @@ void displayUltrasonicCheck() {
   lcd.print(ultrasonicDistances[0]);
   lcd.print(" P2:");
   lcd.print(ultrasonicDistances[1]);
+  lcd.print("    "); // Clear remaining characters
 
   lcd.setCursor(0, 2);
   lcd.print("P3:");
@@ -2505,12 +2534,22 @@ void displayUltrasonicCheck() {
   lcd.print(ultrasonicDistances[3]);
   lcd.print(" P5:");
   lcd.print(ultrasonicDistances[4]);
+  lcd.print("   "); // Clear remaining characters
 
   lcd.setCursor(0, 3);
-  if (obstacleDetected) {
+  // Manual obstacle detection based on distance values only
+  bool manualObstacleDetected = false;
+  uint16_t currentMinSafeDistance = (getCurrentUltrasonicSlaveId() == SLAVEID_ULTRASONIK_DEPAN) ? 
+                                   minSafeDistanceFront : minSafeDistanceBack;
+  
+  if (ultrasonicDistances[2] > 0 && ultrasonicDistances[2] < currentMinSafeDistance) {
+    manualObstacleDetected = true;
+  }
+  
+  if (manualObstacleDetected) {
     lcd.print("OBSTACLE! ");
   } else {
-    lcd.print("Clear ");
+    lcd.print("Clear     ");
   }
 
   // Show current sensor (Front/Back) and controls
@@ -2575,12 +2614,18 @@ void handleMagnetCheck() {
 
 void handleUltrasonicCheck() {
   static unsigned long lastSwitchTime = 0;
+  static unsigned long lastSensorRead = 0;
   const unsigned long SWITCH_DEBOUNCE = 200; // 200ms debounce for switching
+  const unsigned long SENSOR_READ_INTERVAL = 100; // 100ms interval for sensor reading
   
-  loopUltrasonik();
-  checkObstacles();
-
   unsigned long currentTime = millis();
+  
+  // Rate-limited sensor reading to prevent stack overflow
+  if (currentTime - lastSensorRead >= SENSOR_READ_INTERVAL) {
+    // Only read ultrasonic sensor, avoid calling checkObstacles in menu mode
+    loopUltrasonik();
+    lastSensorRead = currentTime;
+  }
   
   if (LEFT() && (currentTime - lastSwitchTime >= SWITCH_DEBOUNCE)) {
     Serial.println("[INFO] Switching to FRONT ultrasonic sensor");
@@ -3405,6 +3450,72 @@ void saveRfidPertigaanToPreferences() {
   preferences.begin("rfid_pertigaan", false);
   preferences.putString("pertigaanRfid", pertigaanRfidId);
   preferences.end();
+}
+
+// ===== RFID MAJU FUNCTIONS =====
+void displayRfidMaju() {
+  displayMenuHeader("RFID Maju");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Current RFID:");
+  
+  lcd.setCursor(0, 2);
+  if (rfidMajuId.length() > 0) {
+    String shortRfid = rfidMajuId.substring(0, 12);
+    lcd.print(shortRfid);
+    lcd.print("    ");
+  } else {
+    lcd.print("Not set         ");
+  }
+  
+  lcd.setCursor(0, 3);
+  lcd.print("A:Scan STOP:Back   ");
+}
+
+void handleRfidMaju() {
+  if (START()) { // Scan RFID
+    lcd.setCursor(0, 1);
+    lcd.print("Scanning RFID...    ");
+    lcd.setCursor(0, 2);
+    lcd.print("Place card on reader");
+    lcd.setCursor(0, 3);
+    lcd.print("STOP:Cancel         ");
+    
+    unsigned long scanStart = millis();
+    newRfidScanned = false;
+    
+    while (millis() - scanStart < 10000) { // 10 second timeout
+      if (newRfidScanned) {
+        String scannedRfid = String(lastScannedRfidOptimized);
+        saveRfidMaju(scannedRfid);
+        
+        lcd.clear();
+        lcd.setCursor(0, 1);
+        lcd.print("RFID Maju");
+        lcd.setCursor(0, 2);
+        lcd.print("saved successfully!");
+        delay(2000);
+        
+        newRfidScanned = false;
+        displayRfidMaju();
+        return;
+      } else if (LEFT() || STOP()) {
+        displayRfidMaju();
+        return;
+      }
+      delay(100);
+    }
+    
+    // Timeout
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print("Scan timeout!");
+    delay(1500);
+    displayRfidMaju();
+  } else if (STOP()) {
+    currentMenu = MENU_RFID_SETTINGS;
+    menuNeedsRefresh = true;
+  }
 }
 
 void displayUltrasonicSettings() {

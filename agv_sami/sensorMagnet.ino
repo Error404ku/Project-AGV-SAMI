@@ -51,10 +51,17 @@ void loopMagneticSensor() {
   // Ultra-fast slave ID switching with zero-overhead - INDUSTRY STANDARD
   // Only call begin() when slave ID changes - most efficient approach
   static int lastSlaveId = -1;
+  static unsigned long lastSwitchTime = 0;
   if (currentMagnetSlaveId != lastSlaveId) {
     magnetNode.begin(currentMagnetSlaveId, Serial1);
     lastSlaveId = currentMagnetSlaveId;
-    delay(10);
+    lastSwitchTime = millis();
+    return; // Skip this cycle to allow sensor to stabilize
+  }
+  
+  // Wait for sensor stabilization after switch (non-blocking)
+  if (millis() - lastSwitchTime < 10) {
+    return; // Skip reading for 10ms after switch
   }
 
   // Enhanced error handling with exponential backoff

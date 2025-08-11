@@ -422,7 +422,8 @@ void handleSaveWifi() {
       
       // Restart ESP32 setelah 5 detik
       delay(5000);
-      ESP.restart();
+      // NOTE: ESP.restart() disabled during diagnostics to avoid reboot loops
+      // ESP.restart();
     } else {
       server.send(500, "text/plain", "Gagal menyimpan konfigurasi WiFi.");
     }

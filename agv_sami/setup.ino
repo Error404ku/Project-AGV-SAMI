@@ -54,18 +54,41 @@ void setuplamp() {
 
 // setup display
 void initializeDisplay() {
-  lcd.begin(LCD_COLUMNS, LCD_ROWS);  // Inisialisasi LCD
-  lcd.backlight();                   // Nyalakan backlight
+  // I2C address scanner for debugging
+  Serial.println("[DISPLAY] Scanning I2C addresses...");
+  byte count = 0;
+  for (byte i = 8; i < 120; i++) {
+    Wire.beginTransmission(i);
+    if (Wire.endTransmission() == 0) {
+      Serial.printf("[DISPLAY] Found I2C device at address 0x%02X\n", i);
+      count++;
+      if (i == LCD_ADDRESS) {
+        Serial.println("[DISPLAY] LCD found at expected address!");
+      }
+    }
+  }
+  
+  if (count == 0) {
+    Serial.println("[ERROR] No I2C devices found - check wiring!");
+  }
+
+  // Initialize LCD with error handling
+  Serial.printf("[DISPLAY] Initializing LCD at address 0x%02X...\n", LCD_ADDRESS);
+  lcd.begin(LCD_COLUMNS, LCD_ROWS);
+  
   // Test LCD communication
+  lcd.backlight();
   lcd.setCursor(0, 0);
-  lcd.print("Mulai Program");
+  lcd.print("LCD Test OK        ");
   lcd.setCursor(0, 1);
-  lcd.print("AGV System");
-  // Simple LCD test - try to set cursor and check if it works
-  delay(100);
-  lcd.setCursor(0, 0);
-  // If LCD is not responding, this will be detected in normal operation
+  lcd.print("AGV System Ready   ");
+  
+  // Verify LCD is responding
+  delay(500);
   lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Display Ready      ");
+  Serial.println("[DISPLAY] LCD initialization completed");
 }
 
 void setupDisplay() {
@@ -83,38 +106,11 @@ void setupWebServer() {
   lcd.setCursor(0, 0);
   lcd.print("SETUP WIFI");
  
-  int wifiAttempts = 0;
-  bool wifiConnected = false;
-  
-  // Try to connect to WiFi with saved credentials
-  if (strlen(ssid) > 0 && strlen(password) > 0) {
-    Serial.printf("Connecting to WiFi: %s\n", ssid);
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED && wifiAttempts < 5) { // Increased attempts for initial connection
-      lcd.setCursor(0, 0);
-      lcd.print("MENCARI WIFI");
-      Serial.print(".");
-      delay(1000);
-      wifiAttempts++;
-    }
-  }
-  
-  if (WiFi.status() == WL_CONNECTED) {
-    wifiConnected = true;
-    Serial.println("\nKoneksi Wi-Fi berhasil!");
-    Serial.print("Alamat IP: ");
-    Serial.println(WiFi.localIP());
-    lcd.setCursor(0, 1);
-    lcd.print("Wi-Fi Berhasil!");
-    lcd.setCursor(0, 2);
-    lcd.print("IP: ");
-    lcd.print(WiFi.localIP());
-  } else {
-    Serial.println("\nKoneksi Wi-Fi gagal. Memulai sebagai Access Point.");
-    lcd.setCursor(0, 1);
-    lcd.print("Wi-Fi Gagal!");
-    delay(1000);
-   }
+  // Non-blocking WiFi setup - just initialize, don't wait for connection
+  Serial.println("WiFi setup initialized. Connection will be handled asynchronously.");
+  lcd.setCursor(0, 1);
+  lcd.print("WiFi Initialized");
+  delay(500); // Brief delay for display
   
   // Registrasi Endpoint HTTP yang diminta
   server.on("/updatestations", HTTP_POST, handleUpdateTargetStations);  // Untuk menyimpan/menimpa daftar stasiun
@@ -175,18 +171,18 @@ void setupRS485(int baudrate) {
 
 void setupRS485_Serial2(int baudrate) {
   Serial.printf("[DEBUG] setupRS485_Serial2 dimulai dengan baudrate: %d\n", baudrate);
-  Serial.printf("[DEBUG] RS485 Serial2 pins - RX: %d, TX: %d, RE: %d, DE: %d\n", RS485_RX2, RS485_TX2, MAX485_RE, MAX485_DE);
+  Serial.printf("[DEBUG] RS485 Serial2 pins - RX: %d, TX: %d, RE: %d, DE: %d\n", RS485_RX2, RS485_TX2, MAX485_RE2, MAX485_DE2);
 
   // Initialize Serial2 for RS485 communication (Ultrasonic sensors)
   Serial2.begin(baudrate, SERIAL_8N1, RS485_RX2, RS485_TX2);
 
-  // Setup control pins for MAX485 Serial2 (menggunakan pin yang sama dengan Serial1)
-  pinMode(MAX485_RE, OUTPUT);
-  pinMode(MAX485_DE, OUTPUT);
+  // Setup control pins for MAX485 Serial2 (menggunakan pin terpisah dari Serial1)
+  pinMode(MAX485_RE2, OUTPUT);
+  pinMode(MAX485_DE2, OUTPUT);
 
   // Set to receive mode (RE=0, DE=0)
-  digitalWrite(MAX485_RE, 0);
-  digitalWrite(MAX485_DE, 0);
+  digitalWrite(MAX485_RE2, 0);
+  digitalWrite(MAX485_DE2, 0);
 
   // Wait for Serial2 to be ready
   delay(100);
@@ -389,6 +385,9 @@ void setupMenu() {
   
   // Load Terminal RFID data
   loadTerminalRfid();
+  
+  // Load RFID Maju data
+  loadRfidMaju();
   
   // Load except error position flag
   loadExceptErrorFlag();

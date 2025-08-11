@@ -92,3 +92,19 @@ void saveTerminalPickUpRfid(String rfidId) {
   terminalPickUpRfidId = rfidId;
   Serial.println("Terminal PickUp RFID saved: " + rfidId);
 }
+
+/***********************************************************
+ *  RFID MAJU FUNCTIONS                                   *
+ ***********************************************************/
+void loadRfidMaju() {
+  preferences.begin("rfid-maju", false);
+  rfidMajuId = preferences.getString("rfidMaju", "");
+  preferences.end();
+}
+
+void saveRfidMaju(String rfidId) {
+  preferences.begin("rfid-maju", false);
+  preferences.putString("rfidMaju", rfidId);
+  preferences.end();
+  rfidMajuId = rfidId;
+}

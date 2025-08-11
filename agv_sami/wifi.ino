@@ -2,19 +2,22 @@
 
 // Fungsi untuk setup WiFi - dipanggil di setup()
 void setupWifi() {
-  // Load WiFi config from   Preferences
+  // Load WiFi config from Preferences
   loadWifiConfig();
   
-  // Setup WiFi mode
+  // Setup WiFi mode - but don't auto-connect to avoid blocking
   WiFi.mode(WIFI_AP_STA);  // Enable both AP and STA mode
-  WiFi.setAutoReconnect(true); // Enable auto-reconnect
+  WiFi.setAutoReconnect(false); // Disable auto-reconnect during setup
   WiFi.persistent(false); // Reduce flash writes
   
-  // Ensure AP is always active for web access
+  // Only start AP mode for configuration access
   const char* ap_ssid = "ESP32-AGV-Config";
   const char* ap_password = "12345678";
   WiFi.softAP(ap_ssid, ap_password);
   WiFi.softAPConfig(IPAddress(192, 168, 121, 14), IPAddress(192, 168, 121, 14), IPAddress(255, 255, 255, 0));
+  
+  Serial.println("WiFi setup completed - AP mode active for configuration");
+  Serial.println("WiFi connection will be handled in main loop");
 }
 
 // Fungsi untuk memulai koneksi WiFi - dipanggil saat tombol START ditekan
@@ -36,7 +39,15 @@ void startWifiConnection() {
   if (strlen(staticIPStr) > 0) {
     WiFi.config(staticIP, gateway, subnet, dns);
   }
-  WiFi.begin(ssid, password);
+  
+  // Only attempt connection if credentials are available
+  if (strlen(ssid) > 0 && strlen(password) > 0) {
+    Serial.printf("Attempting WiFi connection to: %s\n", ssid);
+    WiFi.begin(ssid, password);
+  } else {
+    Serial.println("No WiFi credentials available - staying in AP mode");
+    isConnectingWifi = false;
+  }
   
   // Ensure AP is still active for web access
   WiFi.softAP("ESP32-AGV-Config", "12345678");

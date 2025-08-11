@@ -39,8 +39,8 @@
 
 // External variables from other files
 extern int targetStation[2];
-extern int targetStationFromKomputer[];
-extern bool modeMaju;
+// extern int targetStationFromKomputer[]; // Removed - not used
+// extern bool modeMaju; // Removed - not used
 extern double kp, ki, kd;
 extern int baseSpeed;
 extern bool tombolBoot;
