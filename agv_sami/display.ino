@@ -166,9 +166,9 @@ void displaySensorData() {
   for (int i = 15; i >= 0; i--) {
     if (jumlahMagnet[i] == 1) {
       lcd.print("1");
-    } else {
+    } else {  
       lcd.print("0");
-    }
+    } 
   }
 
   // Show error value

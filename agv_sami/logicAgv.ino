@@ -37,19 +37,8 @@ void agvMode(AgvState state) {
 void agvWarehouse() {
   static bool trigger = false;
   saveCurrentStateAGVToPreferences(AGV_STATE_WAREHOUSE);
-  static unsigned long lastReadTime = 0;
-  unsigned long currentTime = millis();
-  if (playMusic) {
-    music(MUSIC_MODE_KOMPUTER);
-    if (lastReadTime == 0) {
-      lastReadTime = currentTime;
-    }
-    if (currentTime - lastReadTime > 5000) {
-      stopMusic();
-      playMusic = false;
-      lastReadTime = 0;
-    }
-  }
+  music(MUSIC_MODE_WARNING);
+
   if (START()) {
     if (targetStationsList.size() == 0){
       // Tampilkan pesan tidak ada station di warehouse
@@ -61,10 +50,7 @@ void agvWarehouse() {
       delay(2000); // Tampilkan pesan selama 2 detik
       return; // Kembali tanpa memulai pergerakan
     } else {
-      stopMusic();
-      lastReadTime = 0;
       trigger = true;
-      playMusic = true;
     }
   }
   if (!trigger) {
@@ -85,23 +71,19 @@ void agvStation() {
   modeDisplayStation();
   static unsigned long lastReadTime = 0;
   unsigned long currentTime = millis();
-  if (playMusic) {
-    agvStop();
-    music(MUSIC_MODE_DETECT);
-    if (lastReadTime == 0) {
-      lastReadTime = currentTime;
-    }
-    if (currentTime - lastReadTime > 5000) {
-      stopMusic();
-      playMusic = false;
-      lastReadTime = 0;
-    }
+  agvStop();
+
+  if (lastReadTime == 0) {
+    lastReadTime = currentTime;
+  }
+  if (currentTime - lastReadTime > 20000) {
+    music(MUSIC_MODE_WARNING);
+  } else {
+    music(MUSIC_MODE_STATION);
   }
   if (START()) {
-    stopMusic();
     lastReadTime = 0;
     trigger = true;
-    playMusic = true;
   }
   if (trigger) {
     // Cek apakah masih ada station di StationList
@@ -129,7 +111,7 @@ void agvTerminalDrop() {
   modeDisplayTerminalDrop();
   static unsigned long lastStopTime = 0;
   static unsigned long currentTime = millis();
-
+  music(MUSIC_MODE_ON);
   switch (dropProcessStep) {
     case 0: 
       dropProcessStep = 1;
@@ -153,6 +135,12 @@ void agvTerminalDrop() {
 void agvTerminalPickup() {
   static bool isHookUp = false;
   modeDisplayTerminalPickup(isHookUp);
+  static unsigned long lastReadTime = 0;
+  unsigned long currentTime = millis();
+  
+  if (currentStateAgv == AGV_STATE_NULL){
+    isHookUp = false;
+  }
   if (currentStateAgv != AGV_STATE_NULL){
     saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_PICKUP);
   }
@@ -180,10 +168,9 @@ void agvTerminalPickup() {
       }
     }
   } else {
-    music(MUSIC_MODE_KOMPUTER);
+    music(MUSIC_MODE_WARNING);
     if (START()) {
-      stopMusic();
-      isHookUp = false;
+      lastReadTime = currentTime;
       stopCalledPickup = false;
       agvMode(AGV_STATE_MOVE_FORWARD);
     }
@@ -232,9 +219,6 @@ void agvMoveForward() {
       agvMode(AGV_STATE_WAREHOUSE);
       return;
     }
-    // Jika RFID tidak cocok dengan ujung, terminal, atau warehouse, reset flag
-    // untuk mencegah RFID yang tidak dikenal mempengaruhi scan berikutnya
-    // Flag akan di-reset oleh getStationFromLastRfid() jika ada station match
   }
 
   // Cek apakah ada RFID yang terbaca untuk stasiun
@@ -254,8 +238,9 @@ void agvMoveForward() {
 
   // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
   if (!obstacleDetected) {
+    music(MUSIC_MODE_ON);
     if (exceptErrorPosition && totalSensorAktif > 5) {
-      pidLinefollower(0, PID_MODE_MAJU);  // Error = 0
+      pidLinefollower(0, PID_MODE_MAJU_MASSA);  
     }else if(forceLeft){
       pwmMotor(baseSpeed/2, baseSpeed/2);
       if (totalSensorAktif == 0){
@@ -266,7 +251,11 @@ void agvMoveForward() {
         forceLeft = false;
       }
     }else {
-      pidLinefollower(errorValue, PID_MODE_MAJU);  // Error dari sensor magnet
+      if (targetStationsList.size() != 0 || currentRFID == AGV_STATE_TERMINAL_PICKUP) {
+        pidLinefollower(errorValue, PID_MODE_MAJU_MASSA);  // Error dari sensor magnet
+      } else {
+        pidLinefollower(errorValue, PID_MODE_MAJU);  // Error dari sensor magnet
+      }
     }
   }
 }
@@ -277,7 +266,6 @@ void agvMoveBackward() {
   modeDisplayMoveBackward();
   checkObstacles();
   moveStateAGV(AGV_STATE_MOVE_BACKWARD);
-  
   // AGV bergerak mundur otomatis tanpa perlu menekan START
   // Logika pergerakan mundur:
   // Cek apakah RFID warehouse terdeteksi untuk mengabaikan error saat mundur
@@ -315,11 +303,16 @@ void agvMoveBackward() {
   }
   // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
   if (!obstacleDetected) {
+    music(MUSIC_MODE_ON);
     // Abaikan error jika warehouse RFID pernah terdeteksi dan segment aktif >5
     if (exceptErrorPosition && totalSensorAktif > 5) {
-      pidLinefollower(0, PID_MODE_MUNDUR);  // Error = 0
+      pidLinefollower(0, PID_MODE_MUNDUR_MASSA);  // Error = 0
     } else {
-      pidLinefollower(errorValue, PID_MODE_MUNDUR);  // Error normal
+      if (targetStationsList.size() != 0){
+        pidLinefollower(errorValue, PID_MODE_MUNDUR_MASSA);  // Error normal
+      } else {
+        pidLinefollower(0, PID_MODE_MUNDUR);
+      }
     }
   }
 }

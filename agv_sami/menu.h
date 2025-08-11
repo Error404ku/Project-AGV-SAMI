@@ -18,6 +18,11 @@
 #define MENU_MOTOR_INVERT 19
 #define MENU_MUSIC_SETTINGS 20
 #define MENU_MUSIC_TEST 21
+#define MENU_MUSIC_ON 40
+#define MENU_MUSIC_OBSTACLE 41
+#define MENU_MUSIC_STATION 42
+#define MENU_MUSIC_OUTOFLINE 43
+#define MENU_MUSIC_WARNING 44
 #define MENU_HOOK_TEST 22
 #define MENU_MAGNET_CHECK 23
 #define MENU_ULTRASONIC_CHECK 24
@@ -27,6 +32,10 @@
 #define MENU_ULTRASONIC_BACK 32
 #define MENU_PID_FORWARD 28
 #define MENU_PID_BACKWARD 29
+#define MENU_PID_FORWARD_WITHMASSA 34
+#define MENU_PID_FORWARD_DEFAULT 35
+#define MENU_PID_BACKWARD_WITHMASSA 36
+#define MENU_PID_BACKWARD_DEFAULT 37
 
 // External variables from other files
 extern int targetStation[2];
@@ -54,19 +63,33 @@ void displayWifiSettings();
 void handleMotorTest();
 void handlePidSettings();
 void handlePidSubmenu();
-void handlePidForwardSettings();
-void handlePidBackwardSettings();
+
 void handleTargetSettings();
 void handleWifiSettings();
 
 void displayPidSubmenu();
-void displayPidForwardSettings();
-void displayPidBackwardSettings();
+
+void displayPidForwardSubmenu();
+void displayPidBackwardSubmenu();
+void handlePidForwardSubmenu();
+void handlePidBackwardSubmenu();
+void displayPidForwardWithMassaSettings();
+void displayPidForwardDefaultSettings();
+void displayPidBackwardWithMassaSettings();
+void displayPidBackwardDefaultSettings();
+void handlePidForwardWithMassaSettings();
+void handlePidForwardDefaultSettings();
+void handlePidBackwardWithMassaSettings();
+void handlePidBackwardDefaultSettings();
 void displayUltrasonicSettings();
 void handleUltrasonicSettings();
 void displayUltrasonicFrontSettings();
 void displayUltrasonicBackSettings();
 void handleUltrasonicFrontSettings();
 void handleUltrasonicBackSettings();
+void displayMusicSettings();
+void handleMusicSettings();
+void displayMusicSubmenu(const char* title, int* currentPin);
+void handleMusicSubmenu(int* targetPin);
 
 #endif

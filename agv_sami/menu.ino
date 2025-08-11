@@ -13,6 +13,10 @@
 #define MENU_MOTOR_INVERT 19
 #define MENU_MUSIC_SETTINGS 20
 #define MENU_MUSIC_TEST 21
+#define MENU_MUSIC_ON 40
+#define MENU_MUSIC_OBSTACLE 41
+#define MENU_MUSIC_STATION 42
+#define MENU_MUSIC_OUTOFLINE 43
 #define MENU_HOOK_TEST 22
 #define MENU_MAGNET_CHECK 23
 #define MENU_ULTRASONIC_CHECK 24
@@ -36,22 +40,30 @@ void initMenuTempVariables() {
   tempKp = kpLinefollower;
   tempKi = kiLinefollower;
   tempKd = kdLinefollower;
-  tempKpForward = kpLinefollowerForward;
-  tempKiForward = kiLinefollowerForward;
-  tempKdForward = kdLinefollowerForward;
-  tempKpBackward = kpLinefollowerBackward;
-  tempKiBackward = kiLinefollowerBackward;
-  tempKdBackward = kdLinefollowerBackward;
+
+  tempKpForwardWithMassa = kpLinefollowerForwardWithMassa;
+  tempKiForwardWithMassa = kiLinefollowerForwardWithMassa;
+  tempKdForwardWithMassa = kdLinefollowerForwardWithMassa;
+  tempKpForwardDefault = kpLinefollowerForwardDefault;
+  tempKiForwardDefault = kiLinefollowerForwardDefault;
+  tempKdForwardDefault = kdLinefollowerForwardDefault;
+  tempKpBackwardWithMassa = kpLinefollowerBackwardWithMassa;
+  tempKiBackwardWithMassa = kiLinefollowerBackwardWithMassa;
+  tempKdBackwardWithMassa = kdLinefollowerBackwardWithMassa;
+  tempKpBackwardDefault = kpLinefollowerBackwardDefault;
+  tempKiBackwardDefault = kiLinefollowerBackwardDefault;
+  tempKdBackwardDefault = kdLinefollowerBackwardDefault;
   tempBaseSpeed = baseSpeed;
   tempInvertY = invertMotorY;
   tempInvertX = invertMotorX;
   tempInvertKanan = invertMotorKanan;
   tempInvertKiri = invertMotorKiri;
   tempInvertHook = invertHook;
+  tempMusicOnPin = musicOnPin;
+  tempMusicObstaclePin = musicObstaclePin;
   tempMusicStationPin = musicStationPin;
-  tempMusicErrorPin = musicErrorPin;
-  tempMusicDetectPin = musicDetectPin;
-  tempMusicKomputerPin = musicKomputerPin;
+  tempMusicOutOfLinePin = musicOutOfLinePin;
+  selectedMusicPin = 0;
   tempMinSafeDistanceFront = minSafeDistanceFront;
   tempMinSafeDistanceBack = minSafeDistanceBack;
 }
@@ -84,15 +96,27 @@ void saveSettings() {
   preferences.putDouble("kiLinefollower", tempKi);
   preferences.putDouble("kdLinefollower", tempKd);
   
-  // Save Forward PID values
-  preferences.putDouble("kpForward", tempKpForward);
-  preferences.putDouble("kiForward", tempKiForward);
-  preferences.putDouble("kdForward", tempKdForward);
+
   
-  // Save Backward PID values
-  preferences.putDouble("kpBackward", tempKpBackward);
-  preferences.putDouble("kiBackward", tempKiBackward);
-  preferences.putDouble("kdBackward", tempKdBackward);
+  // Save Forward PID WithMassa values
+  preferences.putDouble("kpFwdMassa", tempKpForwardWithMassa);
+  preferences.putDouble("kiFwdMassa", tempKiForwardWithMassa);
+  preferences.putDouble("kdFwdMassa", tempKdForwardWithMassa);
+  
+  // Save Forward PID Default values
+  preferences.putDouble("kpFwdDefault", tempKpForwardDefault);
+  preferences.putDouble("kiFwdDefault", tempKiForwardDefault);
+  preferences.putDouble("kdFwdDefault", tempKdForwardDefault);
+  
+  // Save Backward PID WithMassa values
+  preferences.putDouble("kpBwdMassa", tempKpBackwardWithMassa);
+  preferences.putDouble("kiBwdMassa", tempKiBackwardWithMassa);
+  preferences.putDouble("kdBwdMassa", tempKdBackwardWithMassa);
+  
+  // Save Backward PID Default values
+  preferences.putDouble("kpBwdDefault", tempKpBackwardDefault);
+  preferences.putDouble("kiBwdDefault", tempKiBackwardDefault);
+  preferences.putDouble("kdBwdDefault", tempKdBackwardDefault);
 
   // Save Motor values
   preferences.putInt("baseSpeed", tempBaseSpeed);
@@ -105,10 +129,11 @@ void saveSettings() {
   preferences.putBool("invertHook", tempInvertHook);
 
   // Save Music mapping values
+  preferences.putInt("musicOn", tempMusicOnPin);
+  preferences.putInt("musicObstacle", tempMusicObstaclePin);
   preferences.putInt("musicStation", tempMusicStationPin);
- preferences.putInt("musicError", tempMusicErrorPin);
-  preferences.putInt("musicDetect", tempMusicDetectPin);
-  preferences.putInt("musicKomputer", tempMusicKomputerPin);
+  preferences.putInt("musicOutOfLine", tempMusicOutOfLinePin);
+  preferences.putInt("musicWarning", tempMusicWarningPin);
   
   // Save Ultrasonic settings
   preferences.putUShort("SafeDistFront", tempMinSafeDistanceFront);
@@ -119,20 +144,30 @@ void saveSettings() {
   kiLinefollower = tempKi;
   kdLinefollower = tempKd;
   
-  // Apply Forward PID values
-  kpLinefollowerForward = tempKpForward;
-  kiLinefollowerForward = tempKiForward;
-  kdLinefollowerForward = tempKdForward;
+
   
-  // Apply Backward PID values
-  kpLinefollowerBackward = tempKpBackward;
-  kiLinefollowerBackward = tempKiBackward;
-  kdLinefollowerBackward = tempKdBackward;
+  // Apply Forward PID WithMassa values
+  kpLinefollowerForwardWithMassa = tempKpForwardWithMassa;
+  kiLinefollowerForwardWithMassa = tempKiForwardWithMassa;
+  kdLinefollowerForwardWithMassa = tempKdForwardWithMassa;
+  
+  // Apply Forward PID Default values
+  kpLinefollowerForwardDefault = tempKpForwardDefault;
+  kiLinefollowerForwardDefault = tempKiForwardDefault;
+  kdLinefollowerForwardDefault = tempKdForwardDefault;
+  
+  // Apply Backward PID WithMassa values
+  kpLinefollowerBackwardWithMassa = tempKpBackwardWithMassa;
+  kiLinefollowerBackwardWithMassa = tempKiBackwardWithMassa;
+  kdLinefollowerBackwardWithMassa = tempKdBackwardWithMassa;
+  
+  // Apply Backward PID Default values
+  kpLinefollowerBackwardDefault = tempKpBackwardDefault;
+  kiLinefollowerBackwardDefault = tempKiBackwardDefault;
+  kdLinefollowerBackwardDefault = tempKdBackwardDefault;
 
   // Debug: Print saved values in saveSettings
   Serial.println("=== All PID Values Saved in saveSettings() ===");
-  Serial.println("Forward PID - Kp: " + String(tempKpForward) + ", Ki: " + String(tempKiForward) + ", Kd: " + String(tempKdForward));
-  Serial.println("Backward PID - Kp: " + String(tempKpBackward) + ", Ki: " + String(tempKiBackward) + ", Kd: " + String(tempKdBackward));
 
   // Apply Motor values
   baseSpeed = tempBaseSpeed;
@@ -145,10 +180,10 @@ void saveSettings() {
   invertHook = tempInvertHook;
 
   // Apply Music mapping values
+  musicOnPin = tempMusicOnPin;
+  musicObstaclePin = tempMusicObstaclePin;
   musicStationPin = tempMusicStationPin;
-  musicErrorPin = tempMusicErrorPin;
-  musicDetectPin = tempMusicDetectPin;
-  musicKomputerPin = tempMusicKomputerPin;
+  musicOutOfLinePin = tempMusicOutOfLinePin;
   
   // Apply Ultrasonic settings
   minSafeDistanceFront = tempMinSafeDistanceFront;
@@ -262,6 +297,7 @@ void handleMenu() {
       displayMainMenu();
       pwmMotor(0,0);
       stopMusic();
+      digitalWrite(lampPin, HIGH);
       if (currentMillis - lastButtonPress >= buttonDelay) {
         if (UP()) {
           selectedItem = (selectedItem - 1 + maxItems) % maxItems;
@@ -402,13 +438,43 @@ void handleMenu() {
       break;
 
     case MENU_PID_FORWARD:
-      displayPidForwardSettings();
-      handlePidForwardSettings();
+      displayPidForwardSubmenu();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handlePidForwardSubmenu();
+        if (UP() || DOWN() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
       break;
 
     case MENU_PID_BACKWARD:
-      displayPidBackwardSettings();
-      handlePidBackwardSettings();
+      displayPidBackwardSubmenu();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handlePidBackwardSubmenu();
+        if (UP() || DOWN() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_PID_FORWARD_WITHMASSA:
+      displayPidForwardWithMassaSettings();
+      handlePidForwardWithMassaSettings();
+      break;
+
+    case MENU_PID_FORWARD_DEFAULT:
+      displayPidForwardDefaultSettings();
+      handlePidForwardDefaultSettings();
+      break;
+
+    case MENU_PID_BACKWARD_WITHMASSA:
+      displayPidBackwardWithMassaSettings();
+      handlePidBackwardWithMassaSettings();
+      break;
+
+    case MENU_PID_BACKWARD_DEFAULT:
+      displayPidBackwardDefaultSettings();
+      handlePidBackwardDefaultSettings();
       break;
 
     case MENU_TARGET_SETTINGS:
@@ -560,132 +626,11 @@ void handleMenu() {
       break;
 
     case MENU_MUSIC_SETTINGS:
-      {
-        static bool displayInitialized = false;
-        static int lastSelectedMusicItem = -1;
-        static int lastMusicPins[4] = {-1, -1, -1, -1};
-        
-        // Check if display needs refresh
-        bool needsRefresh = !displayInitialized || 
-                           selectedMusicItem != lastSelectedMusicItem ||
-                           tempMusicStationPin != lastMusicPins[0] ||
-                           tempMusicErrorPin != lastMusicPins[1] ||
-                           tempMusicDetectPin != lastMusicPins[2] ||
-                           tempMusicKomputerPin != lastMusicPins[3];
-        
-        if (needsRefresh) {
-          displayMenuHeader("Music Settings");
-
-          // Music mode labels and their assigned pins
-          String musicModes[4] = { "Station", "Error", "Detect", "Komputer" };
-          int* musicPins[4] = { &tempMusicStationPin, &tempMusicErrorPin, &tempMusicDetectPin, &tempMusicKomputerPin };
-
-          for (int i = 0; i < 3 && i < maxMusicItems; i++) {
-            lcd.setCursor(0, i + 1);
-
-            // Clear line first
-            lcd.print("                    ");
-            lcd.setCursor(0, i + 1);
-
-            // Show cursor for selected item
-            if (i == selectedMusicItem) {
-              lcd.print("> ");
-            } else {
-              lcd.print("  ");
-            }
-
-            // Show mode and pin assignment
-            lcd.print(musicModes[i]);
-            lcd.print(":");
-            lcd.print("Pin");
-            lcd.print(*musicPins[i] + 1);  // +1 to show 1-4 instead of 0-3
-
-            // Show controls on the right
-            if (i == 0) {
-              lcd.setCursor(12, i + 1);
-              lcd.print("UP/DN:Nav");
-            } else if (i == 1) {
-              lcd.setCursor(12, i + 1);
-              lcd.print("LF/RT:Set");
-            } else if (i == 2) {
-              lcd.setCursor(12, i + 1);
-              lcd.print("A:OK B:Back");
-            }
-          }
-
-          // Show 4th item (Komputer) if selected
-          if (selectedMusicItem == 3) {
-            lcd.setCursor(0, 3);
-            lcd.print("                    ");
-            lcd.setCursor(0, 3);
-            lcd.print("> Komputer:Pin");
-            lcd.print(tempMusicKomputerPin + 1);
-            lcd.setCursor(12, 3);
-            lcd.print("A:OK B:Back");
-          }
-          
-          // Update tracking variables
-          displayInitialized = true;
-          lastSelectedMusicItem = selectedMusicItem;
-          lastMusicPins[0] = tempMusicStationPin;
-          lastMusicPins[1] = tempMusicErrorPin;
-          lastMusicPins[2] = tempMusicDetectPin;
-          lastMusicPins[3] = tempMusicKomputerPin;
-        }
-
-        if (currentMillis - lastButtonPress >= buttonDelay) {
-          if (UP()) {
-            selectedMusicItem = (selectedMusicItem - 1 + maxMusicItems) % maxMusicItems;
-            lastButtonPress = currentMillis;
-          } else if (DOWN()) {
-            selectedMusicItem = (selectedMusicItem + 1) % maxMusicItems;
-            lastButtonPress = currentMillis;
-          } else if (LEFT()) {
-            // Decrease pin assignment (cycle 0-3)
-            switch (selectedMusicItem) {
-              case 0: tempMusicStationPin = (tempMusicStationPin - 1 + 4) % 4; break;
-              case 1: tempMusicErrorPin = (tempMusicErrorPin - 1 + 4) % 4; break;
-              case 2: tempMusicDetectPin = (tempMusicDetectPin - 1 + 4) % 4; break;
-              case 3: tempMusicKomputerPin = (tempMusicKomputerPin - 1 + 4) % 4; break;
-            }
-            lastButtonPress = currentMillis;
-          } else if (RIGHT()) {
-            // Increase pin assignment (cycle 0-3)
-            switch (selectedMusicItem) {
-              case 0: tempMusicStationPin = (tempMusicStationPin + 1) % 4; break;
-              case 1: tempMusicErrorPin = (tempMusicErrorPin + 1) % 4; break;
-              case 2: tempMusicDetectPin = (tempMusicDetectPin + 1) % 4; break;
-              case 3: tempMusicKomputerPin = (tempMusicKomputerPin + 1) % 4; break;
-            }
-            lastButtonPress = currentMillis;
-          } else if (START()) {
-            // Save all music settings
-            musicStationPin = tempMusicStationPin;
-            musicErrorPin = tempMusicErrorPin;
-            musicDetectPin = tempMusicDetectPin;
-            musicKomputerPin = tempMusicKomputerPin;
-            saveSettings();
-            // Reset display cache
-            displayInitialized = false;
-            currentMenu = MENU_MAIN;
-            selectedMusicItem = 0;
-            menuStartIndex = 0;
-            menuNeedsRefresh = true;
-            lastButtonPress = currentMillis;
-          } else if (STOP()) {
-            // Cancel changes
-            tempMusicStationPin = musicStationPin;
-            tempMusicErrorPin = musicErrorPin;
-            tempMusicDetectPin = musicDetectPin;
-            tempMusicKomputerPin = musicKomputerPin;
-            // Reset display cache
-            displayInitialized = false;
-            currentMenu = MENU_MAIN;
-            selectedMusicItem = 0;
-            menuStartIndex = 0;
-            menuNeedsRefresh = true;
-            lastButtonPress = currentMillis;
-          }
+      displayMusicSettings();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleMusicSettings();
+        if (UP() || DOWN() || START() || STOP()) {
+          lastButtonPress = currentMillis;
         }
       }
       break;
@@ -697,6 +642,41 @@ void handleMenu() {
         if (UP() || DOWN() || LEFT() || RIGHT() || STOP()) {
           lastButtonPress = currentMillis;
         }
+      }
+      break;
+
+    case MENU_MUSIC_ON:
+      displayMusicSubmenu("On Music", &tempMusicOnPin);
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleMusicSubmenu(&tempMusicOnPin);
+      }
+      break;
+
+    case MENU_MUSIC_OBSTACLE:
+      displayMusicSubmenu("Obstacle Music", &tempMusicObstaclePin);
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleMusicSubmenu(&tempMusicObstaclePin);
+      }
+      break;
+
+    case MENU_MUSIC_STATION:
+      displayMusicSubmenu("Station Music", &tempMusicStationPin);
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleMusicSubmenu(&tempMusicStationPin);
+      }
+      break;
+
+    case MENU_MUSIC_OUTOFLINE:
+      displayMusicSubmenu("OutOfLine Music", &tempMusicOutOfLinePin);
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleMusicSubmenu(&tempMusicOutOfLinePin);
+      }
+      break;
+
+    case MENU_MUSIC_WARNING:
+      displayMusicSubmenu("Warning Music", &tempMusicWarningPin);
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleMusicSubmenu(&tempMusicWarningPin);
       }
       break;
 
@@ -874,6 +854,12 @@ void displayMotorTest() {
 }
 
 void displayPidSettings() {
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
   displayMenuHeader("PID Settings");
 
   // Display Kp
@@ -907,6 +893,12 @@ void displayPidSettings() {
 
 // PID Submenu Functions
 void displayPidSubmenu() {
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
   displayMenuHeader("PID Settings");
 
   // Display Forward option
@@ -948,6 +940,8 @@ void handlePidSubmenu() {
       menuNeedsRefresh = true;
     }
   } else if (STOP()) {
+    // Save settings before going back to main menu
+    saveSettings();
     currentMenu = MENU_MAIN;
     selectedParam = 0;
     menuStartIndex = 0;
@@ -955,15 +949,140 @@ void handlePidSubmenu() {
   }
 }
 
-void displayPidForwardSettings() {
+
+
+// PID Forward Submenu Functions
+void displayPidForwardSubmenu() {
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
   displayMenuHeader("PID Forward");
+
+  // Display WithMassa option
+  lcd.setCursor(0, 1);
+  if (selectedParam == 0) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("WithMassa");
+
+  // Display Default option
+  lcd.setCursor(0, 2);
+  if (selectedParam == 1) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Default");
+
+  // Show controls
+  lcd.setCursor(0, 3);
+  lcd.print("A:Select B:Back");
+}
+
+void handlePidForwardSubmenu() {
+  if (UP()) {
+    selectedParam = (selectedParam - 1 + 2) % 2;
+  } else if (DOWN()) {
+    selectedParam = (selectedParam + 1) % 2;
+  } else if (START()) {
+    if (selectedParam == 0) {
+      // WithMassa PID
+      lcd.clear();
+      initMenuTempVariables();  // Initialize temporary variables from global values
+      currentMenu = MENU_PID_FORWARD_WITHMASSA;
+      selectedParam = 0; // Reset for PID parameter selection
+      menuNeedsRefresh = true;
+    } else if (selectedParam == 1) {
+      // Default PID
+      lcd.clear();
+      initMenuTempVariables();  // Initialize temporary variables from global values
+      currentMenu = MENU_PID_FORWARD_DEFAULT;
+      selectedParam = 0; // Reset for PID parameter selection
+      menuNeedsRefresh = true;
+    }
+  } else if (STOP()) {
+    // Save settings before going back
+    saveSettings();
+    currentMenu = MENU_PID_SETTINGS;
+    selectedParam = 0;
+    menuStartIndex = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+// PID Backward Submenu Functions
+void displayPidBackwardSubmenu() {
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
+  displayMenuHeader("PID Backward");
+
+  // Display WithMassa option
+  lcd.setCursor(0, 1);
+  if (selectedParam == 0) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("WithMassa");
+
+  // Display Default option
+  lcd.setCursor(0, 2);
+  if (selectedParam == 1) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Default");
+
+  // Show controls
+  lcd.setCursor(0, 3);
+  lcd.print("A:Select B:Back");
+}
+
+void handlePidBackwardSubmenu() {
+  if (UP()) {
+    selectedParam = (selectedParam - 1 + 2) % 2;
+  } else if (DOWN()) {
+    selectedParam = (selectedParam + 1) % 2;
+  } else if (START()) {
+    if (selectedParam == 0) {
+      // WithMassa PID
+      lcd.clear();
+      initMenuTempVariables();  // Initialize temporary variables from global values
+      currentMenu = MENU_PID_BACKWARD_WITHMASSA;
+      selectedParam = 0; // Reset for PID parameter selection
+      menuNeedsRefresh = true;
+    } else if (selectedParam == 1) {
+      // Default PID
+      lcd.clear();
+      initMenuTempVariables();  // Initialize temporary variables from global values
+      currentMenu = MENU_PID_BACKWARD_DEFAULT;
+      selectedParam = 0; // Reset for PID parameter selection
+      menuNeedsRefresh = true;
+    }
+  } else if (STOP()) {
+    // Save settings before going back
+    saveSettings();
+    currentMenu = MENU_PID_SETTINGS;
+    selectedParam = 0;
+    menuStartIndex = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+// PID Forward WithMassa Settings Functions
+void displayPidForwardWithMassaSettings() {
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
+  displayMenuHeader("PID Fwd WithMassa");
 
   // Display Kp
   lcd.setCursor(0, 1);
   if (selectedParam == 0) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Kp: ");
-  lcd.print(tempKpForward);
+  lcd.print(tempKpForwardWithMassa);
   lcd.print("       ");
 
   // Display Ki
@@ -971,7 +1090,7 @@ void displayPidForwardSettings() {
   if (selectedParam == 1) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Ki: ");
-  lcd.print(tempKiForward);
+  lcd.print(tempKiForwardWithMassa);
   lcd.print("       ");
 
   // Display Kd
@@ -979,7 +1098,7 @@ void displayPidForwardSettings() {
   if (selectedParam == 2) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Kd: ");
-  lcd.print(tempKdForward);
+  lcd.print(tempKdForwardWithMassa);
   lcd.print("       ");
 
   // Show controls
@@ -987,15 +1106,124 @@ void displayPidForwardSettings() {
   lcd.print("B:OK");
 }
 
-void displayPidBackwardSettings() {
-  displayMenuHeader("PID Backward");
+void handlePidForwardWithMassaSettings() {
+  static unsigned long lastRightPress = 0;
+  static unsigned long lastLeftPress = 0;
+  static unsigned long rightHoldStart = 0;
+  static unsigned long leftHoldStart = 0;
+  static bool rightHolding = false;
+  static bool leftHolding = false;
+  unsigned long currentMillis = millis();
+
+  if (UP()) {
+    selectedParam = (selectedParam - 1 + 3) % 3;
+  } else if (DOWN()) {
+    selectedParam = (selectedParam + 1) % 3;
+  }
+
+  // Check RIGHT button
+  if (digitalRead(rightPin) == HIGH) {
+    if (!rightHolding) {
+      // Button just pressed
+      rightHoldStart = currentMillis;
+      rightHolding = true;
+      
+      // Single click - increment by 0.1
+      pidIncrement = 0.1f;
+      switch (selectedParam) {
+        case 0: tempKpForwardWithMassa += pidIncrement; break;
+        case 1: tempKiForwardWithMassa += pidIncrement; break;
+        case 2: tempKdForwardWithMassa += pidIncrement; break;
+      }
+      // Update values in memory
+      kpLinefollowerForwardWithMassa = tempKpForwardWithMassa;
+      kiLinefollowerForwardWithMassa = tempKiForwardWithMassa;
+      kdLinefollowerForwardWithMassa = tempKdForwardWithMassa;
+      lastRightPress = currentMillis;
+    } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
+      // Button is being held - increment by 1.0 every 100ms
+      if (currentMillis - lastRightPress >= 100) {
+        pidIncrement = 1.0f;
+        switch (selectedParam) {
+          case 0: tempKpForwardWithMassa += pidIncrement; break;
+          case 1: tempKiForwardWithMassa += pidIncrement; break;
+          case 2: tempKdForwardWithMassa += pidIncrement; break;
+        }
+        // Update values in memory
+        kpLinefollowerForwardWithMassa = tempKpForwardWithMassa;
+        kiLinefollowerForwardWithMassa = tempKiForwardWithMassa;
+        kdLinefollowerForwardWithMassa = tempKdForwardWithMassa;
+        lastRightPress = currentMillis;
+      }
+    }
+  } else {
+    rightHolding = false;
+  }
+
+  // Check LEFT button
+  if (digitalRead(leftPin) == HIGH) {
+    if (!leftHolding) {
+      // Button just pressed
+      leftHoldStart = currentMillis;
+      leftHolding = true;
+      
+      // Single click - decrement by 0.1
+      pidIncrement = 0.1f;
+      switch (selectedParam) {
+        case 0: tempKpForwardWithMassa -= pidIncrement; break;
+        case 1: tempKiForwardWithMassa -= pidIncrement; break;
+        case 2: tempKdForwardWithMassa -= pidIncrement; break;
+      }
+      // Update values in memory
+      kpLinefollowerForwardWithMassa = tempKpForwardWithMassa;
+      kiLinefollowerForwardWithMassa = tempKiForwardWithMassa;
+      kdLinefollowerForwardWithMassa = tempKdForwardWithMassa;
+      lastLeftPress = currentMillis;
+    } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
+      // Button is being held - decrement by 1.0 every 100ms
+      if (currentMillis - lastLeftPress >= 100) {
+        pidIncrement = 1.0f;
+        switch (selectedParam) {
+          case 0: tempKpForwardWithMassa -= pidIncrement; break;
+          case 1: tempKiForwardWithMassa -= pidIncrement; break;
+          case 2: tempKdForwardWithMassa -= pidIncrement; break;
+        }
+        // Update values in memory
+        kpLinefollowerForwardWithMassa = tempKpForwardWithMassa;
+        kiLinefollowerForwardWithMassa = tempKiForwardWithMassa;
+        kdLinefollowerForwardWithMassa = tempKdForwardWithMassa;
+        lastLeftPress = currentMillis;
+      }
+    }
+  } else {
+    leftHolding = false;
+  }
+
+  if (STOP()) {
+    // Save settings before going back
+    saveSettings();
+    currentMenu = MENU_PID_FORWARD;
+    selectedParam = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+// PID Forward Default Settings Functions
+void displayPidForwardDefaultSettings() {
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
+  displayMenuHeader("PID Fwd Default");
 
   // Display Kp
   lcd.setCursor(0, 1);
   if (selectedParam == 0) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Kp: ");
-  lcd.print(tempKpBackward);
+  lcd.print(tempKpForwardDefault);
   lcd.print("       ");
 
   // Display Ki
@@ -1003,7 +1231,7 @@ void displayPidBackwardSettings() {
   if (selectedParam == 1) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Ki: ");
-  lcd.print(tempKiBackward);
+  lcd.print(tempKiForwardDefault);
   lcd.print("       ");
 
   // Display Kd
@@ -1011,12 +1239,396 @@ void displayPidBackwardSettings() {
   if (selectedParam == 2) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Kd: ");
-  lcd.print(tempKdBackward);
+  lcd.print(tempKdForwardDefault);
   lcd.print("       ");
 
   // Show controls
   lcd.setCursor(12, 3);
   lcd.print("B:OK");
+}
+
+void handlePidForwardDefaultSettings() {
+  static unsigned long lastRightPress = 0;
+  static unsigned long lastLeftPress = 0;
+  static unsigned long rightHoldStart = 0;
+  static unsigned long leftHoldStart = 0;
+  static bool rightHolding = false;
+  static bool leftHolding = false;
+  unsigned long currentMillis = millis();
+
+  if (UP()) {
+    selectedParam = (selectedParam - 1 + 3) % 3;
+  } else if (DOWN()) {
+    selectedParam = (selectedParam + 1) % 3;
+  }
+
+  // Check RIGHT button
+  if (digitalRead(rightPin) == HIGH) {
+    if (!rightHolding) {
+      // Button just pressed
+      rightHoldStart = currentMillis;
+      rightHolding = true;
+      
+      // Single click - increment by 0.1
+      pidIncrement = 0.1f;
+      switch (selectedParam) {
+        case 0: tempKpForwardDefault += pidIncrement; break;
+        case 1: tempKiForwardDefault += pidIncrement; break;
+        case 2: tempKdForwardDefault += pidIncrement; break;
+      }
+      // Update values in memory
+      kpLinefollowerForwardDefault = tempKpForwardDefault;
+      kiLinefollowerForwardDefault = tempKiForwardDefault;
+      kdLinefollowerForwardDefault = tempKdForwardDefault;
+      lastRightPress = currentMillis;
+    } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
+      // Button is being held - increment by 1.0 every 100ms
+      if (currentMillis - lastRightPress >= 100) {
+        pidIncrement = 1.0f;
+        switch (selectedParam) {
+          case 0: tempKpForwardDefault += pidIncrement; break;
+          case 1: tempKiForwardDefault += pidIncrement; break;
+          case 2: tempKdForwardDefault += pidIncrement; break;
+        }
+        // Update values in memory
+        kpLinefollowerForwardDefault = tempKpForwardDefault;
+        kiLinefollowerForwardDefault = tempKiForwardDefault;
+        kdLinefollowerForwardDefault = tempKdForwardDefault;
+        lastRightPress = currentMillis;
+      }
+    }
+  } else {
+    rightHolding = false;
+  }
+
+  // Check LEFT button
+  if (digitalRead(leftPin) == HIGH) {
+    if (!leftHolding) {
+      // Button just pressed
+      leftHoldStart = currentMillis;
+      leftHolding = true;
+      
+      // Single click - decrement by 0.1
+      pidIncrement = 0.1f;
+      switch (selectedParam) {
+        case 0: tempKpForwardDefault -= pidIncrement; break;
+        case 1: tempKiForwardDefault -= pidIncrement; break;
+        case 2: tempKdForwardDefault -= pidIncrement; break;
+      }
+      // Update values in memory
+      kpLinefollowerForwardDefault = tempKpForwardDefault;
+      kiLinefollowerForwardDefault = tempKiForwardDefault;
+      kdLinefollowerForwardDefault = tempKdForwardDefault;
+      lastLeftPress = currentMillis;
+    } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
+      // Button is being held - decrement by 1.0 every 100ms
+      if (currentMillis - lastLeftPress >= 100) {
+        pidIncrement = 1.0f;
+        switch (selectedParam) {
+          case 0: tempKpForwardDefault -= pidIncrement; break;
+          case 1: tempKiForwardDefault -= pidIncrement; break;
+          case 2: tempKdForwardDefault -= pidIncrement; break;
+        }
+        // Update values in memory
+        kpLinefollowerForwardDefault = tempKpForwardDefault;
+        kiLinefollowerForwardDefault = tempKiForwardDefault;
+        kdLinefollowerForwardDefault = tempKdForwardDefault;
+        lastLeftPress = currentMillis;
+      }
+    }
+  } else {
+    leftHolding = false;
+  }
+
+  if (STOP()) {
+    // Save settings before going back
+    saveSettings();
+    currentMenu = MENU_PID_FORWARD;
+    selectedParam = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+// PID Backward WithMassa Settings Functions
+void displayPidBackwardWithMassaSettings() {
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
+  displayMenuHeader("PID Bwd WithMassa");
+
+  // Display Kp
+  lcd.setCursor(0, 1);
+  if (selectedParam == 0) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Kp: ");
+  lcd.print(tempKpBackwardWithMassa);
+  lcd.print("       ");
+
+  // Display Ki
+  lcd.setCursor(0, 2);
+  if (selectedParam == 1) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Ki: ");
+  lcd.print(tempKiBackwardWithMassa);
+  lcd.print("       ");
+
+  // Display Kd
+  lcd.setCursor(0, 3);
+  if (selectedParam == 2) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Kd: ");
+  lcd.print(tempKdBackwardWithMassa);
+  lcd.print("       ");
+
+  // Show controls
+  lcd.setCursor(12, 3);
+  lcd.print("B:OK");
+}
+
+void handlePidBackwardWithMassaSettings() {
+  static unsigned long lastRightPress = 0;
+  static unsigned long lastLeftPress = 0;
+  static unsigned long rightHoldStart = 0;
+  static unsigned long leftHoldStart = 0;
+  static bool rightHolding = false;
+  static bool leftHolding = false;
+  unsigned long currentMillis = millis();
+
+  if (UP()) {
+    selectedParam = (selectedParam - 1 + 3) % 3;
+  } else if (DOWN()) {
+    selectedParam = (selectedParam + 1) % 3;
+  }
+
+  // Check RIGHT button
+  if (digitalRead(rightPin) == HIGH) {
+    if (!rightHolding) {
+      // Button just pressed
+      rightHoldStart = currentMillis;
+      rightHolding = true;
+      
+      // Single click - increment by 0.1
+      pidIncrement = 0.1f;
+      switch (selectedParam) {
+        case 0: tempKpBackwardWithMassa += pidIncrement; break;
+        case 1: tempKiBackwardWithMassa += pidIncrement; break;
+        case 2: tempKdBackwardWithMassa += pidIncrement; break;
+      }
+      // Update values in memory
+      kpLinefollowerBackwardWithMassa = tempKpBackwardWithMassa;
+      kiLinefollowerBackwardWithMassa = tempKiBackwardWithMassa;
+      kdLinefollowerBackwardWithMassa = tempKdBackwardWithMassa;
+      lastRightPress = currentMillis;
+    } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
+      // Button is being held - increment by 1.0 every 100ms
+      if (currentMillis - lastRightPress >= 100) {
+        pidIncrement = 1.0f;
+        switch (selectedParam) {
+          case 0: tempKpBackwardWithMassa += pidIncrement; break;
+          case 1: tempKiBackwardWithMassa += pidIncrement; break;
+          case 2: tempKdBackwardWithMassa += pidIncrement; break;
+        }
+        // Update values in memory
+        kpLinefollowerBackwardWithMassa = tempKpBackwardWithMassa;
+        kiLinefollowerBackwardWithMassa = tempKiBackwardWithMassa;
+        kdLinefollowerBackwardWithMassa = tempKdBackwardWithMassa;
+        lastRightPress = currentMillis;
+      }
+    }
+  } else {
+    rightHolding = false;
+  }
+
+  // Check LEFT button
+  if (digitalRead(leftPin) == HIGH) {
+    if (!leftHolding) {
+      // Button just pressed
+      leftHoldStart = currentMillis;
+      leftHolding = true;
+      
+      // Single click - decrement by 0.1
+      pidIncrement = 0.1f;
+      switch (selectedParam) {
+        case 0: tempKpBackwardWithMassa -= pidIncrement; break;
+        case 1: tempKiBackwardWithMassa -= pidIncrement; break;
+        case 2: tempKdBackwardWithMassa -= pidIncrement; break;
+      }
+      // Update values in memory
+      kpLinefollowerBackwardWithMassa = tempKpBackwardWithMassa;
+      kiLinefollowerBackwardWithMassa = tempKiBackwardWithMassa;
+      kdLinefollowerBackwardWithMassa = tempKdBackwardWithMassa;
+      lastLeftPress = currentMillis;
+    } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
+      // Button is being held - decrement by 1.0 every 100ms
+      if (currentMillis - lastLeftPress >= 100) {
+        pidIncrement = 1.0f;
+        switch (selectedParam) {
+          case 0: tempKpBackwardWithMassa -= pidIncrement; break;
+          case 1: tempKiBackwardWithMassa -= pidIncrement; break;
+          case 2: tempKdBackwardWithMassa -= pidIncrement; break;
+        }
+        // Update values in memory
+        kpLinefollowerBackwardWithMassa = tempKpBackwardWithMassa;
+        kiLinefollowerBackwardWithMassa = tempKiBackwardWithMassa;
+        kdLinefollowerBackwardWithMassa = tempKdBackwardWithMassa;
+        lastLeftPress = currentMillis;
+      }
+    }
+  } else {
+    leftHolding = false;
+  }
+
+  if (STOP()) {
+    // Save settings before going back
+    saveSettings();
+    currentMenu = MENU_PID_BACKWARD;
+    selectedParam = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+// PID Backward Default Settings Functions
+void displayPidBackwardDefaultSettings() {
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
+  displayMenuHeader("PID Bwd Default");
+
+  // Display Kp
+  lcd.setCursor(0, 1);
+  if (selectedParam == 0) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Kp: ");
+  lcd.print(tempKpBackwardDefault);
+  lcd.print("       ");
+
+  // Display Ki
+  lcd.setCursor(0, 2);
+  if (selectedParam == 1) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Ki: ");
+  lcd.print(tempKiBackwardDefault);
+  lcd.print("       ");
+
+  // Display Kd
+  lcd.setCursor(0, 3);
+  if (selectedParam == 2) lcd.print("> ");
+  else lcd.print("  ");
+  lcd.print("Kd: ");
+  lcd.print(tempKdBackwardDefault);
+  lcd.print("       ");
+
+  // Show controls
+  lcd.setCursor(12, 3);
+  lcd.print("B:OK");
+}
+
+void handlePidBackwardDefaultSettings() {
+  static unsigned long lastRightPress = 0;
+  static unsigned long lastLeftPress = 0;
+  static unsigned long rightHoldStart = 0;
+  static unsigned long leftHoldStart = 0;
+  static bool rightHolding = false;
+  static bool leftHolding = false;
+  unsigned long currentMillis = millis();
+
+  if (UP()) {
+    selectedParam = (selectedParam - 1 + 3) % 3;
+  } else if (DOWN()) {
+    selectedParam = (selectedParam + 1) % 3;
+  }
+
+  // Check RIGHT button
+  if (digitalRead(rightPin) == HIGH) {
+    if (!rightHolding) {
+      // Button just pressed
+      rightHoldStart = currentMillis;
+      rightHolding = true;
+      
+      // Single click - increment by 0.1
+      pidIncrement = 0.1f;
+      switch (selectedParam) {
+        case 0: tempKpBackwardDefault += pidIncrement; break;
+        case 1: tempKiBackwardDefault += pidIncrement; break;
+        case 2: tempKdBackwardDefault += pidIncrement; break;
+      }
+      // Update values in memory
+      kpLinefollowerBackwardDefault = tempKpBackwardDefault;
+      kiLinefollowerBackwardDefault = tempKiBackwardDefault;
+      kdLinefollowerBackwardDefault = tempKdBackwardDefault;
+      lastRightPress = currentMillis;
+    } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
+      // Button is being held - increment by 1.0 every 100ms
+      if (currentMillis - lastRightPress >= 100) {
+        pidIncrement = 1.0f;
+        switch (selectedParam) {
+          case 0: tempKpBackwardDefault += pidIncrement; break;
+          case 1: tempKiBackwardDefault += pidIncrement; break;
+          case 2: tempKdBackwardDefault += pidIncrement; break;
+        }
+        // Update values in memory
+        kpLinefollowerBackwardDefault = tempKpBackwardDefault;
+        kiLinefollowerBackwardDefault = tempKiBackwardDefault;
+        kdLinefollowerBackwardDefault = tempKdBackwardDefault;
+        lastRightPress = currentMillis;
+      }
+    }
+  } else {
+    rightHolding = false;
+  }
+
+  // Check LEFT button
+  if (digitalRead(leftPin) == HIGH) {
+    if (!leftHolding) {
+      // Button just pressed
+      leftHoldStart = currentMillis;
+      leftHolding = true;
+      
+      // Single click - decrement by 0.1
+      pidIncrement = 0.1f;
+      switch (selectedParam) {
+        case 0: tempKpBackwardDefault -= pidIncrement; break;
+        case 1: tempKiBackwardDefault -= pidIncrement; break;
+        case 2: tempKdBackwardDefault -= pidIncrement; break;
+      }
+      // Update values in memory
+      kpLinefollowerBackwardDefault = tempKpBackwardDefault;
+      kiLinefollowerBackwardDefault = tempKiBackwardDefault;
+      kdLinefollowerBackwardDefault = tempKdBackwardDefault;
+      lastLeftPress = currentMillis;
+    } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
+      // Button is being held - decrement by 1.0 every 100ms
+      if (currentMillis - lastLeftPress >= 100) {
+        pidIncrement = 1.0f;
+        switch (selectedParam) {
+          case 0: tempKpBackwardDefault -= pidIncrement; break;
+          case 1: tempKiBackwardDefault -= pidIncrement; break;
+          case 2: tempKdBackwardDefault -= pidIncrement; break;
+        }
+        // Update values in memory
+        kpLinefollowerBackwardDefault = tempKpBackwardDefault;
+        kiLinefollowerBackwardDefault = tempKiBackwardDefault;
+        kdLinefollowerBackwardDefault = tempKdBackwardDefault;
+        lastLeftPress = currentMillis;
+      }
+    }
+  } else {
+    leftHolding = false;
+  }
+
+  if (STOP()) {
+    // Save settings before going back
+    saveSettings();
+    currentMenu = MENU_PID_BACKWARD;
+    selectedParam = 0;
+    menuNeedsRefresh = true;
+  }
 }
 
 void displayTargetSettings() {
@@ -1337,213 +1949,7 @@ void handlePidSettings() {
   }
 }
 
-void handlePidForwardSettings() {
-  static unsigned long lastRightPress = 0;
-  static unsigned long lastLeftPress = 0;
-  static unsigned long rightHoldStart = 0;
-  static unsigned long leftHoldStart = 0;
-  static bool rightHolding = false;
-  static bool leftHolding = false;
-  unsigned long currentMillis = millis();
 
-  if (UP()) {
-    selectedParam = (selectedParam - 1 + 3) % 3;
-  } else if (DOWN()) {
-    selectedParam = (selectedParam + 1) % 3;
-  }
-
-  // Check RIGHT button
-  if (digitalRead(rightPin) == HIGH) {
-    if (!rightHolding) {
-      // Button just pressed
-      rightHoldStart = currentMillis;
-      rightHolding = true;
-      
-      // Single click - increment by 0.1
-      pidIncrement = 0.1f;
-      switch (selectedParam) {
-        case 0: tempKpForward += pidIncrement; break;
-        case 1: tempKiForward += pidIncrement; break;
-        case 2: tempKdForward += pidIncrement; break;
-      }
-      // Update values in memory (save on exit only for efficiency)
-      kpLinefollowerForward = tempKpForward;
-      kiLinefollowerForward = tempKiForward;
-      kdLinefollowerForward = tempKdForward;
-      lastRightPress = currentMillis;
-    } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
-      // Button is being held - increment by 1.0 every 100ms
-      if (currentMillis - lastRightPress >= 100) {
-        pidIncrement = 1.0f;
-        switch (selectedParam) {
-          case 0: tempKpForward += pidIncrement; break;
-          case 1: tempKiForward += pidIncrement; break;
-          case 2: tempKdForward += pidIncrement; break;
-        }
-        // Update values in memory (save on exit only for efficiency)
-        kpLinefollowerForward = tempKpForward;
-        kiLinefollowerForward = tempKiForward;
-        kdLinefollowerForward = tempKdForward;
-        lastRightPress = currentMillis;
-      }
-    }
-  } else {
-    rightHolding = false;
-  }
-
-  // Check LEFT button
-  if (digitalRead(leftPin) == HIGH) {
-    if (!leftHolding) {
-      // Button just pressed
-      leftHoldStart = currentMillis;
-      leftHolding = true;
-      
-      // Single click - decrement by 0.1
-      pidIncrement = 0.1f;
-      switch (selectedParam) {
-        case 0: tempKpForward = max(0.0f, (float)(tempKpForward - pidIncrement)); break;
-        case 1: tempKiForward = max(0.0f, (float)(tempKiForward - pidIncrement)); break;
-        case 2: tempKdForward = max(0.0f, (float)(tempKdForward - pidIncrement)); break;
-      }
-      // Update values in memory (save on exit only for efficiency)
-      kpLinefollowerForward = tempKpForward;
-      kiLinefollowerForward = tempKiForward;
-      kdLinefollowerForward = tempKdForward;
-      lastLeftPress = currentMillis;
-    } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
-      // Button is being held - decrement by 1.0 every 100ms
-      if (currentMillis - lastLeftPress >= 100) {
-        pidIncrement = 1.0f;
-        switch (selectedParam) {
-          case 0: tempKpForward = max(0.0f, (float)(tempKpForward - pidIncrement)); break;
-          case 1: tempKiForward = max(0.0f, (float)(tempKiForward - pidIncrement)); break;
-          case 2: tempKdForward = max(0.0f, (float)(tempKdForward - pidIncrement)); break;
-        }
-        // Update values in memory (save on exit only for efficiency)
-        kpLinefollowerForward = tempKpForward;
-        kiLinefollowerForward = tempKiForward;
-        kdLinefollowerForward = tempKdForward;
-        lastLeftPress = currentMillis;
-      }
-    }
-  } else {
-    leftHolding = false;
-  }
-
-  if (STOP()) {
-    kpLinefollowerForward = tempKpForward;
-    kiLinefollowerForward = tempKiForward;
-    kdLinefollowerForward = tempKdForward;
-    saveSettings();
-    currentMenu = MENU_PID_SETTINGS;
-    selectedParam = 0;
-    menuNeedsRefresh = true;
-  }
-}
-
-void handlePidBackwardSettings() {
-  static unsigned long lastRightPress = 0;
-  static unsigned long lastLeftPress = 0;
-  static unsigned long rightHoldStart = 0;
-  static unsigned long leftHoldStart = 0;
-  static bool rightHolding = false;
-  static bool leftHolding = false;
-  unsigned long currentMillis = millis();
-
-  if (UP()) {
-    selectedParam = (selectedParam - 1 + 3) % 3;
-  } else if (DOWN()) {
-    selectedParam = (selectedParam + 1) % 3;
-  }
-
-  // Check RIGHT button
-  if (digitalRead(rightPin) == HIGH) {
-    if (!rightHolding) {
-      // Button just pressed
-      rightHoldStart = currentMillis;
-      rightHolding = true;
-      
-      // Single click - increment by 0.1
-      pidIncrement = 0.1f;
-      switch (selectedParam) {
-        case 0: tempKpBackward += pidIncrement; break;
-        case 1: tempKiBackward += pidIncrement; break;
-        case 2: tempKdBackward += pidIncrement; break;
-      }
-      // Update values in memory (save on exit only for efficiency)
-      kpLinefollowerBackward = tempKpBackward;
-      kiLinefollowerBackward = tempKiBackward;
-      kdLinefollowerBackward = tempKdBackward;
-      lastRightPress = currentMillis;
-    } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
-      // Button is being held - increment by 1.0 every 100ms
-      if (currentMillis - lastRightPress >= 100) {
-        pidIncrement = 1.0f;
-        switch (selectedParam) {
-          case 0: tempKpBackward += pidIncrement; break;
-          case 1: tempKiBackward += pidIncrement; break;
-          case 2: tempKdBackward += pidIncrement; break;
-        }
-        // Update values in memory (save on exit only for efficiency)
-        kpLinefollowerBackward = tempKpBackward;
-        kiLinefollowerBackward = tempKiBackward;
-        kdLinefollowerBackward = tempKdBackward;
-        lastRightPress = currentMillis;
-      }
-    }
-  } else {
-    rightHolding = false;
-  }
-
-  // Check LEFT button
-  if (digitalRead(leftPin) == HIGH) {
-    if (!leftHolding) {
-      // Button just pressed
-      leftHoldStart = currentMillis;
-      leftHolding = true;
-      
-      // Single click - decrement by 0.1
-      pidIncrement = 0.1f;
-      switch (selectedParam) {
-        case 0: tempKpBackward = max(0.0f, (float)(tempKpBackward - pidIncrement)); break;
-        case 1: tempKiBackward = max(0.0f, (float)(tempKiBackward - pidIncrement)); break;
-        case 2: tempKdBackward = max(0.0f, (float)(tempKdBackward - pidIncrement)); break;
-      }
-      // Update values in memory (save on exit only for efficiency)
-      kpLinefollowerBackward = tempKpBackward;
-      kiLinefollowerBackward = tempKiBackward;
-      kdLinefollowerBackward = tempKdBackward;
-      lastLeftPress = currentMillis;
-    } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
-      // Button is being held - decrement by 1.0 every 100ms
-      if (currentMillis - lastLeftPress >= 100) {
-        pidIncrement = 1.0f;
-        switch (selectedParam) {
-          case 0: tempKpBackward = max(0.0f, (float)(tempKpBackward - pidIncrement)); break;
-          case 1: tempKiBackward = max(0.0f, (float)(tempKiBackward - pidIncrement)); break;
-          case 2: tempKdBackward = max(0.0f, (float)(tempKdBackward - pidIncrement)); break;
-        }
-        // Update values in memory (save on exit only for efficiency)
-        kpLinefollowerBackward = tempKpBackward;
-        kiLinefollowerBackward = tempKiBackward;
-        kdLinefollowerBackward = tempKdBackward;
-        lastLeftPress = currentMillis;
-      }
-    }
-  } else {
-    leftHolding = false;
-  }
-
-  if (STOP()) {
-    kpLinefollowerBackward = tempKpBackward;
-    kiLinefollowerBackward = tempKiBackward;
-    kdLinefollowerBackward = tempKdBackward;
-    saveSettings();
-    currentMenu = MENU_PID_SETTINGS;
-    selectedParam = 0;
-    menuNeedsRefresh = true;
-  }
-}
 
 void handleTargetSettings() {
   unsigned long currentMillis = millis();
@@ -1827,20 +2233,32 @@ void handleResetMenu() {
     tempKi = 0.0;
     tempKd = 0.0;
     
-    // Reset Forward PID values to defaults
-    tempKpForward = 70.0;
-    tempKiForward = 0.0;
-    tempKdForward = 0.0;
+    // Reset Forward PID WithMassa values to defaults
+    tempKpForwardWithMassa = 70.0;
+    tempKiForwardWithMassa = 0.0;
+    tempKdForwardWithMassa = 0.0;
     
-    // Reset Backward PID values to defaults
-    tempKpBackward = 70.0;
-    tempKiBackward = 0.0;
-    tempKdBackward = 0.0;
+    // Reset Forward PID Default values to defaults
+    tempKpForwardDefault = 70.0;
+    tempKiForwardDefault = 0.0;
+    tempKdForwardDefault = 0.0;
+    
+    // Reset Backward PID WithMassa values to defaults
+    tempKpBackwardWithMassa = 70.0;
+    tempKiBackwardWithMassa = 0.0;
+    tempKdBackwardWithMassa = 0.0;
+    
+    // Reset Backward PID Default values to defaults
+    tempKpBackwardDefault = 70.0;
+    tempKiBackwardDefault = 0.0;
+    tempKdBackwardDefault = 0.0;
     
     // Debug: Print reset values
     Serial.println("=== PID Values Reset to Defaults ===");
-    Serial.println("Reset Forward PID - Kp: " + String(tempKpForward) + ", Ki: " + String(tempKiForward) + ", Kd: " + String(tempKdForward));
-    Serial.println("Reset Backward PID - Kp: " + String(tempKpBackward) + ", Ki: " + String(tempKiBackward) + ", Kd: " + String(tempKdBackward));
+    Serial.println("Reset Forward PID WithMassa - Kp: " + String(tempKpForwardWithMassa) + ", Ki: " + String(tempKiForwardWithMassa) + ", Kd: " + String(tempKdForwardWithMassa));
+    Serial.println("Reset Forward PID Default - Kp: " + String(tempKpForwardDefault) + ", Ki: " + String(tempKiForwardDefault) + ", Kd: " + String(tempKdForwardDefault));
+    Serial.println("Reset Backward PID WithMassa - Kp: " + String(tempKpBackwardWithMassa) + ", Ki: " + String(tempKiBackwardWithMassa) + ", Kd: " + String(tempKdBackwardWithMassa));
+    Serial.println("Reset Backward PID Default - Kp: " + String(tempKpBackwardDefault) + ", Ki: " + String(tempKiBackwardDefault) + ", Kd: " + String(tempKdBackwardDefault));
 
     // Reset Motor values to defaults
     tempBaseSpeed = 1000;
@@ -1853,10 +2271,10 @@ void handleResetMenu() {
     tempInvertHook = false;
 
     // Reset Music mapping values to defaults
-    tempMusicStationPin = 0;   // pinMusic1
-    tempMusicErrorPin = 1;     // pinMusic2
-    tempMusicDetectPin = 2;    // pinMusic3
-    tempMusicKomputerPin = 3;  // pinMusic4
+    tempMusicOnPin = 0;        // pinMusic1
+    tempMusicObstaclePin = 1;  // pinMusic2
+    tempMusicStationPin = 2;   // pinMusic3
+    tempMusicOutOfLinePin = 3; // pinMusic4
     
     // Reset Ultrasonic settings to defaults
     tempMinSafeDistanceFront = 30;
@@ -1921,41 +2339,97 @@ void handleResetAgvStateMenu() {
 
 
 void displayMusicTest() {
-  displayMenuHeader("Music Test");
+  static bool displayInitialized = false;
+  static int lastSelectedMusicItem = -1;
+  static int musicTestMenuStartIndex = 0;
+  static int lastMusicTestMenuStartIndex = -1;
+  
+  // Music mode labels (5 main categories)
+  String musicModes[5] = { "On", "Obstacle", "Station", "OutOfLine", "Warning" };
+  int maxMusicTestDisplay = 2; // Show 2 items at a time (to avoid overlap with controls)
+  
+  // Update scroll position if needed
+  if (selectedMusicItem < musicTestMenuStartIndex) {
+    musicTestMenuStartIndex = selectedMusicItem;
+    menuNeedsRefresh = true;
+  } else if (selectedMusicItem >= musicTestMenuStartIndex + maxMusicTestDisplay) {
+    musicTestMenuStartIndex = selectedMusicItem - maxMusicTestDisplay + 1;
+    menuNeedsRefresh = true;
+  }
+  
+  // Check if display needs refresh
+  bool needsRefresh = !displayInitialized || 
+                     selectedMusicItem != lastSelectedMusicItem ||
+                     musicTestMenuStartIndex != lastMusicTestMenuStartIndex ||
+                     menuNeedsRefresh;
+  
+  if (needsRefresh) {
+    lcd.clear();
+    displayMenuHeader("Music Test");
 
-  lcd.setCursor(0, 1);
-  lcd.print("UP   : Station");
-  lcd.setCursor(0, 2);
-  lcd.print("DOWN : Error");
-  lcd.setCursor(0, 3);
-  lcd.print("LF:Detect RT:Komputer");
+    // Display music items with scrolling (2 items max)
+    for (int i = 0; i < maxMusicTestDisplay && (musicTestMenuStartIndex + i) < maxMusicItems; i++) {
+      int musicIndex = musicTestMenuStartIndex + i;
+      lcd.setCursor(0, i + 1);
+
+      // Show cursor for selected item
+      if (musicIndex == selectedMusicItem) {
+        lcd.print("> ");
+      } else {
+        lcd.print("  ");
+      }
+
+      // Show mode name only
+      lcd.print(musicModes[musicIndex]);
+    }
+    
+    // Show controls at bottom (baris 3)
+    lcd.setCursor(0, 3);
+    lcd.print("A:Play B:Back");
+    
+    // Update tracking variables
+    displayInitialized = true;
+    lastSelectedMusicItem = selectedMusicItem;
+    lastMusicTestMenuStartIndex = musicTestMenuStartIndex;
+    menuNeedsRefresh = false;
+  }
 }
 
 void handleMusicTest() {
+  static bool displayInitialized = false;
+  
   if (UP()) {
-    statusMusic = false;
-    music(MUSIC_MODE_STATION);
-    lcd.setCursor(15, 1);
-    lcd.print("ON ");
+    selectedMusicItem = (selectedMusicItem - 1 + maxMusicItems) % maxMusicItems;
+    displayInitialized = false;
   } else if (DOWN()) {
+    selectedMusicItem = (selectedMusicItem + 1) % maxMusicItems;
+    displayInitialized = false;
+  } else if (START()) {
+    // Play selected music mode
     statusMusic = false;
-    music(MUSIC_MODE_ERROR);
-    lcd.setCursor(15, 2);
-    lcd.print("ON ");
-  } else if (LEFT()) {
-    statusMusic = false;
-    music(MUSIC_MODE_DETECT);
-    lcd.setCursor(15, 3);
-    lcd.print("ON ");
-  } else if (RIGHT()) {
-    statusMusic = false;
-    music(MUSIC_MODE_KOMPUTER);
-    lcd.setCursor(15, 3);
-    lcd.print("ON ");
+    switch (selectedMusicItem) {
+      case 0: 
+        music(MUSIC_MODE_ON);
+        break;
+      case 1: 
+        music(MUSIC_MODE_OBSTACLE);
+        break;
+      case 2: 
+        music(MUSIC_MODE_STATION);
+        break;
+      case 3: 
+        music(MUSIC_MODE_OUTOFLINE);
+        break;
+      case 4: 
+        music(MUSIC_MODE_WARNING);
+        break;
+    }
+    displayInitialized = false;
   } else if (STOP()) {
-    stopMusic();
+    // Stop all music and back to main menu
     currentMenu = MENU_MAIN;
     menuStartIndex = 0;
+    selectedMusicItem = 0;
     menuNeedsRefresh = true;
   }
 }
@@ -3103,6 +3577,208 @@ void handleUltrasonicBackSettings() {
     tempMinSafeDistanceBack = minSafeDistanceBack;
     currentMenu = MENU_ULTRASONIC_SETTINGS;
     selectedItem = 1;
+    menuNeedsRefresh = true;
+  }
+}
+
+void displayMusicSubmenu(const char* title, int* currentPin) {
+  static bool displayInitialized = false;
+  static int lastSelectedMusicPin = -1;
+  
+  // Check if display needs refresh
+  bool needsRefresh = !displayInitialized || 
+                     selectedMusicPin != lastSelectedMusicPin ||
+                     menuNeedsRefresh;
+  
+  if (needsRefresh) {
+    lcd.clear();
+    displayMenuHeader(title);
+    
+    // Display pin options (Pin 1 to Pin 5 + Silent) with scrolling
+    // Calculate scroll position to show 2 pins at a time (baris 1 dan 2)
+    int startIdx = 0;
+    if (selectedMusicPin >= 2) {
+      startIdx = selectedMusicPin - 1; // Keep selected item visible
+    }
+    if (startIdx > 4) startIdx = 4; // Max start index for 6 items (show last 2)
+    
+    for (int i = 0; i < 2; i++) { // Show 2 pins at a time
+      int pinIndex = startIdx + i;
+      if (pinIndex < 6) {
+        lcd.setCursor(0, i + 1);
+        
+        // Clear the line first
+        lcd.print("                    ");
+        lcd.setCursor(0, i + 1);
+        
+        // Show cursor for selected pin
+        if (pinIndex == selectedMusicPin) {
+          lcd.print("> ");
+        } else {
+          lcd.print("  ");
+        }
+        
+        if (pinIndex == 5) {
+          lcd.print("Silent");
+        } else {
+          lcd.print("Sound ");
+          lcd.print(pinIndex + 1);
+        }
+        
+        // Show current pin indicator
+        if (pinIndex == *currentPin) {
+          lcd.print(" (Current)");
+        }
+      }
+    }
+    
+    // Show controls at baris 3
+    lcd.setCursor(0, 3);
+    lcd.print("                    "); // Clear line
+    lcd.setCursor(0, 3);
+    lcd.print("U/D:Navi A:OK B:Back");
+    
+    // Update tracking variables
+    displayInitialized = true;
+    lastSelectedMusicPin = selectedMusicPin;
+    menuNeedsRefresh = false;
+  }
+}
+
+void handleMusicSubmenu(int* targetPin) {
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastButtonPress >= buttonDelay) {
+    if (UP()) {
+      selectedMusicPin = (selectedMusicPin - 1 + 6) % 6;
+      menuNeedsRefresh = true;
+      lastButtonPress = currentMillis;
+    } else if (DOWN()) {
+      selectedMusicPin = (selectedMusicPin + 1) % 6;
+      menuNeedsRefresh = true;
+      lastButtonPress = currentMillis;
+    } else if (START()) {
+      // Save selection
+      *targetPin = selectedMusicPin;
+      
+      // Apply all changes and save
+      musicOnPin = tempMusicOnPin;
+      musicObstaclePin = tempMusicObstaclePin;
+      musicStationPin = tempMusicStationPin;
+      musicOutOfLinePin = tempMusicOutOfLinePin;
+      musicWarningPin = tempMusicWarningPin;
+      saveSettings();
+      
+      // Back to music settings
+      currentMenu = MENU_MUSIC_SETTINGS;
+      menuNeedsRefresh = true;
+      lastButtonPress = currentMillis;
+    } else if (STOP()) {
+      // Back to music settings without saving
+      currentMenu = MENU_MUSIC_SETTINGS;
+      menuNeedsRefresh = true;
+      lastButtonPress = currentMillis;
+    }
+  }
+}
+
+void displayMusicSettings() {
+  static bool displayInitialized = false;
+  static int lastSelectedMusicItem = -1;
+  static int musicMenuStartIndex = 0;
+  static int lastMusicMenuStartIndex = -1;
+  
+  // Music mode labels (5 main categories)
+  String musicModes[5] = { "On", "Obstacle", "Station", "OutOfLine", "Warning" };
+  int maxMusicDisplay = 2; // Show 2 items at a time (to avoid overlap with controls)
+  
+  // Update scroll position if needed
+  if (selectedMusicItem < musicMenuStartIndex) {
+    musicMenuStartIndex = selectedMusicItem;
+    menuNeedsRefresh = true;
+  } else if (selectedMusicItem >= musicMenuStartIndex + maxMusicDisplay) {
+    musicMenuStartIndex = selectedMusicItem - maxMusicDisplay + 1;
+    menuNeedsRefresh = true;
+  }
+  
+  // Check if display needs refresh
+  bool needsRefresh = !displayInitialized || 
+                     selectedMusicItem != lastSelectedMusicItem ||
+                     musicMenuStartIndex != lastMusicMenuStartIndex ||
+                     menuNeedsRefresh;
+  
+  if (needsRefresh) {
+    lcd.clear();
+    displayMenuHeader("Music Settings");
+
+    // Display music items with scrolling (2 items max)
+    for (int i = 0; i < maxMusicDisplay && (musicMenuStartIndex + i) < maxMusicItems; i++) {
+      int musicIndex = musicMenuStartIndex + i;
+      lcd.setCursor(0, i + 1);
+
+      // Show cursor for selected item
+      if (musicIndex == selectedMusicItem) {
+        lcd.print("> ");
+      } else {
+        lcd.print("  ");
+      }
+
+      // Show mode name only
+      lcd.print(musicModes[musicIndex]);
+    }
+    
+    // Show controls at bottom (baris 3)
+    lcd.setCursor(0, 3);
+    lcd.print("A:Select B:Back");
+    
+    // Update tracking variables
+    displayInitialized = true;
+    lastSelectedMusicItem = selectedMusicItem;
+    lastMusicMenuStartIndex = musicMenuStartIndex;
+    menuNeedsRefresh = false;
+  }
+}
+
+void handleMusicSettings() {
+  static bool displayInitialized = false;
+  
+  if (UP()) {
+    selectedMusicItem = (selectedMusicItem - 1 + maxMusicItems) % maxMusicItems;
+    displayInitialized = false;
+  } else if (DOWN()) {
+    selectedMusicItem = (selectedMusicItem + 1) % maxMusicItems;
+    displayInitialized = false;
+  } else if (START()) {
+    // Enter submenu based on selected item
+    switch (selectedMusicItem) {
+      case 0: 
+        selectedMusicPin = tempMusicOnPin;
+        currentMenu = MENU_MUSIC_ON; 
+        break;
+      case 1: 
+        selectedMusicPin = tempMusicObstaclePin;
+        currentMenu = MENU_MUSIC_OBSTACLE; 
+        break;
+      case 2: 
+        selectedMusicPin = tempMusicStationPin;
+        currentMenu = MENU_MUSIC_STATION; 
+        break;
+      case 3: 
+        selectedMusicPin = tempMusicOutOfLinePin;
+        currentMenu = MENU_MUSIC_OUTOFLINE; 
+        break;
+      case 4: 
+        selectedMusicPin = tempMusicWarningPin;
+        currentMenu = MENU_MUSIC_WARNING; 
+        break;
+    }
+    displayInitialized = false;
+    menuNeedsRefresh = true;
+  } else if (STOP()) {
+    // Back to main menu
+    displayInitialized = false;
+    currentMenu = MENU_MAIN;
+    selectedMusicItem = 0;
+    menuStartIndex = 0;
     menuNeedsRefresh = true;
   }
 }

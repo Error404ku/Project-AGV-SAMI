@@ -28,11 +28,15 @@ void setupMusic() {
   pinMode(pinMusic2, OUTPUT);
   pinMode(pinMusic3, OUTPUT);
   pinMode(pinMusic4, OUTPUT);
-  // digital high semua
+  pinMode(pinMusic5, OUTPUT);
+  pinMode(pinMusic6, OUTPUT);
+  // Set all music pins to HIGH (relay OFF)
   digitalWrite(pinMusic1, HIGH);
   digitalWrite(pinMusic2, HIGH);
   digitalWrite(pinMusic3, HIGH);
   digitalWrite(pinMusic4, HIGH);
+  digitalWrite(pinMusic5, HIGH);
+  digitalWrite(pinMusic6, HIGH);
 }
 
 void setupHook() {
@@ -276,25 +280,32 @@ void setupRfid() {
 void setupMenu() {
   preferences.begin("agv-settings", true);
 
-  // Load PID settings
-  tempKp = preferences.getDouble("kpLinefollower", 0.0);
+  // Load PID settings with proper default values
+  tempKp = preferences.getDouble("kpLinefollower", 70.0);
   tempKi = preferences.getDouble("kiLinefollower", 0.0);
   tempKd = preferences.getDouble("kdLinefollower", 0.0);
   
-  // Load Forward PID settings
-  tempKpForward = preferences.getDouble("kpForward", 0.0);
-  tempKiForward = preferences.getDouble("kiForward", 0.0);
-  tempKdForward = preferences.getDouble("kdForward", 0.0);
+
   
-  // Load Backward PID settings
-  tempKpBackward = preferences.getDouble("kpBackward", 0.0);
-  tempKiBackward = preferences.getDouble("kiBackward", 0.0);
-  tempKdBackward = preferences.getDouble("kdBackward", 0.0);
+  // Load Forward PID WithMassa settings with proper default values
+  tempKpForwardWithMassa = preferences.getDouble("kpFwdMassa", 70.0);
+  tempKiForwardWithMassa = preferences.getDouble("kiFwdMassa", 0.0);
+  tempKdForwardWithMassa = preferences.getDouble("kdFwdMassa", 0.0);
   
-  // Debug: Print loaded values
-  Serial.println("=== PID Values Loaded from Preferences ===");
-  Serial.println("Forward PID - Kp: " + String(tempKpForward) + ", Ki: " + String(tempKiForward) + ", Kd: " + String(tempKdForward));
-  Serial.println("Backward PID - Kp: " + String(tempKpBackward) + ", Ki: " + String(tempKiBackward) + ", Kd: " + String(tempKdBackward));
+  // Load Forward PID Default settings with proper default values
+  tempKpForwardDefault = preferences.getDouble("kpFwdDefault", 70.0);
+  tempKiForwardDefault = preferences.getDouble("kiFwdDefault", 0.0);
+  tempKdForwardDefault = preferences.getDouble("kdFwdDefault", 0.0);
+  
+  // Load Backward PID WithMassa settings with proper default values
+  tempKpBackwardWithMassa = preferences.getDouble("kpBwdMassa", 70.0);
+  tempKiBackwardWithMassa = preferences.getDouble("kiBwdMassa", 0.0);
+  tempKdBackwardWithMassa = preferences.getDouble("kdBwdMassa", 0.0);
+  
+  // Load Backward PID Default settings with proper default values
+  tempKpBackwardDefault = preferences.getDouble("kpBwdDefault", 70.0);
+  tempKiBackwardDefault = preferences.getDouble("kiBwdDefault", 0.0);
+  tempKdBackwardDefault = preferences.getDouble("kdBwdDefault", 0.0);
 
   // Load Motor settings
   tempBaseSpeed = preferences.getInt("baseSpeed", 1000);
@@ -307,10 +318,11 @@ void setupMenu() {
   tempInvertHook = preferences.getBool("invertHook", false);
 
   // Load Music mapping settings
-  tempMusicStationPin = preferences.getInt("musicStation", 0);
-  tempMusicErrorPin = preferences.getInt("musicError", 1);
-  tempMusicDetectPin = preferences.getInt("musicDetect", 2);
-  tempMusicKomputerPin = preferences.getInt("musicKomputer", 3);
+  tempMusicOnPin = preferences.getInt("musicOn", 0);
+  tempMusicObstaclePin = preferences.getInt("musicObstacle", 1);
+  tempMusicStationPin = preferences.getInt("musicStation", 2);
+  tempMusicOutOfLinePin = preferences.getInt("musicOutOfLine", 3);
+  tempMusicWarningPin = preferences.getInt("musicWarning", 4);
   
   // Load Ultrasonic settings
   tempMinSafeDistanceFront = preferences.getUShort("SafeDistFront", 30);
@@ -321,21 +333,28 @@ void setupMenu() {
   kiLinefollower = tempKi;
   kdLinefollower = tempKd;
   
-  // Apply Forward PID values
-  kpLinefollowerForward = tempKpForward;
-  kiLinefollowerForward = tempKiForward;
-  kdLinefollowerForward = tempKdForward;
-  
-  // Apply Backward PID values
-  kpLinefollowerBackward = tempKpBackward;
-  kiLinefollowerBackward = tempKiBackward;
-  kdLinefollowerBackward = tempKdBackward;
-  
-  // Debug: Print applied values
-  Serial.println("=== PID Values Applied to Global Variables ===");
-  Serial.println("Forward PID Global - Kp: " + String(kpLinefollowerForward) + ", Ki: " + String(kiLinefollowerForward) + ", Kd: " + String(kdLinefollowerForward));
-  Serial.println("Backward PID Global - Kp: " + String(kpLinefollowerBackward) + ", Ki: " + String(kiLinefollowerBackward) + ", Kd: " + String(kdLinefollowerBackward));
 
+  
+  // Apply Forward PID WithMassa values
+  kpLinefollowerForwardWithMassa = tempKpForwardWithMassa;
+  kiLinefollowerForwardWithMassa = tempKiForwardWithMassa;
+  kdLinefollowerForwardWithMassa = tempKdForwardWithMassa;
+  
+  // Apply Forward PID Default values
+  kpLinefollowerForwardDefault = tempKpForwardDefault;
+  kiLinefollowerForwardDefault = tempKiForwardDefault;
+  kdLinefollowerForwardDefault = tempKdForwardDefault;
+  
+  // Apply Backward PID WithMassa values
+  kpLinefollowerBackwardWithMassa = tempKpBackwardWithMassa;
+  kiLinefollowerBackwardWithMassa = tempKiBackwardWithMassa;
+  kdLinefollowerBackwardWithMassa = tempKdBackwardWithMassa;
+  
+  // Apply Backward PID Default values
+  kpLinefollowerBackwardDefault = tempKpBackwardDefault;
+  kiLinefollowerBackwardDefault = tempKiBackwardDefault;
+  kdLinefollowerBackwardDefault = tempKdBackwardDefault;
+  
   // Apply Motor values
   baseSpeed = tempBaseSpeed;
 
@@ -347,10 +366,11 @@ void setupMenu() {
   invertHook = tempInvertHook;
 
   // Apply Music mapping values
+  musicOnPin = tempMusicOnPin;
+  musicObstaclePin = tempMusicObstaclePin;
   musicStationPin = tempMusicStationPin;
-  musicErrorPin = tempMusicErrorPin;
-  musicDetectPin = tempMusicDetectPin;
-  musicKomputerPin = tempMusicKomputerPin;
+  musicOutOfLinePin = tempMusicOutOfLinePin;
+  musicWarningPin = tempMusicWarningPin;
   
   // Apply Ultrasonic settings
   minSafeDistanceFront = tempMinSafeDistanceFront;

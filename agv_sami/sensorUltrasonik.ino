@@ -111,8 +111,7 @@ int getCurrentUltrasonicSlaveId() {
 void checkObstacles() {
   bool previousObstacleState = obstacleDetected;
   obstacleDetected = false;
-
-  // Determine which safe distance to use based on current sensor
+    // Determine which safe distance to use based on current sensor
   uint16_t currentMinSafeDistance;
   if (currentUltrasonicSlaveId == SLAVEID_ULTRASONIK_DEPAN) {
     currentMinSafeDistance = minSafeDistanceFront;
@@ -122,20 +121,24 @@ void checkObstacles() {
     currentMinSafeDistance = minSafeDistanceFront; // Default to front
   }
 
-  // Check each probe for obstacles
-  for (int i = 1; i < 4; i++) {
-    if (ultrasonicDistances[i] > 0 && ultrasonicDistances[i] < currentMinSafeDistance) {
-      obstacleDetected = true;
-      break;
-    }
+  if (ultrasonicDistances[2] > 0 && ultrasonicDistances[2] < currentMinSafeDistance) {
+    obstacleDetected = true;
   }
+
+  // Check each probe for obstacles
+  // for (int i = 1; i < 4; i++) {
+  //   if (ultrasonicDistances[i] > 0 && ultrasonicDistances[i] < currentMinSafeDistance) {
+  //     obstacleDetected = true;
+  //     break;
+  //   }
+  // }
 
   // If obstacle just detected, trigger buzzer
   static bool musicAlreadyPlaying = false;
   if (obstacleDetected && !previousObstacleState) {
     agvStop();
     if (!musicAlreadyPlaying) {
-      music(MUSIC_MODE_ERROR);
+      music(MUSIC_MODE_OBSTACLE);
       musicAlreadyPlaying = true;
     }
   } else if (!obstacleDetected && previousObstacleState) {

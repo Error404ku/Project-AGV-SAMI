@@ -122,6 +122,7 @@ size_t minFreeHeap = 0;
 AgvState currentStateAgv = AGV_STATE_NULL;
 AgvState moveStateAgv = AGV_STATE_MOVE_FORWARD;
 AgvState currentRFID = AGV_STATE_NULL;
+static bool firstChange = true;
 
 // Timer system structure
 struct Timer {
@@ -172,7 +173,7 @@ const float MAX_INCREMENT = 10.0f;
 const unsigned long ACCELERATION_INTERVAL = 500;  // Time in ms to increase increment
 const unsigned long buttonDelay = 200;  // Delay in milliseconds between button presses
 const int maxInvertItems = 5;
-const int maxMusicItems = 4;
+const int maxMusicItems = 5;
 const unsigned long WIFI_CONNECT_TIMEOUT = 3000; // Optimized to 3 seconds
 const int WIFI_MAX_SCROLL = 3; // Maximum scroll positions (0-3 existing)
 
@@ -182,15 +183,27 @@ int lastSelectedItem = -1;
 int lastMenuStartIndex = -1;
 
 // Temporary variables for settings
-// Temporary variables for Forward PID settings
-double tempKpForward = 0.0;   // Will be initialized from preferences in setupMenu()
-double tempKiForward = 0.0;    // Will be initialized from preferences in setupMenu()
-double tempKdForward = 0.0;    // Will be initialized from preferences in setupMenu()
 
-// Temporary PID variables untuk gerakan mundur (backward)
-double tempKpBackward = 0.0;  // Will be initialized from preferences in setupMenu()
-double tempKiBackward = 0.0;   // Will be initialized from preferences in setupMenu()
-double tempKdBackward = 0.0;   // Will be initialized from preferences in setupMenu()
+
+// Temporary variables for Forward PID WithMassa settings
+double tempKpForwardWithMassa = 0.0;   // Will be initialized from preferences in setupMenu()
+double tempKiForwardWithMassa = 0.0;    // Will be initialized from preferences in setupMenu()
+double tempKdForwardWithMassa = 0.0;    // Will be initialized from preferences in setupMenu()
+
+// Temporary variables for Forward PID Default settings
+double tempKpForwardDefault = 0.0;   // Will be initialized from preferences in setupMenu()
+double tempKiForwardDefault = 0.0;    // Will be initialized from preferences in setupMenu()
+double tempKdForwardDefault = 0.0;    // Will be initialized from preferences in setupMenu()
+
+// Temporary variables for Backward PID WithMassa settings
+double tempKpBackwardWithMassa = 0.0;  // Will be initialized from preferences in setupMenu()
+double tempKiBackwardWithMassa = 0.0;   // Will be initialized from preferences in setupMenu()
+double tempKdBackwardWithMassa = 0.0;   // Will be initialized from preferences in setupMenu()
+
+// Temporary variables for Backward PID Default settings
+double tempKpBackwardDefault = 0.0;  // Will be initialized from preferences in setupMenu()
+double tempKiBackwardDefault = 0.0;   // Will be initialized from preferences in setupMenu()
+double tempKdBackwardDefault = 0.0;   // Will be initialized from preferences in setupMenu()
 
 // Legacy temporary variables (for backward compatibility)
 double tempKp = 0.0;          // Will be initialized from preferences in setupMenu()
@@ -231,10 +244,11 @@ bool tempInvertKiri = false;   // Will be initialized from invertMotorKiri
 bool tempInvertHook = false;   // Will be initialized from invertHook
 
 // Music mapping settings (temporary)
-int tempMusicStationPin = 0;   // Will be initialized from musicStationPin
-int tempMusicErrorPin = 1;     // Will be initialized from musicErrorPin
-int tempMusicDetectPin = 2;    // Will be initialized from musicDetectPin
-int tempMusicKomputerPin = 3;  // Will be initialized from musicKomputerPin
+int tempMusicOnPin = 0;        // Will be initialized from musicOnPin
+int tempMusicObstaclePin = 1;  // Will be initialized from musicObstaclePin
+int tempMusicStationPin = 2;   // Will be initialized from musicStationPin
+int tempMusicOutOfLinePin = 3; // Will be initialized from musicOutOfLinePin
+int tempMusicWarningPin = 4;   // Will be initialized from musicWarningPin
 
 // Ultrasonic settings (temporary)
 uint16_t tempMinSafeDistanceFront = 30;  // Will be initialized from minSafeDistanceFront
@@ -244,7 +258,8 @@ uint16_t tempMinSafeDistanceBack = 20;   // Will be initialized from minSafeDist
 int selectedInvertItem = 0;  // 0=Y-axis, 1=X-axis, 2=Motor Kanan, 3=Motor Kiri, 4=Hook
 
 // Music settings variables
-int selectedMusicItem = 0;  // 0=Station, 1=Error, 2=Detect, 3=Komputer
+int selectedMusicItem = 0;  // 0=On, 1=Obstacle, 2=Station, 3=OutOfLine, 4=Warning
+int selectedMusicPin = 0;   // 0-5 for pin selection in submenu
 
 // Motor test variables
 int motorTestState = 0;  // 0=stop, 1=forward, 2=backward, 3=left, 4=right
@@ -418,15 +433,27 @@ int pwmKanan, pwmKiri;
 // K 0.5 1.5 0.0
 double kp = 0.2, ki = 0.4, kd = 0.0;
 
-// PID Parameters for Forward Movement
-float kpLinefollowerForward = 0.0;  // Kp untuk gerakan maju - will be loaded from preferences
-float kiLinefollowerForward = 0.0;   // Ki untuk gerakan maju - will be loaded from preferences
-float kdLinefollowerForward = 0.0;   // Kd untuk gerakan maju - will be loaded from preferences
 
-// PID parameters untuk gerakan mundur (backward)
-float kpLinefollowerBackward = 0.0; // Kp untuk gerakan mundur - will be loaded from preferences
-float kiLinefollowerBackward = 0.0;  // Ki untuk gerakan mundur - will be loaded from preferences
-float kdLinefollowerBackward = 0.0;  // Kd untuk gerakan mundur - will be loaded from preferences
+
+// PID Parameters for Forward Movement WithMassa
+float kpLinefollowerForwardWithMassa = 0.0;  // Kp untuk gerakan maju dengan massa - will be loaded from preferences
+float kiLinefollowerForwardWithMassa = 0.0;   // Ki untuk gerakan maju dengan massa - will be loaded from preferences
+float kdLinefollowerForwardWithMassa = 0.0;   // Kd untuk gerakan maju dengan massa - will be loaded from preferences
+
+// PID Parameters for Forward Movement Default
+float kpLinefollowerForwardDefault = 0.0;  // Kp untuk gerakan maju default - will be loaded from preferences
+float kiLinefollowerForwardDefault = 0.0;   // Ki untuk gerakan maju default - will be loaded from preferences
+float kdLinefollowerForwardDefault = 0.0;   // Kd untuk gerakan maju default - will be loaded from preferences
+
+// PID Parameters for Backward Movement WithMassa
+float kpLinefollowerBackwardWithMassa = 0.0; // Kp untuk gerakan mundur dengan massa - will be loaded from preferences
+float kiLinefollowerBackwardWithMassa = 0.0;  // Ki untuk gerakan mundur dengan massa - will be loaded from preferences
+float kdLinefollowerBackwardWithMassa = 0.0;  // Kd untuk gerakan mundur dengan massa - will be loaded from preferences
+
+// PID Parameters for Backward Movement Default
+float kpLinefollowerBackwardDefault = 0.0; // Kp untuk gerakan mundur default - will be loaded from preferences
+float kiLinefollowerBackwardDefault = 0.0;  // Ki untuk gerakan mundur default - will be loaded from preferences
+float kdLinefollowerBackwardDefault = 0.0;  // Kd untuk gerakan mundur default - will be loaded from preferences
 
 // Legacy PID variables (for backward compatibility)
 float kpLinefollower = 0.0;  // Will be initialized from preferences in setupMenu()
@@ -450,6 +477,7 @@ int totalSensorAktif = 0;
 int buttonStep = 0;  // Track button state for sequential actions
 
 int baseSpeed = 2000;
+int pidSpeed = 0;
 
 // RFID
 #define PIN_D0 12
@@ -502,11 +530,13 @@ extern bool newRfidScanned;  // Flag untuk RFID baru yang terbaca
 extern bool obstacleDetected;
 extern uint16_t ultrasonicDistances[5];
 
-// Pin Relay music 7, 15, 16, 14
+// Pin Relay music 7, 15, 16, 14, 37, 38
 #define pinMusic1 7
 #define pinMusic2 15
 #define pinMusic3 16
 #define pinMusic4 14
+#define pinMusic5 37
+#define pinMusic6 38
 
 bool statusMusic = false;
 
@@ -528,27 +558,30 @@ bool invertHook = false;        // Invers hook naik-turun
 // #define DEBUG_ULTRASONIC      // Enable ultrasonic sensor debug output
 // #define DEBUG_OBSTACLES       // Enable obstacle detection debug output
 
-// Music pin mapping settings (0=pinMusic1, 1=pinMusic2, 2=pinMusic3, 3=pinMusic4)
-int musicStationPin = 0;   // Default: pinMusic1 untuk station
-int musicErrorPin = 1;     // Default: pinMusic2 untuk error
-int musicDetectPin = 2;    // Default: pinMusic3 untuk detect
-int musicKomputerPin = 3;  // Default: pinMusic4 untuk komputer
+// Music pin mapping settings (0=pinMusic1, 1=pinMusic2, 2=pinMusic3, 3=pinMusic4, 4=pinMusic5, 5=pinMusic6/Silent)
+int musicOnPin = 0;        // Default: pinMusic1 untuk on
+int musicObstaclePin = 1;  // Default: pinMusic2 untuk obstacle
+int musicStationPin = 2;   // Default: pinMusic3 untuk station
+int musicOutOfLinePin = 3; // Default: pinMusic4 untuk out of line
+int musicWarningPin = 4;   // Default: pinMusic5 untuk warning
+// musicCustom1Pin dan musicCustom2Pin dihapus karena tidak digunakan
 
-static bool playMusic = true;
 // Enum for music modes
 enum MusicMode {
+  MUSIC_MODE_ON,
+  MUSIC_MODE_OBSTACLE,
   MUSIC_MODE_STATION,
-  MUSIC_MODE_ERROR,
-  MUSIC_MODE_DETECT,
-  MUSIC_MODE_KOMPUTER
+  MUSIC_MODE_OUTOFLINE,
+  MUSIC_MODE_WARNING
 };
 
 // Variable to track current music mode
-MusicMode currentMusicMode = MUSIC_MODE_STATION;
+MusicMode currentMusicMode = MUSIC_MODE_ON;
 
 // ===== MUSIC FUNCTIONS =====
 void music(MusicMode mode);
 void stopMusic();
+void silentMusic();  // Fungsi untuk mengaktifkan pin 6 (Silent)
 
 static bool forceLeft = false;
 static bool inLine = true;
@@ -680,7 +713,9 @@ HookPosition hook(HookPositionMode mode);
 // PID and motor control functions
 enum PidMode {
   PID_MODE_MAJU,
+  PID_MODE_MAJU_MASSA,
   PID_MODE_MUNDUR,
+  PID_MODE_MUNDUR_MASSA,
   PID_MODE_FORCEMUNDUR,
   PID_MODE_FORCEMAJU,
   PID_MODE_STOPPELANPELAN,
