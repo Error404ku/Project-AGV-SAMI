@@ -563,11 +563,11 @@ void createQueuesAndSemaphores() {
 void createAllTasks() {
     BaseType_t result;
     
-    // Safety Monitor Task (Highest Priority)
+    // Safety Monitor Task (Highest Priority) - Reduced stack
     result = xTaskCreatePinnedToCore(
         taskSafetyMonitor,
         "SafetyMonitor",
-        STACK_SIZE_MEDIUM,
+        STACK_SIZE_SMALL,  // Reduced from MEDIUM
         NULL,
         PRIORITY_CRITICAL,
         &taskHandleSafety,
@@ -578,11 +578,11 @@ void createAllTasks() {
         return;
     }
     
-    // Sensor Tasks (High Priority)
+    // Sensor Tasks (High Priority) - Reduced stack for sensors
     xTaskCreatePinnedToCore(
         taskSensorMagnet,
         "SensorMagnet",
-        STACK_SIZE_MEDIUM,
+        STACK_SIZE_SMALL,  // Reduced from MEDIUM
         NULL,
         PRIORITY_HIGH,
         &taskHandleSensorMagnet,
@@ -592,7 +592,7 @@ void createAllTasks() {
     xTaskCreatePinnedToCore(
         taskSensorUltrasonic,
         "SensorUltrasonic",
-        STACK_SIZE_MEDIUM,
+        STACK_SIZE_SMALL,  // Reduced from MEDIUM
         NULL,
         PRIORITY_HIGH,
         &taskHandleSensorUltrasonic,
@@ -602,7 +602,7 @@ void createAllTasks() {
     xTaskCreatePinnedToCore(
         taskSensorRFID,
         "SensorRFID",
-        STACK_SIZE_MEDIUM,
+        STACK_SIZE_SMALL,  // Reduced from MEDIUM
         NULL,
         PRIORITY_HIGH,
         &taskHandleSensorRFID,
@@ -613,7 +613,7 @@ void createAllTasks() {
     xTaskCreatePinnedToCore(
         taskPIDController,
         "PIDController",
-        STACK_SIZE_MEDIUM,
+        STACK_SIZE_MEDIUM,  // Keep MEDIUM for PID calculations
         NULL,
         PRIORITY_HIGH,
         &taskHandlePIDController,
@@ -624,40 +624,40 @@ void createAllTasks() {
     xTaskCreatePinnedToCore(
         taskAGVLogic,
         "AGVLogic",
-        STACK_SIZE_LARGE,
+        STACK_SIZE_MEDIUM,  // Reduced from LARGE
         NULL,
         PRIORITY_MEDIUM,
         &taskHandleAGVLogic,
         0 // Pin to Core 0
     );
     
-    // Button Handler Task (Medium Priority)
+    // Button Handler Task (Medium Priority) - Minimal stack
     xTaskCreatePinnedToCore(
         taskButtonHandler,
         "ButtonHandler",
-        STACK_SIZE_SMALL,
+        STACK_SIZE_SMALL,  // Use SMALL instead of TINY
         NULL,
         PRIORITY_MEDIUM,
         &taskHandleButton,
         0 // Pin to Core 0
     );
     
-    // Display Manager Task (Low Priority)
+    // Display Manager Task (Low Priority) - Minimal stack
     xTaskCreatePinnedToCore(
         taskDisplayManager,
         "DisplayManager",
-        STACK_SIZE_MEDIUM,
+        STACK_SIZE_SMALL,  // Use SMALL instead of TINY
         NULL,
         PRIORITY_LOW,
         &taskHandleDisplay,
         0 // Pin to Core 0
     );
     
-    // WiFi Manager Task (Low Priority)
+    // WiFi Manager Task (Low Priority) - Keep larger for HTTP/JSON
     xTaskCreatePinnedToCore(
         taskWiFiManager,
         "WiFiManager",
-        STACK_SIZE_LARGE,
+        STACK_SIZE_LARGE,  // Keep LARGE for WiFi operations
         NULL,
         PRIORITY_LOW,
         &taskHandleWiFi,
@@ -668,12 +668,12 @@ void createAllTasks() {
     xTaskCreatePinnedToCore(
         taskMenuManager,
         "MenuManager",
-        STACK_SIZE_MEDIUM,
+        STACK_SIZE_SMALL,  // Reduced from MEDIUM
         NULL,
         PRIORITY_LOW,
         &taskHandleMenu,
         0 // Pin to Core 0
     );
     
-    Serial.println("[FREERTOS] All tasks created successfully");
+    Serial.println("[FREERTOS] All tasks created successfully with optimized stack sizes");
 }

@@ -76,7 +76,20 @@ void loop() {
     return;
   }
   
-  // Standard mode - original loop implementation
+  // Standard mode - lightweight monitoring only
+  // ===================================================================
+  //                        LIGHTWEIGHT MONITORING
+  // ===================================================================
+  
+  // Simple stack monitoring (every 30 seconds)
+  lightweightStackMonitor();
+  
+  // Display health check (every 10 seconds)
+  checkDisplayHealth();
+  
+  // Reset watchdog safely
+  resetWatchdogSafely();
+  
   // ===================================================================
   //                        BACKGROUND TASKS
   // ===================================================================
@@ -91,7 +104,7 @@ void loop() {
 
   if (isAgvMode) {
     // ===================================================================
-    //                        AGV MODE (ORIGINAL IMPLEMENTATION)
+    //                        AGV MODE (ENHANCED)
     // ===================================================================
     
     // Original sensor reading
@@ -121,8 +134,8 @@ void loop() {
         displayUpdated = false; // Reset flag ketika hook masih bergerak
       }else{
         if (!displayUpdated) {
-          lcd.clear(); // Membersihkan tampilan sebelum menampilkan mode AGV
-          displayPrint();
+          safeLcdClear(); // Use lightweight display function
+          lightweightDisplayPrint(); // Use lightweight display function
           displayUpdated = true; // Set flag agar tidak update lagi
         }
         agvMode(AGV_STATE_TERMINAL_PICKUP);
@@ -142,12 +155,10 @@ void loop() {
         firstStopTime = currentTime;
         Serial.println("[AGV_EXIT] First STOP click detected. Click again within 2 seconds to exit AGV mode.");
         
-        // Show message on LCD
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("STOP 1x detected");
-        lcd.setCursor(0, 1);
-        lcd.print("Click again to exit");
+        // Show message on lightweight LCD
+        safeLcdClear();
+        safeLcdPrint(0, 0, "STOP 1x detected");
+        safeLcdPrint(0, 1, "Click again to exit");
       } else {
         // Check if second click is within interval
         if (currentTime - firstStopTime <= doubleClickInterval) {
@@ -169,12 +180,10 @@ void loop() {
           firstStopTime = currentTime;
           Serial.println("[AGV_EXIT] Second click too late. Starting new double click sequence.");
           
-          // Show message on LCD
-          lcd.clear();
-          lcd.setCursor(0, 0);
-          lcd.print("STOP 1x detected");
-          lcd.setCursor(0, 1);
-          lcd.print("Click again to exit");
+          // Show message on lightweight LCD
+          safeLcdClear();
+          safeLcdPrint(0, 0, "STOP 1x detected");
+          safeLcdPrint(0, 1, "Click again to exit");
         }
       }
     } else {
@@ -184,9 +193,9 @@ void loop() {
         firstStopTime = 0;
         Serial.println("[AGV_EXIT] Double click timeout. Reset to normal AGV display.");
         
-        // Reset display to normal AGV mode
-        lcd.clear();
-        displayPrint();
+        // Reset display to normal AGV mode using lightweight display
+        safeLcdClear();
+        lightweightDisplayPrint();
       }
     }
   } else {

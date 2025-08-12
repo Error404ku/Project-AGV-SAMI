@@ -22,11 +22,13 @@
 #define PRIORITY_IDLE         1    // Same - Background tasks
 
 // ===================================================================
-//                    TASK STACK SIZES - OPTIMIZED
+//                    TASK STACK SIZES - FURTHER OPTIMIZED FOR ESP32-S3
 // ===================================================================
-#define STACK_SIZE_SMALL      1536   // Reduced from 2048 - Simple tasks
-#define STACK_SIZE_MEDIUM     2048   // Reduced from 4096 - Standard tasks  
-#define STACK_SIZE_LARGE      3072   // Reduced from 8192 - Complex tasks with JSON
+#define STACK_SIZE_TINY       1024   // Very simple tasks (Button, Display)
+#define STACK_SIZE_SMALL      1536   // Simple tasks (Sensors, Safety)
+#define STACK_SIZE_MEDIUM     2048   // Standard tasks (PID, AGV Logic)
+#define STACK_SIZE_LARGE      2560   // Complex tasks (WiFi, reduced from 3072)
+#define STACK_SIZE_XLARGE     3072   // Only for tasks that absolutely need it
 
 // ===================================================================
 //                    QUEUE SIZES - OPTIMIZED

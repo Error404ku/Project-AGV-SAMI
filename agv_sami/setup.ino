@@ -70,6 +70,7 @@ void initializeDisplay() {
   
   if (count == 0) {
     Serial.println("[ERROR] No I2C devices found - check wiring!");
+    return;
   }
 
   // Initialize LCD with error handling
@@ -78,16 +79,18 @@ void initializeDisplay() {
   
   // Test LCD communication
   lcd.backlight();
-  lcd.setCursor(0, 0);
-  lcd.print("LCD Test OK        ");
-  lcd.setCursor(0, 1);
-  lcd.print("AGV System Ready   ");
+  
+  // Initialize lightweight monitoring instead of heavy analysis
+  initLightweightMonitoring();
+  
+  // Test display using lightweight functions
+  safeLcdPrint(0, 0, "LCD Test OK");
+  safeLcdPrint(0, 1, "AGV System Ready");
   
   // Verify LCD is responding
   delay(500);
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Display Ready      ");
+  safeLcdClear();
+  safeLcdPrint(0, 0, "Display Ready");
   Serial.println("[DISPLAY] LCD initialization completed");
 }
 
@@ -380,7 +383,6 @@ void setupMenu() {
   // Load RFID Ujung and Warehouse data
   loadRfidUjungFromPreferences();
   loadRfidWarehouseFromPreferences();
-  loadRfidPertigaanFromPreferences();
   loadWarehouseUjungRfid();
   
   // Load Terminal RFID data
@@ -414,6 +416,10 @@ void setupAll() {
   setupMusic();
   setupDisplay();
   setupMenu();  // Initialize menu system
+  
+  // Initialize lightweight monitoring
+  initLightweightMonitoring();
+  
   // Setup RS485 communication for both Serial1 and Serial2
   setupRS485(BAUDRATE);        // Serial1 untuk sensor magnet
   setupRS485_Serial2(BAUDRATE); // Serial2 untuk sensor ultrasonik
@@ -425,11 +431,14 @@ void setupAll() {
   setupWebServer();
   setupTombol();
   setupRfid();
+  
   // Initialize performance optimization
   resetSensorTimers();
   
-  lcd.clear();
-  lcd.setCursor(0, 1);
-  lcd.println("SETUP ALL SELESAI");
-  delay(1000);
+  // Final display update using lightweight display
+  safeLcdClear();
+  safeLcdPrint(0, 0, "SETUP COMPLETED");
+  safeLcdPrint(0, 1, useFreeRTOS ? "Mode: FreeRTOS" : "Mode: Standard");
+  
+  Serial.println("SETUP ALL SELESAI - Lightweight monitoring active");
 }
