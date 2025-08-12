@@ -199,29 +199,23 @@ void agvMoveForward() {
       delay(2000);
       agvMode(AGV_STATE_MOVE_BACKWARD);
       return;
-    } else if (isRfidMatch(currentRfid, terminalDropRfidId) && currentRFID != AGV_STATE_TERMINAL_DROP) {
-      newRfidScanned = false; // Reset flag
-      currentRFID = AGV_STATE_TERMINAL_DROP;
-      agvMode(AGV_STATE_TERMINAL_DROP);
-      return;
     } else if (isRfidMatch(currentRfid, terminalPickUpRfidId) && currentRFID != AGV_STATE_TERMINAL_PICKUP) {
       newRfidScanned = false; // Reset flag
-      exceptErrorPosition = true;
+      exceptErrorPosition = false;
       saveExceptErrorFlag();
       currentRFID = AGV_STATE_TERMINAL_PICKUP;
       agvMode(AGV_STATE_TERMINAL_PICKUP);
       return;
     } else if (isRfidMatch(currentRfid, warehouseRfidId) && currentRFID != AGV_STATE_WAREHOUSE) {
       newRfidScanned = false; // Reset flag
-      exceptErrorPosition = false;
+      exceptErrorPosition = true;
       saveExceptErrorFlag();
       currentRFID = AGV_STATE_WAREHOUSE;
       agvMode(AGV_STATE_WAREHOUSE);
       return;
-    } else if (isRfidMatch(currentRfid, pertigaanRfidId) && currentRFID == AGV_STATE_SWITCH_FORWARD) {
+    } else if (isRfidMatch(currentRfid, getRfidForStation(1)) && exceptErrorPosition != false) {
       newRfidScanned = false; // Reset flag
       exceptErrorPosition = false;
-      forceLeft = true;
       saveExceptErrorFlag();
     }
   }
@@ -275,17 +269,16 @@ void agvMoveBackward() {
   // Logika pergerakan mundur:
   // Cek apakah RFID warehouse terdeteksi untuk mengabaikan error saat mundur
   String currentRfid = String(lastScannedRfidOptimized);
-  if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, warehouseRfidId)) {
-    exceptErrorPosition = true;  // Set flag untuk mengabaikan error saat mundur
-    saveExceptErrorFlag();       // Simpan flag ke preferences
-    newRfidScanned = false;      // Reset flag
-  } else if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, rfidMajuId)) {
-    newRfidScanned = false;      // Reset flag
-    currentRFID = AGV_STATE_SWITCH_FORWARD;
-    agvMode(AGV_STATE_MOVE_FORWARD);
-    return;
+  if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, terminalDropRfidId) && currentRFID != AGV_STATE_TERMINAL_DROP) {
+      newRfidScanned = false; // Reset flag
+      currentRFID = AGV_STATE_TERMINAL_DROP;
+      agvMode(AGV_STATE_TERMINAL_DROP);
+      return;
+  } else if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, getRfidForStation(1)) && exceptErrorPosition != true) {
+    newRfidScanned = false; // Reset flag
+    exceptErrorPosition = true;
+    saveExceptErrorFlag();
   }
-  
 
   if (targetStationsList.size() != 0) {
     // Cek apakah ada RFID yang terbaca
