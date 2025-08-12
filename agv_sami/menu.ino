@@ -2619,7 +2619,7 @@ void handleUltrasonicCheck() {
   const unsigned long SENSOR_READ_INTERVAL = 100; // 100ms interval for sensor reading
   
   unsigned long currentTime = millis();
-  
+  checkObstacles();
   // Rate-limited sensor reading to prevent stack overflow
   if (currentTime - lastSensorRead >= SENSOR_READ_INTERVAL) {
     // Only read ultrasonic sensor, avoid calling checkObstacles in menu mode

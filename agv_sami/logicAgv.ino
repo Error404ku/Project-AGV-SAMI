@@ -37,7 +37,7 @@ void agvMode(AgvState state) {
 void agvWarehouse() {
   static bool trigger = false;
   saveCurrentStateAGVToPreferences(AGV_STATE_WAREHOUSE);
-  music(MUSIC_MODE_WARNING);
+  // music(MUSIC_MODE_WARNING);
 
   if (START()) {
     if (targetStationsList.size() == 0){

@@ -21,7 +21,12 @@
 // ===================================================================
 //                        FREERTOS INCLUDES
 // ===================================================================
-// FreeRTOS includes removed - using original non-FreeRTOS implementation
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/queue.h>
+#include <freertos/semphr.h>
+#include <freertos/timers.h>
+#include <freertos/event_groups.h>
 
 enum AgvState {
   AGV_STATE_MOVE_FORWARD,
@@ -549,6 +554,9 @@ int currentScanStation = 0;
 extern char lastScannedRfidOptimized[32];  // Optimized RFID storage
 extern bool newRfidScanned;  // Flag untuk RFID baru yang terbaca
 
+// For FreeRTOS compatibility - make it String type
+#define lastDetectedRfidId String(lastScannedRfidOptimized)
+
 // Obstacle detection variables
 extern bool obstacleDetected;
 extern uint16_t ultrasonicDistances[5];
@@ -828,6 +836,110 @@ int getStationFromLastRfid();
 void clearAllRfidStations();
 bool deleteRfidStation(int stationId);
 bool addRfidStation(int stationId, String rfidId);
+
+// ===================================================================
+//                        FREERTOS DEFINITIONS
+// ===================================================================
+
+// Task Priorities
+#define PRIORITY_CRITICAL     5    // Safety & Emergency
+#define PRIORITY_HIGH         4    // Sensor readings & PID
+#define PRIORITY_MEDIUM       3    // Motor control & Logic
+#define PRIORITY_LOW          2    // WiFi, Display, Menu
+#define PRIORITY_IDLE         1    // Background tasks
+
+// Task Stack Sizes
+#define STACK_SIZE_SMALL      2048   // Simple tasks
+#define STACK_SIZE_MEDIUM     4096   // Standard tasks
+#define STACK_SIZE_LARGE      8192   // Complex tasks with JSON
+
+// Queue Sizes
+#define SENSOR_QUEUE_SIZE     10
+#define COMMAND_QUEUE_SIZE    5
+#define DISPLAY_QUEUE_SIZE    3
+
+// Event Bits
+#define EVENT_SYSTEM_READY     BIT0
+#define EVENT_SENSORS_OK       BIT1
+#define EVENT_EMERGENCY_STOP   BIT2
+#define EVENT_WIFI_CONNECTED   BIT3
+#define EVENT_AGV_MODE         BIT4
+
+// FreeRTOS Handles - declared as extern
+extern TaskHandle_t taskHandleSafety;
+extern TaskHandle_t taskHandleSensorMagnet;
+extern TaskHandle_t taskHandleSensorUltrasonic;
+extern TaskHandle_t taskHandleSensorRFID;
+extern TaskHandle_t taskHandlePIDController;
+extern TaskHandle_t taskHandleAGVLogic;
+extern TaskHandle_t taskHandleWiFi;
+extern TaskHandle_t taskHandleDisplay;
+extern TaskHandle_t taskHandleButton;
+extern TaskHandle_t taskHandleMenu;
+
+extern QueueHandle_t queueSensorData;
+extern QueueHandle_t queueCommands;
+extern QueueHandle_t queueDisplayUpdate;
+extern QueueHandle_t queueButtonPress;
+
+extern SemaphoreHandle_t mutexSensorData;
+extern SemaphoreHandle_t mutexMotorControl;
+extern SemaphoreHandle_t mutexDisplay;
+extern SemaphoreHandle_t mutexPreferences;
+
+extern EventGroupHandle_t eventGroupSystem;
+extern TimerHandle_t timerWatchdog;
+extern TimerHandle_t timerSensorHealth;
+
+// Data structures for FreeRTOS communication
+typedef struct {
+    uint32_t timestamp;
+    uint8_t sensorType;    // 0=magnet, 1=ultrasonic, 2=rfid
+    int16_t errorValue;    // For magnet sensor
+    uint16_t distance;     // For ultrasonic sensor
+    String rfidId;         // For RFID sensor
+    bool isValid;
+} SensorData_t;
+
+typedef struct {
+    uint8_t commandType;   // 0=move, 1=stop, 2=mode_change
+    int16_t param1;
+    int16_t param2;
+    AgvState newState;
+} Command_t;
+
+typedef struct {
+    uint8_t line;
+    String text;
+    bool clearFirst;
+} DisplayUpdate_t;
+
+typedef struct {
+    uint8_t buttonId;
+    uint32_t pressTime;
+    bool isLongPress;
+} ButtonPress_t;
+
+// FreeRTOS task function prototypes
+void taskSafetyMonitor(void *parameters);
+void taskSensorMagnet(void *parameters);
+void taskSensorUltrasonic(void *parameters);
+void taskSensorRFID(void *parameters);
+void taskPIDController(void *parameters);
+void taskMotorControl(void *parameters);
+void taskAGVLogic(void *parameters);
+void taskWiFiManager(void *parameters);
+void taskDisplayManager(void *parameters);
+void taskButtonHandler(void *parameters);
+void taskMenuManager(void *parameters);
+
+// FreeRTOS initialization functions
+bool initializeFreeRTOS();
+void createAllTasks();
+void createQueuesAndSemaphores();
+
+// Control flags
+extern bool useFreeRTOS; // Flag to enable/disable FreeRTOS mode
 int findRfidStationByRfidId(String rfidId);
 
 // FreeRTOS function declarations removed - using original implementation

@@ -1,82 +1,29 @@
-// ===================================================================
-//                    OPTIMIZED AGV MAIN WITH FREERTOS
-// ===================================================================
-
 #include "config.h"
 #include "performance_linefollower.h"
-
-// Control flag for FreeRTOS mode - change this to enable/disable FreeRTOS
-bool useFreeRTOS = false; // DISABLED due to ESP32-S3 compatibility issues
+// extern bool modeMaju; // Removed - not used
+// extern bool modeMundur; // Removed - not used
 
 void setup() {
   Serial.begin(115200);
-  
-  if (useFreeRTOS) {
-    Serial.println("[SYSTEM] AGV SAMI Starting with FreeRTOS...");
-    
-    // Initialize all hardware components
-    setupAll();
-    
-    // Initialize performance optimization system
-    initPerformanceOptimization();
-    
-    // Load all AGV states efficiently in one call
-    loadAllAGVStatesFromPreferences();
-    
-    // Initialize ultrasonic sensor if not already done
-    static bool ultrasonicSensorInitialized = false;
-    if (!ultrasonicSensorInitialized) {
-      setupUltrasonikWithParams(SLAVEID_ULTRASONIK_DEPAN);
-      ultrasonicSensorInitialized = true;
-    }
-    
-    // Initialize FreeRTOS components
-    if (!initializeFreeRTOS()) {
-      Serial.println("[ERROR] Failed to initialize FreeRTOS! Falling back to standard mode.");
-      useFreeRTOS = false;
-    } else {
-      Serial.println("[SYSTEM] SETUP COMPLETED - FreeRTOS Active");
-      Serial.println("[SYSTEM] All tasks running in parallel");
-      
-      // Start FreeRTOS scheduler (this will never return if successful)
-      vTaskStartScheduler();
-      
-      // Should never reach here if FreeRTOS started successfully
-      Serial.println("[ERROR] FreeRTOS scheduler failed to start! Falling back to standard mode.");
-      useFreeRTOS = false;
-    }
+  setupAll();
+
+  // Initialize performance optimization system
+  initPerformanceOptimization();
+
+  // Load all AGV states efficiently in one call
+  loadAllAGVStatesFromPreferences();
+  Serial.println("SETUP SELESAI - Performance Optimization Active");
+
+  // Initialize ultrasonic sensor if not already done
+  static bool ultrasonicSensorInitialized = false;
+  if (!ultrasonicSensorInitialized) {
+    setupUltrasonikWithParams(SLAVEID_ULTRASONIK_DEPAN);
+    ultrasonicSensorInitialized = true;
   }
-  
-  // Standard mode initialization (original code)
-  if (!useFreeRTOS) {
-    Serial.println("[SYSTEM] AGV SAMI Starting in Standard Mode...");
-    setupAll();
 
-    // Initialize performance optimization system
-    initPerformanceOptimization();
-
-    // Load all AGV states efficiently in one call
-    loadAllAGVStatesFromPreferences();
-    Serial.println("SETUP SELESAI - Performance Optimization Active");
-
-    // Initialize ultrasonic sensor if not already done
-    static bool ultrasonicSensorInitialized = false;
-    if (!ultrasonicSensorInitialized) {
-      setupUltrasonikWithParams(SLAVEID_ULTRASONIK_DEPAN);
-      ultrasonicSensorInitialized = true;
-    }
-  }
 }
 
 void loop() {
-  if (useFreeRTOS) {
-    // FreeRTOS mode - this should never be called when scheduler is running
-    Serial.println("[WARNING] Main loop() called in FreeRTOS mode - scheduler may have failed!");
-    delay(5000);
-    return;
-  }
-  
-  // Standard mode - original loop implementation
   // ===================================================================
   //                        BACKGROUND TASKS
   // ===================================================================
@@ -191,6 +138,7 @@ void loop() {
     }
   } else {
     // Menu Mode
+    // inTerminal();
     agvMode(AGV_STATE_STOP);
     handleMenu();
   }
@@ -200,4 +148,5 @@ void loop() {
   
   // Small delay to prevent tight loop and allow other tasks to run
   delay(10);
+
 }
