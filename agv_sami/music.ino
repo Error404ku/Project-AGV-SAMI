@@ -55,4 +55,21 @@ void stopMusic() {
   digitalWrite(pinMusic5, HIGH);
   digitalWrite(pinMusic6, LOW);
   statusMusic = false;
+  currentMusicMode = MUSIC_MODE_STOP; // Reset to default
+}
+
+// Function to process music timer and auto-stop music after duration
+void processMusicTimer() {
+  if (!statusMusic) return;
+  
+  // Only process timer for MUSIC_MODE_ON and MUSIC_MODE_STATION
+  if (currentMusicMode != MUSIC_MODE_ON && currentMusicMode != MUSIC_MODE_STATION) {
+    return;
+  }
+  
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval) {
+    Serial.println("Music timer expired, stopping music");
+    stopMusic();
+  }
 }

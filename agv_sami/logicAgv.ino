@@ -111,7 +111,10 @@ void agvTerminalDrop() {
   modeDisplayTerminalDrop();
   static unsigned long lastStopTime = 0;
   static unsigned long currentTime = millis();
-  music(MUSIC_MODE_ON);
+  // Only play normal music if no obstacle music is currently playing
+  if (currentMusicMode != MUSIC_MODE_OBSTACLE) {
+    music(MUSIC_MODE_ON);
+  }
   switch (dropProcessStep) {
     case 0: 
       dropProcessStep = 1;
@@ -237,7 +240,10 @@ void agvMoveForward() {
 
   // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
   if (!obstacleDetected) {
-    music(MUSIC_MODE_ON);
+    // Only play normal music if no obstacle music is currently playing
+    if (currentMusicMode != MUSIC_MODE_OBSTACLE) {
+      music(MUSIC_MODE_ON);
+    }
     if (exceptErrorPosition && totalSensorAktif > 5) {
       pidLinefollower(0, PID_MODE_MAJU_MASSA);
     } else {
@@ -290,7 +296,10 @@ void agvMoveBackward() {
   }
   // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
   if (!obstacleDetected) {
-    music(MUSIC_MODE_ON);
+    // Only play normal music if no obstacle music is currently playing
+    if (currentMusicMode != MUSIC_MODE_OBSTACLE) {
+      music(MUSIC_MODE_ON);
+    }
     // Abaikan error jika exceptErrorPosition = true dan segment aktif >5
     if (exceptErrorPosition && totalSensorAktif > 5) {
       pidLinefollower(0, PID_MODE_MUNDUR);  // Error = 0

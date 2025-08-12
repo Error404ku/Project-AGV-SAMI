@@ -36,6 +36,13 @@
 #define MENU_PID_FORWARD_DEFAULT 35
 #define MENU_PID_BACKWARD_WITHMASSA 36
 #define MENU_PID_BACKWARD_DEFAULT 37
+#define MENU_PID_TEST 45
+#define MENU_PID_TEST_WITHMASSA 46
+#define MENU_PID_TEST_DEFAULT 47
+#define MENU_PID_TEST_WITHMASSA_FORWARD 48
+#define MENU_PID_TEST_WITHMASSA_BACKWARD 49
+#define MENU_PID_TEST_DEFAULT_FORWARD 50
+#define MENU_PID_TEST_DEFAULT_BACKWARD 51
 
 // External variables from other files
 extern int targetStation[2];
@@ -91,5 +98,19 @@ void displayMusicSettings();
 void handleMusicSettings();
 void displayMusicSubmenu(const char* title, int* currentPin);
 void handleMusicSubmenu(int* targetPin);
+void displayPidTestSubmenu();
+void handlePidTestSubmenu();
+void displayPidTestWithMassaSubmenu();
+void handlePidTestWithMassaSubmenu();
+void displayPidTestDefaultSubmenu();
+void handlePidTestDefaultSubmenu();
+void displayPidTestWithMassaForward();
+void handlePidTestWithMassaForward();
+void displayPidTestWithMassaBackward();
+void handlePidTestWithMassaBackward();
+void displayPidTestDefaultForward();
+void handlePidTestDefaultForward();
+void displayPidTestDefaultBackward();
+void handlePidTestDefaultBackward();
 
 #endif

@@ -5,51 +5,9 @@
 #include "config.h"
 #include "performance_linefollower.h"
 
-// Control flag for FreeRTOS mode - change this to enable/disable FreeRTOS
-bool useFreeRTOS = false; // DISABLED due to ESP32-S3 compatibility issues
-
 void setup() {
   Serial.begin(115200);
-  
-  if (useFreeRTOS) {
-    Serial.println("[SYSTEM] AGV SAMI Starting with FreeRTOS...");
-    
-    // Initialize all hardware components
-    setupAll();
-    
-    // Initialize performance optimization system
-    initPerformanceOptimization();
-    
-    // Load all AGV states efficiently in one call
-    loadAllAGVStatesFromPreferences();
-    
-    // Initialize ultrasonic sensor if not already done
-    static bool ultrasonicSensorInitialized = false;
-    if (!ultrasonicSensorInitialized) {
-      setupUltrasonikWithParams(SLAVEID_ULTRASONIK_DEPAN);
-      ultrasonicSensorInitialized = true;
-    }
-    
-    // Initialize FreeRTOS components
-    if (!initializeFreeRTOS()) {
-      Serial.println("[ERROR] Failed to initialize FreeRTOS! Falling back to standard mode.");
-      useFreeRTOS = false;
-    } else {
-      Serial.println("[SYSTEM] SETUP COMPLETED - FreeRTOS Active");
-      Serial.println("[SYSTEM] All tasks running in parallel");
-      
-      // Start FreeRTOS scheduler (this will never return if successful)
-      vTaskStartScheduler();
-      
-      // Should never reach here if FreeRTOS started successfully
-      Serial.println("[ERROR] FreeRTOS scheduler failed to start! Falling back to standard mode.");
-      useFreeRTOS = false;
-    }
-  }
-  
-  // Standard mode initialization (original code)
-  if (!useFreeRTOS) {
-    Serial.println("[SYSTEM] AGV SAMI Starting in Standard Mode...");
+      Serial.println("[SYSTEM] AGV SAMI Starting in Standard Mode...");
     setupAll();
 
     // Initialize performance optimization system
@@ -65,16 +23,9 @@ void setup() {
       setupUltrasonikWithParams(SLAVEID_ULTRASONIK_DEPAN);
       ultrasonicSensorInitialized = true;
     }
-  }
 }
 
 void loop() {
-  if (useFreeRTOS) {
-    // FreeRTOS mode - this should never be called when scheduler is running
-    Serial.println("[WARNING] Main loop() called in FreeRTOS mode - scheduler may have failed!");
-    delay(5000);
-    return;
-  }
   
   // Standard mode - lightweight monitoring only
   // ===================================================================
@@ -96,6 +47,9 @@ void loop() {
   
   server.handleClient();
   loopWifi();  // Handle WiFi connection monitoring
+  
+  // Process music timer for automatic music stopping
+  processMusicTimer();
   
   // Rate-limited sensor readings to reduce delays
   if (shouldReadRfid()) {
@@ -206,7 +160,5 @@ void loop() {
   
   // Reset watchdog timer to prevent reboot
   esp_task_wdt_reset();
-  
-  // Small delay to prevent tight loop and allow other tasks to run
-  delay(10);
+
 }

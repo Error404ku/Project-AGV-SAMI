@@ -197,23 +197,24 @@ void saveSettings() {
 
 void displayMainMenu() {
   // Menu items array
-  String menuItems[16] = {
+  String menuItems[17] = {
     "AGV Mode",           // selectedItem 0 -> MENU_AGV_MODE (1)
     "Reset AGV State",    // selectedItem 1 -> MENU_RESET_AGV_STATE (25)
     "Motor Test",         // selectedItem 2 -> MENU_MOTOR_TEST (2)
     "PID Settings",       // selectedItem 3 -> MENU_PID_SETTINGS (3)
-    "Target Settings",    // selectedItem 4 -> MENU_TARGET_SETTINGS (4)
-    "Reset Settings",     // selectedItem 5 -> MENU_RESET (5)
-    "RFID Settings",      // selectedItem 6 -> MENU_RFID_SETTINGS (6)
-    "Motor Settings",     // selectedItem 7 -> MENU_MOTOR_SETTINGS (18)
-    "Motor Invert",       // selectedItem 8 -> MENU_MOTOR_INVERT (19)
-    "Music Settings",     // selectedItem 9 -> MENU_MUSIC_SETTINGS (20)
-    "Music Test",         // selectedItem 10 -> MENU_MUSIC_TEST (21)
-    "Hook Test",          // selectedItem 11 -> MENU_HOOK_TEST (22)
-    "Magnet Check",       // selectedItem 12 -> MENU_MAGNET_CHECK (23)
-    "Ultrasonic Check",   // selectedItem 13 -> MENU_ULTRASONIC_CHECK (24)
-    "Ultrasonic Settings", // selectedItem 14 -> MENU_ULTRASONIC_SETTINGS (30)
-    "WiFi Settings"       // selectedItem 15 -> MENU_WIFI_SETTINGS (14)
+    "PID Test",           // selectedItem 4 -> MENU_PID_TEST (45)
+    "Target Settings",    // selectedItem 5 -> MENU_TARGET_SETTINGS (4)
+    "Reset Settings",     // selectedItem 6 -> MENU_RESET (5)
+    "RFID Settings",      // selectedItem 7 -> MENU_RFID_SETTINGS (6)
+    "Motor Settings",     // selectedItem 8 -> MENU_MOTOR_SETTINGS (18)
+    "Motor Invert",       // selectedItem 9 -> MENU_MOTOR_INVERT (19)
+    "Music Settings",     // selectedItem 10 -> MENU_MUSIC_SETTINGS (20)
+    "Music Test",         // selectedItem 11 -> MENU_MUSIC_TEST (21)
+    "Hook Test",          // selectedItem 12 -> MENU_HOOK_TEST (22)
+    "Magnet Check",       // selectedItem 13 -> MENU_MAGNET_CHECK (23)
+    "Ultrasonic Check",   // selectedItem 14 -> MENU_ULTRASONIC_CHECK (24)
+    "Ultrasonic Settings", // selectedItem 15 -> MENU_ULTRASONIC_SETTINGS (30)
+    "WiFi Settings"       // selectedItem 16 -> MENU_WIFI_SETTINGS (14)
   };
   maxItems = sizeof(menuItems) / sizeof(menuItems[0]);
   // Update scroll position if needed
@@ -335,67 +336,74 @@ void handleMenu() {
               menuNeedsRefresh = true;
               break;
               
-            case 4:  // Target Settings
+            case 4:  // PID Test
+              lcd.clear();
+              currentMenu = MENU_PID_TEST; // 45
+              selectedParam = 0;
+              menuNeedsRefresh = true;
+              break;
+              
+            case 5:  // Target Settings
               lcd.clear();
               currentMenu = MENU_TARGET_SETTINGS; // 4
               menuNeedsRefresh = true;
               break;
               
-            case 5:  // Reset Settings
+            case 6:  // Reset Settings
               lcd.clear();
               currentMenu = MENU_RESET; // 5
               menuNeedsRefresh = true;
               break;
               
-            case 6:  // RFID Settings
+            case 7:  // RFID Settings
               lcd.clear();
               currentMenu = MENU_RFID_SETTINGS; // 6
               menuNeedsRefresh = true;
               break;
               
-            case 7:  // Motor Settings
+            case 8:  // Motor Settings
               lcd.clear();
               currentMenu = MENU_MOTOR_SETTINGS; // 18
               menuNeedsRefresh = true;
               break;
               
-            case 8:  // Motor Invert
+            case 9:  // Motor Invert
               lcd.clear();
               currentMenu = MENU_MOTOR_INVERT; // 19
               menuNeedsRefresh = true;
               break;
               
-            case 9:  // Music Settings
+            case 10:  // Music Settings
               lcd.clear();
               currentMenu = MENU_MUSIC_SETTINGS; // 20
               menuNeedsRefresh = true;
               break;
               
-            case 10:  // Music Test
+            case 11:  // Music Test
               lcd.clear();
               currentMenu = MENU_MUSIC_TEST; // 21
               menuNeedsRefresh = true;
               break;
               
-            case 11:  // Hook Test
+            case 12:  // Hook Test
               lcd.clear();
               currentMenu = MENU_HOOK_TEST; // 22
               menuNeedsRefresh = true;
               break;
               
-            case 12:  // Magnet Check
+            case 13:  // Magnet Check
               lcd.clear();
               currentMenu = MENU_MAGNET_CHECK; // 23
               menuNeedsRefresh = true;
               break;
               
-            case 13:  // Ultrasonic Check
+            case 14:  // Ultrasonic Check
               lcd.clear();
               currentMenu = MENU_ULTRASONIC_CHECK; // 24
               menuNeedsRefresh = true;
               break;
               
-            case 14:  // Ultrasonic Settings
+            case 15:  // Ultrasonic Settings
               lcd.clear();
               initMenuTempVariables();  // Initialize temporary variables
               tempMinSafeDistanceFront = minSafeDistanceFront;  // Initialize temp variables
@@ -405,7 +413,7 @@ void handleMenu() {
               menuNeedsRefresh = true;
               break;
               
-            case 15:  // WiFi Settings
+            case 16:  // WiFi Settings
               lcd.clear();
               currentMenu = MENU_WIFI_SETTINGS; // 14
               menuNeedsRefresh = true;
@@ -431,6 +439,16 @@ void handleMenu() {
       displayPidSubmenu();
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handlePidSubmenu();
+        if (UP() || DOWN() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_PID_TEST:
+      displayPidTestSubmenu();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handlePidTestSubmenu();
         if (UP() || DOWN() || START() || STOP()) {
           lastButtonPress = currentMillis;
         }
@@ -475,6 +493,66 @@ void handleMenu() {
     case MENU_PID_BACKWARD_DEFAULT:
       displayPidBackwardDefaultSettings();
       handlePidBackwardDefaultSettings();
+      break;
+
+    case MENU_PID_TEST_WITHMASSA:
+      displayPidTestWithMassaSubmenu();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handlePidTestWithMassaSubmenu();
+        if (UP() || DOWN() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_PID_TEST_DEFAULT:
+      displayPidTestDefaultSubmenu();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handlePidTestDefaultSubmenu();
+        if (UP() || DOWN() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_PID_TEST_WITHMASSA_FORWARD:
+      displayPidTestWithMassaForwardMenu();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handlePidTestWithMassaForwardMenu();
+        if (START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_PID_TEST_WITHMASSA_BACKWARD:
+      displayPidTestWithMassaBackwardMenu();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handlePidTestWithMassaBackwardMenu();
+        if (START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_PID_TEST_DEFAULT_FORWARD:
+      displayPidTestDefaultForwardMenu();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handlePidTestDefaultForwardMenu();
+        if (START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_PID_TEST_DEFAULT_BACKWARD:
+      displayPidTestDefaultBackwardMenu();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handlePidTestDefaultBackwardMenu();
+        if (START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
       break;
 
     case MENU_TARGET_SETTINGS:
@@ -1733,7 +1811,6 @@ void displayRfidSettings() {
       "RFID Warehouse",
       "Terminal Drop",
       "Terminal Pickup",
-      "RFID Maju"
     };
 
     // Clear menu area only when needed
@@ -2273,11 +2350,7 @@ void handleRfidSettings() {
         currentMenu = MENU_TERMINAL_PICKUP;
         menuNeedsRefresh = true;
         break;
-        
-      case 10:  // RFID Maju
-        currentMenu = MENU_RFID_MAJU;
-        menuNeedsRefresh = true;
-        break;
+
     }
   } else if (STOP()) {
     currentMenu = MENU_MAIN;
@@ -3895,6 +3968,313 @@ void handleMusicSettings() {
     currentMenu = MENU_MAIN;
     selectedMusicItem = 0;
     menuStartIndex = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+// ===== PID TEST MENU FUNCTIONS =====
+
+void displayPidTestSubmenu() {
+  static bool displayInitialized = false;
+  static int lastSelectedParam = -1;
+  
+  if (!displayInitialized || selectedParam != lastSelectedParam || menuNeedsRefresh) {
+    lcd.clear();
+    displayMenuHeader("PID Test");
+    
+    String menuItems[2] = {"WithMassa", "Default"};
+    
+    for (int i = 0; i < 3; i++) {
+      lcd.setCursor(0, i + 1);
+      lcd.print("                    "); // Clear line
+      lcd.setCursor(0, i + 1);
+      
+      if (i == selectedParam) {
+        lcd.print("> ");
+      } else {
+        lcd.print("  ");
+      }
+      lcd.print(menuItems[i]);
+    }
+    
+    lcd.setCursor(0, 3);
+    lcd.print("A:Ok B:Back         ");
+    
+    displayInitialized = true;
+    lastSelectedParam = selectedParam;
+    menuNeedsRefresh = false;
+  }
+}
+
+void handlePidTestSubmenu() {
+  loopMagneticSensor();
+  if (UP()) {
+    selectedParam = (selectedParam - 1 + 3) % 3;
+    menuNeedsRefresh = true;
+  } else if (DOWN()) {
+    selectedParam = (selectedParam + 1) % 3;
+    menuNeedsRefresh = true;
+  } else if (START()) {
+    lcd.clear();
+    switch (selectedParam) {
+      case 0: // PID Test - go back to main submenu
+        selectedParam = 0;
+        menuNeedsRefresh = true;
+        break;
+      case 1: // WithMassa
+        currentMenu = MENU_PID_TEST_WITHMASSA;
+        selectedParam = 0;
+        menuNeedsRefresh = true;
+        break;
+      case 2: // Default
+        currentMenu = MENU_PID_TEST_DEFAULT;
+        selectedParam = 0;
+        menuNeedsRefresh = true;
+        break;
+    }
+  } else if (STOP()) {
+    currentMenu = MENU_MAIN;
+    selectedItem = 4; // PID Test position in main menu
+    menuNeedsRefresh = true;
+  }
+}
+
+void displayPidTestWithMassaSubmenu() {
+  static bool displayInitialized = false;
+  static int lastSelectedParam = -1;
+  
+  if (!displayInitialized || selectedParam != lastSelectedParam || menuNeedsRefresh) {
+    lcd.clear();
+    displayMenuHeader("WithMassa");
+    
+    String menuItems[2] = {"Forward", "Backward"};
+    
+    for (int i = 0; i < 2; i++) {
+      lcd.setCursor(0, i + 1);
+      lcd.print("                    "); // Clear line
+      lcd.setCursor(0, i + 1);
+      
+      if (i == selectedParam) {
+        lcd.print("> ");
+      } else {
+        lcd.print("  ");
+      }
+      lcd.print(menuItems[i]);
+    }
+    
+    lcd.setCursor(0, 3);
+    lcd.print("A:Go B:Back         ");
+    
+    displayInitialized = true;
+    lastSelectedParam = selectedParam;
+    menuNeedsRefresh = false;
+  }
+}
+
+void handlePidTestWithMassaSubmenu() {
+  if (UP()) {
+    selectedParam = (selectedParam - 1 + 2) % 2;
+    menuNeedsRefresh = true;
+  } else if (DOWN()) {
+    selectedParam = (selectedParam + 1) % 2;
+    menuNeedsRefresh = true;
+  } else if (START()) {
+    lcd.clear();
+    switch (selectedParam) {
+      case 0: // Forward
+
+        currentMenu = MENU_PID_TEST_WITHMASSA_FORWARD;
+        menuNeedsRefresh = true;
+        break;
+      case 1: // Backward
+        currentMenu = MENU_PID_TEST_WITHMASSA_BACKWARD;
+        menuNeedsRefresh = true;
+        break;
+    }
+  } else if (STOP()) {
+    currentMenu = MENU_PID_TEST;
+    selectedParam = 1; // WithMassa position
+    menuNeedsRefresh = true;
+  }
+}
+
+void displayPidTestDefaultSubmenu() {
+  static bool displayInitialized = false;
+  static int lastSelectedParam = -1;
+  
+  if (!displayInitialized || selectedParam != lastSelectedParam || menuNeedsRefresh) {
+    lcd.clear();
+    displayMenuHeader("Default");
+    
+    String menuItems[2] = {"Forward", "Backward"};
+    
+    for (int i = 0; i < 2; i++) {
+      lcd.setCursor(0, i + 1);
+      lcd.print("                    "); // Clear line
+      lcd.setCursor(0, i + 1);
+      
+      if (i == selectedParam) {
+        lcd.print("> ");
+      } else {
+        lcd.print("  ");
+      }
+      lcd.print(menuItems[i]);
+    }
+    
+    lcd.setCursor(0, 3);
+    lcd.print("A:Go B:Back         ");
+    
+    displayInitialized = true;
+    lastSelectedParam = selectedParam;
+    menuNeedsRefresh = false;
+  }
+}
+
+void handlePidTestDefaultSubmenu() {
+  if (UP()) {
+    selectedParam = (selectedParam - 1 + 2) % 2;
+    menuNeedsRefresh = true;
+  } else if (DOWN()) {
+    selectedParam = (selectedParam + 1) % 2;
+    menuNeedsRefresh = true;
+  } else if (START()) {
+    lcd.clear();
+    switch (selectedParam) {
+      case 0: // Forward
+        currentMenu = MENU_PID_TEST_DEFAULT_FORWARD;
+        menuNeedsRefresh = true;
+        break;
+      case 1: // Backward
+        currentMenu = MENU_PID_TEST_DEFAULT_BACKWARD;
+        menuNeedsRefresh = true;
+        break;
+    }
+  } else if (STOP()) {
+    currentMenu = MENU_PID_TEST;
+    selectedParam = 2; // Default position
+    menuNeedsRefresh = true;
+  }
+}
+
+void displayPidTestWithMassaForwardMenu() {
+  lcd.clear();
+  displayMenuHeader("WithMassa Forward");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Testing PID Forward");
+  lcd.setCursor(0, 2);
+  lcd.print("with Massa settings");
+  lcd.setCursor(0, 3);
+  lcd.print("A:Go B:Back");
+}
+
+void handlePidTestWithMassaForwardMenu() {
+  setMagnetSlaveId(SLAVEID_MAGNET_DEPAN);
+  setUltrasonicSlaveId(SLAVEID_ULTRASONIK_DEPAN);
+  checkObstacles();
+  if (START()) {
+    // Implement PID test with massa forward logic here
+    // For now, just show a message
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("PID Test Running...");
+    lcd.setCursor(0, 1);
+    lcd.print("WithMassa Forward");
+    pidLinefollower(errorValue, PID_MODE_MAJU_MASSA) 
+    menuNeedsRefresh = true;
+  } else if (STOP()) {
+    currentMenu = MENU_PID_TEST_WITHMASSA;
+    selectedParam = 0; // Forward position
+    menuNeedsRefresh = true;
+  }
+}
+
+void displayPidTestWithMassaBackwardMenu() {
+  lcd.clear();
+  displayMenuHeader("WithMassa Backward");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Testing PID Backward");
+  lcd.setCursor(0, 2);
+  lcd.print("with Massa settings");
+  lcd.setCursor(0, 3);
+  lcd.print("A:Go B:Back");
+}
+
+void handlePidTestWithMassaBackwardMenu() {
+  if (START()) {
+    // Implement PID test with massa backward logic here
+    // For now, just show a message
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("PID Test Running...");
+    lcd.setCursor(0, 1);
+    lcd.print("WithMassa Backward");
+    pidLinefollower(errorValue, PID_MODE_MUNDUR_MASSA); 
+    // menuNeedsRefresh = true;
+  } else if (STOP()) {
+    currentMenu = MENU_PID_TEST_WITHMASSA;
+    selectedParam = 1; // Backward position
+    menuNeedsRefresh = true;
+  }
+}
+
+void displayPidTestDefaultForwardMenu() {
+  lcd.clear();
+  displayMenuHeader("Default Forward");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Testing PID Forward");
+  lcd.setCursor(0, 2);
+  lcd.print("with Default settings");
+  lcd.setCursor(0, 3);
+  lcd.print("A:Go B:Back");
+}
+
+void handlePidTestDefaultForwardMenu() {
+  if (START()) {
+    // Implement PID test default forward logic here
+    // For now, just show a message
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("PID Test Running...");
+    lcd.setCursor(0, 1);
+    lcd.print("Default Forward");
+    pidLinefollower(errorValue, PID_MODE_MAJU); 
+    menuNeedsRefresh = true;
+  } else if (STOP()) {
+    currentMenu = MENU_PID_TEST_DEFAULT;
+    selectedParam = 0; // Forward position
+    menuNeedsRefresh = true;
+  }
+}
+
+void displayPidTestDefaultBackwardMenu() {
+  lcd.clear();
+  displayMenuHeader("Default Backward");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Testing PID Backward");
+  lcd.setCursor(0, 2);
+  lcd.print("with Default settings");
+  lcd.setCursor(0, 3);
+  lcd.print("A:Go B:Back");
+}
+
+void handlePidTestDefaultBackwardMenu() {
+  if (START()) {
+    // Implement PID test default backward logic here
+    // For now, just show a message
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("PID Test Running...");
+    lcd.setCursor(0, 1);
+    lcd.print("Default Backward");
+    pidLinefollower(errorValue, PID_MODE_MUNDUR); 
+    menuNeedsRefresh = true;
+  } else if (STOP()) {
+    currentMenu = MENU_PID_TEST_DEFAULT;
+    selectedParam = 1; // Backward position
     menuNeedsRefresh = true;
   }
 }

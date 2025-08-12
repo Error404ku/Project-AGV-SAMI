@@ -18,6 +18,9 @@
 #include <Wiegand.h>
 #include <esp_task_wdt.h>
 
+// Control flag for FreeRTOS mode - defined here for global access
+// FORCE DISABLED for ESP32-S3 due to timer allocation conflict
+
 // ===================================================================
 //                        FREERTOS INCLUDES
 // ===================================================================
@@ -602,7 +605,8 @@ enum MusicMode {
   MUSIC_MODE_OBSTACLE,
   MUSIC_MODE_STATION,
   MUSIC_MODE_OUTOFLINE,
-  MUSIC_MODE_WARNING
+  MUSIC_MODE_WARNING,
+  MUSIC_MODE_STOP
 };
 
 // Variable to track current music mode

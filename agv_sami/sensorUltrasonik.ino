@@ -134,19 +134,10 @@ void checkObstacles() {
   // }
 
   // If obstacle just detected, trigger buzzer
-  static bool musicAlreadyPlaying = false;
   if (obstacleDetected && !previousObstacleState) {
     agvStop();
-    if (!musicAlreadyPlaying) {
-      music(MUSIC_MODE_OBSTACLE);
-      musicAlreadyPlaying = true;
-    }
+    music(MUSIC_MODE_OBSTACLE);
   } else if (!obstacleDetected && previousObstacleState) {
-    if (musicAlreadyPlaying) {
-      stopMusic();
-      musicAlreadyPlaying = false;
-    }
-  } else if (!obstacleDetected) {
-    musicAlreadyPlaying = false;
+    stopMusic();
   }
 }
