@@ -240,16 +240,7 @@ void agvMoveForward() {
     music(MUSIC_MODE_ON);
     if (exceptErrorPosition && totalSensorAktif > 5) {
       pidLinefollower(0, PID_MODE_MAJU_MASSA);
-    }else if(forceLeft){
-      pwmMotor(baseSpeed/2, baseSpeed/2);
-      if (totalSensorAktif == 0){
-        inLine = false;
-      }
-      if (totalSensorAktif > 0 && !inLine){
-        inLine = true;
-        forceLeft = false;
-      }
-    }else {
+    } else {
       if (targetStationsList.size() != 0 || currentRFID == AGV_STATE_TERMINAL_PICKUP) {
         pidLinefollower(errorValue, PID_MODE_MAJU_MASSA);  // Error dari sensor magnet
       } else {
@@ -300,9 +291,9 @@ void agvMoveBackward() {
   // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
   if (!obstacleDetected) {
     music(MUSIC_MODE_ON);
-    // Abaikan error jika warehouse RFID pernah terdeteksi dan segment aktif >5
+    // Abaikan error jika exceptErrorPosition = true dan segment aktif >5
     if (exceptErrorPosition && totalSensorAktif > 5) {
-      pidLinefollower(0, PID_MODE_MUNDUR_MASSA);  // Error = 0
+      pidLinefollower(0, PID_MODE_MUNDUR);  // Error = 0
     } else {
       if (targetStationsList.size() != 0){
         pidLinefollower(errorValue, PID_MODE_MUNDUR_MASSA);  // Error normal
