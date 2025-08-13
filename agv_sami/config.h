@@ -362,15 +362,7 @@ LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 // #define RX_MAGNET_BACK 3//11
 // #define TX_MAGNET_BACK 8//10
 // #define RX_ULTRASONIK_BACK 9
-// #define TX_ULTRASONIK_BACK 46
-
-// #Inisialisasi Pin Hook Motor
-#define MOTOR_DI1_PIN 20
-#define MOTOR_DI2_PIN 19
-#define MOTOR_PWM_PIN 21
-#define HOOK_PWM_CHANNEL 2
-
-
+// #define TX_ULTRASONIK_BACK 
 // Alamat slave sensor yang diharapkan
 const byte SENSOR_ADDRESS = 0x01;
 const int PACKET_LENGTH = 15;
@@ -560,7 +552,7 @@ bool statusMusic = false;
 
 // pin hook 20 dan 19, menggunakan relay
 #define pinHook1 20
-#define pinHook2 19
+#define pinHook2 45
 #define pinMotorHook 21
 
 // Motor inversion settings

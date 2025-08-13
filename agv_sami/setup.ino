@@ -169,7 +169,6 @@ void setupRS485(int baudrate) {
 
 void setupRS485_Serial2(int baudrate) {
   Serial.printf("[DEBUG] setupRS485_Serial2 dimulai dengan baudrate: %d\n", baudrate);
-  Serial.printf("[DEBUG] RS485 Serial2 pins - RX: %d, TX: %d, RE: %d, DE: %d\n", RS485_RX2, RS485_TX2, MAX485_RE2, MAX485_DE2);
 
   // Initialize Serial2 for RS485 communication (Ultrasonic sensors)
   Serial2.begin(baudrate, SERIAL_8N1, RS485_RX2, RS485_TX2);
