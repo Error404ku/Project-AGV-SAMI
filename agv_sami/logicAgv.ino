@@ -37,7 +37,6 @@ void agvMode(AgvState state) {
 void agvWarehouse() {
   static bool trigger = false;
   saveCurrentStateAGVToPreferences(AGV_STATE_WAREHOUSE);
-  music(MUSIC_MODE_WARNING);
 
   if (START()) {
     if (targetStationsList.size() == 0){
@@ -200,6 +199,7 @@ void agvMoveForward() {
       agvMode(AGV_STATE_MOVE_BACKWARD);
       return;
     } else if (isRfidMatch(currentRfid, terminalPickUpRfidId) && currentRFID != AGV_STATE_TERMINAL_PICKUP) {
+      stopMusic();
       newRfidScanned = false; // Reset flag
       exceptErrorPosition = false;
       saveExceptErrorFlag();
@@ -207,6 +207,7 @@ void agvMoveForward() {
       agvMode(AGV_STATE_TERMINAL_PICKUP);
       return;
     } else if (isRfidMatch(currentRfid, warehouseRfidId) && currentRFID != AGV_STATE_WAREHOUSE) {
+      stopMusic();
       newRfidScanned = false; // Reset flag
       exceptErrorPosition = true;
       saveExceptErrorFlag();
@@ -228,6 +229,7 @@ void agvMoveForward() {
     // Cari apakah stasiun ini ada di targetStationsList
     for (int i = 0; i < targetStationsList.size(); i++) {
       if (targetStationsList[i] == currentStation) {
+        stopMusic();
         removeTargetStationById(currentStation);
         agvMode(AGV_STATE_STATION);
         return;
@@ -261,6 +263,7 @@ void agvMoveBackward() {
   // Cek apakah RFID warehouse terdeteksi untuk mengabaikan error saat mundur
   String currentRfid = String(lastScannedRfidOptimized);
   if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, terminalDropRfidId) && currentRFID != AGV_STATE_TERMINAL_DROP) {
+      stopMusic();
       newRfidScanned = false; // Reset flag
       currentRFID = AGV_STATE_TERMINAL_DROP;
       agvMode(AGV_STATE_TERMINAL_DROP);
@@ -281,6 +284,7 @@ void agvMoveBackward() {
       for (int i = 0; i < targetStationsList.size(); i++) {
         if (targetStationsList[i] == currentStation) {
           removeTargetStationById(currentStation);
+          stopMusic();
           moveStateAGV(AGV_STATE_MOVE_BACKWARD);
           agvMode(AGV_STATE_STATION);
           return;
