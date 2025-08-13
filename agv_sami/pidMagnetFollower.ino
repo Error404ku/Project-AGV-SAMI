@@ -43,7 +43,7 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
     unsigned long currentTime = millis();
     unsigned long elapsedTime = currentTime - softStartTime;
     
-    if (elapsedTime < 2000) { // 2 seconds soft start duration
+    if (elapsedTime < 5000) { // 2 seconds soft start duration
       // Gradually increase from 25% to 100% of baseSpeed over 2 seconds
       int targetSpeed = map(elapsedTime, 0, 2000, baseSpeed / 4, baseSpeed);
       pidSpeed = targetSpeed;
@@ -107,8 +107,8 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
   int motorKiri = pidSpeed - koreksi;
   int motorKanan = pidSpeed + koreksi;
   if (PID_MODE_MAJU_MASSA || PID_MODE_MUNDUR_MASSA) {
-    motorKiri = (pidSpeed*2) - koreksi;
-    motorKanan = (pidSpeed*2) + koreksi;
+    motorKiri = (pidSpeed + (pidSpeed/2)) - koreksi;
+    motorKanan = (pidSpeed + (pidSpeed/2)) + koreksi;
   }
 
   motorKiri = constrain(motorKiri, -maxPwm, maxPwm);

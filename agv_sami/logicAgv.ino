@@ -189,7 +189,7 @@ void agvStop() {
 // Fungsi ini menangani logika AGV saat bergerak maju.
 void agvMoveForward() {
   saveCurrentStateAGVToPreferences(AGV_STATE_MOVE_FORWARD);
-  checkObstacles();
+  checkObstacles(false);
   modeDisplayMoveForward();
   moveStateAGV(AGV_STATE_MOVE_FORWARD);
   // Cek RFID yang terdeteksi untuk mode switching (harus dilakukan sebelum getStationFromLastRfid)
@@ -260,7 +260,7 @@ void agvMoveForward() {
 void agvMoveBackward() {
   saveCurrentStateAGVToPreferences(AGV_STATE_MOVE_BACKWARD);
   modeDisplayMoveBackward();
-  checkObstacles();
+  checkObstacles(false);
   moveStateAGV(AGV_STATE_MOVE_BACKWARD);
   // AGV bergerak mundur otomatis tanpa perlu menekan START
   // Logika pergerakan mundur:
@@ -307,7 +307,7 @@ void agvMoveBackward() {
       if (targetStationsList.size() != 0){
         pidLinefollower(errorValue, PID_MODE_MUNDUR_MASSA);  // Error normal
       } else {
-        pidLinefollower(0, PID_MODE_MUNDUR);
+        pidLinefollower(errorValue, PID_MODE_MUNDUR);
       }
     }
   }

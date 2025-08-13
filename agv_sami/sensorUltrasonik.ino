@@ -108,7 +108,7 @@ int getCurrentUltrasonicSlaveId() {
 /**
  * Check for obstacles in front of AGV
  */
-void checkObstacles() {
+void checkObstacles(bool call_stopMusic) {
   bool previousObstacleState = obstacleDetected;
   obstacleDetected = false;
     // Determine which safe distance to use based on current sensor
@@ -134,10 +134,12 @@ void checkObstacles() {
   // }
 
   // If obstacle just detected, trigger buzzer
-  if (obstacleDetected && !previousObstacleState) {
+  if (obstacleDetected) {
     agvStop();
     music(MUSIC_MODE_OBSTACLE);
-  } else if (!obstacleDetected && previousObstacleState) {
-    stopMusic();
+  } else if (!obstacleDetected) {
+    if (call_stopMusic) {
+      stopMusic();
+    }
   }
 }

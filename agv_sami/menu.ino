@@ -2770,7 +2770,7 @@ void handleUltrasonicCheck() {
   const unsigned long SENSOR_READ_INTERVAL = 100; // 100ms interval for sensor reading
   
   unsigned long currentTime = millis();
-  checkObstacles();
+  checkObstacles(true);
   // Rate-limited sensor reading to prevent stack overflow
   if (currentTime - lastSensorRead >= SENSOR_READ_INTERVAL) {
     // Only read ultrasonic sensor, avoid calling checkObstacles in menu mode
@@ -4171,18 +4171,28 @@ void displayPidTestWithMassaForwardMenu() {
 void handlePidTestWithMassaForwardMenu() {
   setMagnetSlaveId(SLAVEID_MAGNET_DEPAN);
   setUltrasonicSlaveId(SLAVEID_ULTRASONIK_DEPAN);
-  checkObstacles();
+  checkObstacles(false);
+
+  static bool isRunning = false;
+
   if (START()) {
-    // Implement PID test with massa forward logic here
-    // For now, just show a message
-    lcd.clear();
+    isRunning = !isRunning;
+    menuNeedsRefresh = true; 
+  }
+
+  if (isRunning) {
     lcd.setCursor(0, 0);
-    lcd.print("PID Test Running...");
-    lcd.setCursor(0, 1);
-    lcd.print("WithMassa Forward");
-    pidLinefollower(errorValue, PID_MODE_MAJU_MASSA) 
-    menuNeedsRefresh = true;
-  } else if (STOP()) {
+    lcd.print("Running... (A:Stop)");
+    pidLinefollower(errorValue, PID_MODE_MAJU_MASSA);
+  } else {
+    pwmMotor(0,0);
+    lcd.setCursor(0, 0);
+    lcd.print("Stopped. (A:Run)   ");
+  }
+
+  if (STOP()) {
+    pwmMotor(0,0);
+    isRunning = false;
     currentMenu = MENU_PID_TEST_WITHMASSA;
     selectedParam = 0; // Forward position
     menuNeedsRefresh = true;
@@ -4202,17 +4212,29 @@ void displayPidTestWithMassaBackwardMenu() {
 }
 
 void handlePidTestWithMassaBackwardMenu() {
+  setMagnetSlaveId(SLAVEID_MAGNET_BELAKANG);
+  setUltrasonicSlaveId(SLAVEID_ULTRASONIK_BELAKANG);
+  checkObstacles(false);
+  static bool isRunning = false;
+
   if (START()) {
-    // Implement PID test with massa backward logic here
-    // For now, just show a message
-    lcd.clear();
+    isRunning = !isRunning;
+    menuNeedsRefresh = true;
+  }
+
+  if (isRunning) {
     lcd.setCursor(0, 0);
-    lcd.print("PID Test Running...");
-    lcd.setCursor(0, 1);
-    lcd.print("WithMassa Backward");
-    pidLinefollower(errorValue, PID_MODE_MUNDUR_MASSA); 
-    // menuNeedsRefresh = true;
-  } else if (STOP()) {
+    lcd.print("Running... (A:Stop)");
+    pidLinefollower(errorValue, PID_MODE_MUNDUR_MASSA);
+  } else {
+    pwmMotor(0,0);
+    lcd.setCursor(0, 0);
+    lcd.print("Stopped. (A:Run)   ");
+  }
+
+  if (STOP()) {
+    pwmMotor(0,0);
+    isRunning = false;
     currentMenu = MENU_PID_TEST_WITHMASSA;
     selectedParam = 1; // Backward position
     menuNeedsRefresh = true;
@@ -4232,17 +4254,29 @@ void displayPidTestDefaultForwardMenu() {
 }
 
 void handlePidTestDefaultForwardMenu() {
+  setMagnetSlaveId(SLAVEID_MAGNET_DEPAN);
+  setUltrasonicSlaveId(SLAVEID_ULTRASONIK_DEPAN);
+  checkObstacles(false);
+  static bool isRunning = false;
+
   if (START()) {
-    // Implement PID test default forward logic here
-    // For now, just show a message
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("PID Test Running...");
-    lcd.setCursor(0, 1);
-    lcd.print("Default Forward");
-    pidLinefollower(errorValue, PID_MODE_MAJU); 
+    isRunning = !isRunning;
     menuNeedsRefresh = true;
-  } else if (STOP()) {
+  }
+
+  if (isRunning) {
+    lcd.setCursor(0, 0);
+    lcd.print("Running... (A:Stop)");
+    pidLinefollower(errorValue, PID_MODE_MAJU);
+  } else {
+    pwmMotor(0,0);
+    lcd.setCursor(0, 0);
+    lcd.print("Stopped. (A:Run)   ");
+  }
+
+  if (STOP()) {
+    pwmMotor(0,0);
+    isRunning = false;
     currentMenu = MENU_PID_TEST_DEFAULT;
     selectedParam = 0; // Forward position
     menuNeedsRefresh = true;
@@ -4262,17 +4296,28 @@ void displayPidTestDefaultBackwardMenu() {
 }
 
 void handlePidTestDefaultBackwardMenu() {
+  setMagnetSlaveId(SLAVEID_MAGNET_BELAKANG);
+  setUltrasonicSlaveId(SLAVEID_ULTRASONIK_BELAKANG);
+  checkObstacles(false);
+  static bool isRunning = false;
+
   if (START()) {
-    // Implement PID test default backward logic here
-    // For now, just show a message
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("PID Test Running...");
-    lcd.setCursor(0, 1);
-    lcd.print("Default Backward");
-    pidLinefollower(errorValue, PID_MODE_MUNDUR); 
+    isRunning = !isRunning;
     menuNeedsRefresh = true;
-  } else if (STOP()) {
+  }
+
+  if (isRunning) {
+    lcd.print("Running... (A:Stop)");
+    pidLinefollower(errorValue, PID_MODE_MUNDUR);
+  } else {
+    pwmMotor(0,0);
+    lcd.setCursor(0, 0);
+    lcd.print("Stopped. (A:Run)   ");
+  }
+
+  if (STOP()) {
+    pwmMotor(0,0);
+    isRunning = false;
     currentMenu = MENU_PID_TEST_DEFAULT;
     selectedParam = 1; // Backward position
     menuNeedsRefresh = true;

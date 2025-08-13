@@ -128,8 +128,7 @@ void resetPerformanceStats() {
 // Replace String operations with char arrays for better performance
 char statusJalanOptimized[16] = "BERHENTI";
 char currentModeOptimized[16] = "WAREHOUSE";
-char lastScannedRfidOptimized[32] = ""; // Optimized RFID storage
-bool newRfidScanned = false; // Flag untuk RFID baru yang terbaca
+// Note: lastScannedRfidOptimized and newRfidScanned are defined in config.h
 
 void setStatusJalan(const char* status) {
   strncpy(statusJalanOptimized, status, sizeof(statusJalanOptimized) - 1);

@@ -1,6 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
-// Include Library
+
+// Include Library first
 #include <Wire.h>
 #include <Arduino.h>
 #include <math.h>
@@ -14,6 +15,21 @@
 #include <vector>
 #include <SPIFFS.h>
 #include <algorithm>
+
+// PROGRAM DEFINITIONS
+#define PROGRAM_NAME "AGV SAMI v1.0.0"
+#define DEBUG_ENABLED true
+
+// --- COMMUNICATION ---
+int BAUDRATE = 115200;
+
+// --- HTTP & WEB SERVER ---
+WebServer server(80);
+
+// --- PREFERENCES & STORAGE ---
+Preferences preferences;
+Preferences stationsPreferences;  // Objek Preferences untuk station yang ditemukan
+std::vector<int> targetStationsList;    // Array di RAM untuk menyimpan station yang ditemukan
 #include "menu.h"
 #include <Wiegand.h>
 #include <esp_task_wdt.h>
@@ -60,6 +76,14 @@ enum PidMode {
   PID_MODE_DEFAULT
 };
 
+// Timer struct definition - defined early to avoid forward declaration issues
+struct Timer {
+  unsigned long previousMillis;
+  unsigned long interval;
+  bool active;
+  bool triggered;
+};
+
 // FreeRTOS structures and variables removed - using original implementation
 
 // ===================================================================
@@ -85,17 +109,6 @@ enum PidMode {
 // ===================================================================
 //                        DEKLARASI GLOBAL VARIABLES
 // ===================================================================
-
-// --- HTTP & WEB SERVER ---
-WebServer server(80);
-
-// --- PREFERENCES & STORAGE ---
-Preferences preferences;
-Preferences stationsPreferences;  // Objek Preferences untuk station yang ditemukan
-std::vector<int> targetStationsList;    // Array di RAM untuk menyimpan station yang ditemukan
-
-// --- COMMUNICATION ---
-int BAUDRATE = 115200;
 
 // --- SENSOR MAGNET VARIABLES ---
 int currentMagnetSlaveId = SLAVEID_MAGNET_DEPAN;
@@ -147,36 +160,27 @@ bool systemInErrorState = false;
 int errorRecoveryAttempts = 0;
 
 // Memory tracking variables
-size_t freeHeapSize = 0;
-size_t minFreeHeap = 0;
+extern size_t freeHeapSize;
+size_t minFreeHeap = SIZE_MAX;
 
 // AGV State variables
 AgvState currentStateAgv = AGV_STATE_NULL;
 AgvState moveStateAgv = AGV_STATE_MOVE_FORWARD;
 AgvState currentRFID = AGV_STATE_NULL;
-static bool firstChange = true;
 
-// Timer system structure
-struct Timer {
-  unsigned long previousMillis;
-  unsigned long interval;
-  bool active;
-  bool triggered;
-};
-
-// Timer instances for different operations
-Timer stopPelanPelanTimer = {0, 500, false, false};
-Timer ultrasonicSwitchTimer = {0, 100, false, false};
-Timer magnetSwitchTimer = {0, 50, false, false};  // Optimized to match magnet read interval
-Timer buttonDebounceTimer = {0, 300, false, false};
-Timer menuDelayTimer = {0, 1500, false, false};
-Timer errorRecoveryTimer = {0, 5000, false, false};
-Timer performanceTimer = {0, 5000, false, false};
+// Timer system
+Timer stopPelanPelanTimer = {0, 0, false, false};
+Timer ultrasonicSwitchTimer = {0, 0, false, false};
+Timer magnetSwitchTimer = {0, 0, false, false};
+Timer buttonDebounceTimer = {0, 0, false, false};
+Timer menuDelayTimer = {0, 0, false, false};
+Timer errorRecoveryTimer = {0, 0, false, false};
+Timer performanceTimer = {0, 0, false, false};
 
 // Sensor distances array
-uint16_t ultrasonicDistances[5] = { 0 };  // Store distances from 5 probes
-uint16_t minSafeDistanceFront = 30;       // cm - minimum safe distance for front sensor
-uint16_t minSafeDistanceBack = 20;        // cm - minimum safe distance for back sensor
+int ultrasonicDistances[2] = {0, 0};  // [depan, belakang]
+int minSafeDistanceFront = 20;    // cm untuk depan
+int minSafeDistanceBack = 15;     // cm untuk belakang
 
 // --- RFID TERMINAL VARIABLES ---
 String terminalDropRfidId = "";
@@ -190,9 +194,9 @@ String rfidMajuId = "";
 
 // --- MENU SYSTEM VARIABLES ---
 int selectedItem = 0;
-int maxItems;
+int maxItems = 0;
 int menuStartIndex = 0;        // For scrolling menu
-int maxMenuDisplay = 3;        // Maximum items displayed at once
+int maxMenuDisplay = 4;        // Maximum items displayed at once
 bool isAgvMode = false;
 int currentMenu = 0;           // MENU_MAIN
 
@@ -466,24 +470,24 @@ double kp = 0.2, ki = 0.4, kd = 0.0;
 
 
 // PID Parameters for Forward Movement WithMassa
-float kpLinefollowerForwardWithMassa = 0.0;  // Kp untuk gerakan maju dengan massa - will be loaded from preferences
-float kiLinefollowerForwardWithMassa = 0.0;   // Ki untuk gerakan maju dengan massa - will be loaded from preferences
-float kdLinefollowerForwardWithMassa = 0.0;   // Kd untuk gerakan maju dengan massa - will be loaded from preferences
+float kpLinefollowerForwardWithMassa = 2.0; // Kp untuk gerakan maju dengan massa - will be loaded from preferences
+float kiLinefollowerForwardWithMassa = 0.0;  // Ki untuk gerakan maju dengan massa - will be loaded from preferences
+float kdLinefollowerForwardWithMassa = 0.5;  // Kd untuk gerakan maju dengan massa - will be loaded from preferences
 
 // PID Parameters for Forward Movement Default
-float kpLinefollowerForwardDefault = 0.0;  // Kp untuk gerakan maju default - will be loaded from preferences
+float kpLinefollowerForwardDefault = 1.5;   // Kp untuk gerakan maju default - will be loaded from preferences
 float kiLinefollowerForwardDefault = 0.0;   // Ki untuk gerakan maju default - will be loaded from preferences
-float kdLinefollowerForwardDefault = 0.0;   // Kd untuk gerakan maju default - will be loaded from preferences
+float kdLinefollowerForwardDefault = 0.3;   // Kd untuk gerakan maju default - will be loaded from preferences
 
 // PID Parameters for Backward Movement WithMassa
-float kpLinefollowerBackwardWithMassa = 0.0; // Kp untuk gerakan mundur dengan massa - will be loaded from preferences
+float kpLinefollowerBackwardWithMassa = 2.0; // Kp untuk gerakan mundur dengan massa - will be loaded from preferences
 float kiLinefollowerBackwardWithMassa = 0.0;  // Ki untuk gerakan mundur dengan massa - will be loaded from preferences
-float kdLinefollowerBackwardWithMassa = 0.0;  // Kd untuk gerakan mundur dengan massa - will be loaded from preferences
+float kdLinefollowerBackwardWithMassa = 0.5;  // Kd untuk gerakan mundur dengan massa - will be loaded from preferences
 
 // PID Parameters for Backward Movement Default
-float kpLinefollowerBackwardDefault = 0.0; // Kp untuk gerakan mundur default - will be loaded from preferences
+float kpLinefollowerBackwardDefault = 1.5; // Kp untuk gerakan mundur default - will be loaded from preferences
 float kiLinefollowerBackwardDefault = 0.0;  // Ki untuk gerakan mundur default - will be loaded from preferences
-float kdLinefollowerBackwardDefault = 0.0;  // Kd untuk gerakan mundur default - will be loaded from preferences
+float kdLinefollowerBackwardDefault = 0.3;  // Kd untuk gerakan mundur default - will be loaded from preferences
 
 // Legacy PID variables (for backward compatibility)
 float kpLinefollower = 0.0;  // Will be initialized from preferences in setupMenu()
@@ -506,7 +510,7 @@ const unsigned long interval = 100;
 int totalSensorAktif = 0;
 int buttonStep = 0;  // Track button state for sequential actions
 
-int baseSpeed = 2000;
+int baseSpeed = 100;
 int pidSpeed = 0;
 
 // RFID
@@ -542,8 +546,8 @@ struct RfidWarehouse {
   bool isActive;
 };
 
-RfidUjung rfidUjungList[MAX_RFID_UJUNG];
-RfidWarehouse rfidWarehouseList[MAX_RFID_WAREHOUSE];
+RfidUjung rfidUjungList[MAX_RFID_UJUNG] = {};
+RfidWarehouse rfidWarehouseList[MAX_RFID_WAREHOUSE] = {};
 int rfidUjungCount = 0;
 int rfidWarehouseCount = 0;
 
@@ -553,15 +557,14 @@ int rfidWarehouseCount = 0;
 bool isScanning = false;
 int currentScanStation = 0;
 // String lastScannedRfid = ""; // Replaced with optimized char array
-extern char lastScannedRfidOptimized[32];  // Optimized RFID storage
-extern bool newRfidScanned;  // Flag untuk RFID baru yang terbaca
+char lastScannedRfidOptimized[32] = "";  // Optimized RFID storage
+bool newRfidScanned = false;  // Flag untuk RFID baru yang terbaca
 
 // For FreeRTOS compatibility - make it String type
 #define lastDetectedRfidId String(lastScannedRfidOptimized)
 
 // Obstacle detection variables
 extern bool obstacleDetected;
-extern uint16_t ultrasonicDistances[5];
 
 // Pin Relay music 7, 15, 16, 14, 37, 38
 #define pinMusic1 7
@@ -571,7 +574,7 @@ extern uint16_t ultrasonicDistances[5];
 #define pinMusic5 37
 #define pinMusic6 38
 
-bool statusMusic = false;
+bool statusMusic = true;
 
 // pin hook 20 dan 19, menggunakan relay
 #define pinHook1 20
@@ -642,7 +645,7 @@ void setUltrasonicSlaveId(int slaveId);
 void setupSensorUltrasonic(int slaveId);
 int getCurrentUltrasonicSlaveId();
 void loopUltrasonik();
-void checkObstacles();
+void checkObstacles(bool call_stopMusic);
 void preTransmissionUltrasonic();
 void postTransmissionUltrasonic();
 
@@ -780,15 +783,7 @@ bool isStationExists(String rfidData);
 void initMenuTempVariables();
 
 // ===== PERFORMANCE OPTIMIZATION FUNCTIONS =====
-// Timer system
-struct Timer;
-extern Timer stopPelanPelanTimer;
-extern Timer ultrasonicSwitchTimer;
-extern Timer magnetSwitchTimer;
-extern Timer buttonDebounceTimer;
-extern Timer menuDelayTimer;
-extern Timer errorRecoveryTimer;
-extern Timer performanceTimer;
+// Timer system - already defined above
 
 void startTimer(Timer* timer, unsigned long interval);
 void stopTimer(Timer* timer);
