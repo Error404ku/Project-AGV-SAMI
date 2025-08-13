@@ -422,7 +422,7 @@ const int channelKiri = 1;
 const int pwmResolution = 12;
 
 // # PWM Frequency
-const int pwmFrequency = 5000;
+const int pwmFrequency = 1000;
 
 // # Max PWM
 const int maxPwm = 4096;

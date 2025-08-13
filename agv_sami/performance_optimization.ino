@@ -177,6 +177,7 @@ void saveExceptErrorFlag() {
   preferences.begin("except-error", false);
   preferences.putBool("position", exceptErrorPosition);
   preferences.end();
+  return;
 }
 
 // Fungsi untuk memuat flag except error position dari preferences

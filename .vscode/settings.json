@@ -1,7 +1,7 @@
 {
   "files.associations": {
-    "*.embeddedhtml": "html",
     "*.dbclient-js": "javascript",
+    "*.embeddedhtml": "html",
     "array": "cpp",
     "atomic": "cpp",
     "bit": "cpp",
@@ -48,6 +48,7 @@
     "xstring": "cpp",
     "xutility": "cpp",
     "optional": "cpp",
-    "xmemory": "cpp"
+    "xmemory": "cpp",
+    "*.tcc": "cpp"
   }
 }
