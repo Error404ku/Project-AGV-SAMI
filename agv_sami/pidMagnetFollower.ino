@@ -107,8 +107,8 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
   int motorKiri = pidSpeed - koreksi;
   int motorKanan = pidSpeed + koreksi;
   if (PID_MODE_MAJU_MASSA || PID_MODE_MUNDUR_MASSA) {
-    motorKiri = (pidSpeed*2) - koreksi;
-    motorKanan = (pidSpeed*2) + koreksi;
+    motorKiri = (pidSpeed + (pidSpeed/2)) - koreksi;
+    motorKanan = (pidSpeed + (pidSpeed/2)) + koreksi;
   }
 
   motorKiri = constrain(motorKiri, -maxPwm, maxPwm);

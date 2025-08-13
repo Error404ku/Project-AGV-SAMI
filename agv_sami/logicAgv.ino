@@ -298,7 +298,7 @@ void agvMoveBackward() {
       if (targetStationsList.size() != 0){
         pidLinefollower(errorValue, PID_MODE_MUNDUR_MASSA);  // Error normal
       } else {
-        pidLinefollower(0, PID_MODE_MUNDUR);
+        pidLinefollower(errorValue, PID_MODE_MUNDUR);
       }
     }
   }

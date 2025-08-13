@@ -380,14 +380,12 @@ void setupMenu() {
   // Load RFID Ujung and Warehouse data
   loadRfidUjungFromPreferences();
   loadRfidWarehouseFromPreferences();
-  loadRfidPertigaanFromPreferences();
   loadWarehouseUjungRfid();
   
   // Load Terminal RFID data
   loadTerminalRfid();
   
-  // Load RFID Maju data
-  loadRfidMaju();
+
   
   // Load except error position flag
   loadExceptErrorFlag();

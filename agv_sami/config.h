@@ -178,8 +178,6 @@ bool exceptErrorPosition = false;
 // --- WAREHOUSE & UJUNG RFID VARIABLES ---
 String warehouseRfidId = "";
 String ujungRfidId = "";
-String pertigaanRfidId = "";
-String rfidMajuId = "";
 
 // --- MENU SYSTEM VARIABLES ---
 int selectedItem = 0;
@@ -680,19 +678,13 @@ void handleRfidWarehouse();
 void saveRfidWarehouseToPreferences();
 void loadRfidWarehouseFromPreferences();
 
-// RFID Pertigaan functions
-void displayRfidPertigaan();
-void handleRfidPertigaan();
-void saveRfidPertigaanToPreferences();
-void loadRfidPertigaanFromPreferences();
+
 
 // Warehouse & Ujung RFID sync functions
 void loadWarehouseUjungRfid();
 void saveWarehouseRfid(String rfidId);
 void saveUjungRfid(String rfidId);
-void savePertigaanRfid(String rfidId);
-void saveRfidMaju(String rfidId);
-void loadRfidMaju();
+
 
 // Terminal Drop & Pickup RFID functions
 void loadTerminalRfid();
