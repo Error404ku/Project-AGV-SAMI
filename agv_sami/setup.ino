@@ -157,8 +157,6 @@ void setupRS485(int baudrate) {
   digitalWrite(MAX485_RE, 0);
   digitalWrite(MAX485_DE, 0);
 
-  // Wait for Serial1 to be ready
-  delay(100);
 
   if (Serial1) {
     Serial.println("[SUCCESS] RS485 Serial1 komunikasi berhasil diinisialisasi!");
