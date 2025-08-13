@@ -24,7 +24,11 @@ void postTransmissionMagnet() {
 }
 
 
-// Fungsi bacaSensorGaris dihapus karena tidak digunakan dan kosong
+// Fungsi bacaSensorGaris - implementasi sederhana
+void bacaSensorGaris() {
+  // Simple sensor reading function - placeholder
+  loopMagneticSensor();
+}
 
 // ==================== TIMER VARIABLES FOR 5-SECOND DETECTION ====================
 static int lastErrorValue = 99;

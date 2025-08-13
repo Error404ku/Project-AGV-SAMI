@@ -217,23 +217,28 @@ void displayMainMenu() {
     "WiFi Settings"       // selectedItem 16 -> MENU_WIFI_SETTINGS (14)
   };
   maxItems = sizeof(menuItems) / sizeof(menuItems[0]);
+  
   // Update scroll position if needed
   if (selectedItem < menuStartIndex) {
     menuStartIndex = selectedItem;
     menuNeedsRefresh = true;
-  } else if (selectedItem >= menuStartIndex + maxMenuDisplay) {
-    menuStartIndex = selectedItem - maxMenuDisplay + 1;
+  } else if (selectedItem >= menuStartIndex + 3) {  // Use 3 instead of maxMenuDisplay for cleaner display
+    menuStartIndex = selectedItem - 2;
     menuNeedsRefresh = true;
   }
 
   // Check if we need to refresh the entire display
   if (menuNeedsRefresh || selectedItem != lastSelectedItem || menuStartIndex != lastMenuStartIndex) {
-    lcd.clear();  // Only clear when really needed
-    displayMenuHeader("AGV Menu:");
+    lcd.clear();  // Clear screen for full refresh
+    displayMenuHeader("AGV Menu");
 
-    // Display menu items (3 items max)
-    for (int i = 0; i < maxMenuDisplay && (menuStartIndex + i) < maxItems; i++) {
+    // Display menu items (3 items max for clean display)
+    for (int i = 0; i < 3 && (menuStartIndex + i) < maxItems; i++) {
       int menuIndex = menuStartIndex + i;
+      lcd.setCursor(0, i + 1);
+      
+      // Clear entire line first to prevent artifacts
+      lcd.print("                    ");
       lcd.setCursor(0, i + 1);
 
       // Show cursor for selected item
@@ -243,36 +248,33 @@ void displayMainMenu() {
         lcd.print("  ");
       }
 
-      // Print menu item (max 16 chars to fit cursor)
+      // Print menu item (max 16 chars to fit cursor and number)
       String item = menuItems[menuIndex];
       if (item.length() > 16) {
         item = item.substring(0, 16);
       }
       lcd.print(item);
 
-      // Show item number
+      // Show item number at the end
       lcd.setCursor(18, i + 1);
       lcd.print(menuIndex + 1);
     }
 
-    // Show scroll indicators
-    lcd.setCursor(19, 1);
-    lcd.setCursor(19, 3);
 
     // Update last states
     lastSelectedItem = selectedItem;
     lastMenuStartIndex = menuStartIndex;
     menuNeedsRefresh = false;
   } else {
-    // Quick cursor update without full refresh
-    for (int i = 0; i < maxMenuDisplay && (menuStartIndex + i) < maxItems; i++) {
+    // Quick cursor update without full refresh - but clean the cursor area
+    for (int i = 0; i < 3 && (menuStartIndex + i) < maxItems; i++) {
       int menuIndex = menuStartIndex + i;
       lcd.setCursor(0, i + 1);
 
       if (menuIndex == selectedItem) {
-        lcd.print(">");
+        lcd.print("> ");
       } else {
-        lcd.print(" ");
+        lcd.print("  ");
       }
     }
   }

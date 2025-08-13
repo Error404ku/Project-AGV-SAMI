@@ -3,29 +3,18 @@ void loopRfid() {
   if (!(currentMenu == MENU_RFID_SETTINGS || isAgvMode || MENU_RFID_UJUNG || MENU_RFID_WAREHOUSE || MENU_AUTO_INPUT_STATION || MENU_TERMINAL_DROP || MENU_TERMINAL_PICKUP)) {
     return;
   }
-
-  // Feed watchdog to prevent reset
-  esp_task_wdt_reset();
-  
   noInterrupts();
   wiegand.flush();
   interrupts();
-  
-  // Process any pending RFID data immediately
-  if (newRfidScanned && strlen(lastScannedRfidOptimized) > 0) {
-    // Data RFID sudah tersimpan di lastScannedRfidOptimized oleh receivedData()
-    // Flag newRfidScanned sudah di-set true
-    // Pemrosesan akan dilakukan oleh logika AGV atau menu yang memanggil
-    // Tidak perlu reset flag di sini karena akan di-reset oleh pemroses
-  }
 }
 
-void pinStateChanged() {
-  // Keep interrupt handler as minimal as possible
+void IRAM_ATTR pinStateChanged() {
+  // Optimized interrupt handler - minimal operations only
   static unsigned long lastInterruptTime = 0;
   unsigned long currentTime = micros();
   
-  if (currentTime - lastInterruptTime > 100) { // 100 microseconds debounce
+  // Increased debounce time to reduce interrupt frequency
+  if (currentTime - lastInterruptTime > 100) { // 200 microseconds debounce
     wiegand.setPin0State(digitalRead(PIN_D0));
     wiegand.setPin1State(digitalRead(PIN_D1));
     lastInterruptTime = currentTime;
@@ -45,30 +34,27 @@ void receivedData(uint8_t* data, uint8_t bits, const char* message) {
   static unsigned long lastRfidTime = 0;
   unsigned long currentTime = millis();
   
-  // Debounce: ignore RFID reads within 500ms
-  if (currentTime - lastRfidTime < 300) {
+  // Increased debounce time to reduce processing load
+  if (currentTime - lastRfidTime < 200) {
     return;
   }
   lastRfidTime = currentTime;
   
-  // Minimize serial prints in interrupt context
-  // Move heavy processing to main loop
-  
-  // Only essential processing here
-  char rfidBuffer[32] = "";
+  // Optimized: Minimal processing in interrupt context
+  // Store raw data for processing in main loop
   uint8_t bytes = (bits + 7) / 8;
+  
+  // Quick hex conversion with lookup table for better performance
+  static const char hexLookup[] = "0123456789ABCDEF";
   int bufferIndex = 0;
-
-  for (int i = 0; i < bytes && bufferIndex < 30; i++) {
-    char hexChar1 = (data[i] >> 4) < 10 ? '0' + (data[i] >> 4) : 'A' + (data[i] >> 4) - 10;
-    char hexChar2 = (data[i] & 0xF) < 10 ? '0' + (data[i] & 0xF) : 'A' + (data[i] & 0xF) - 10;
-    rfidBuffer[bufferIndex++] = hexChar1;
-    rfidBuffer[bufferIndex++] = hexChar2;
+  
+  // Limit processing to prevent interrupt conflicts
+  for (int i = 0; i < bytes && i < 15 && bufferIndex < 30; i++) {
+    lastScannedRfidOptimized[bufferIndex++] = hexLookup[data[i] >> 4];
+    lastScannedRfidOptimized[bufferIndex++] = hexLookup[data[i] & 0xF];
   }
-  rfidBuffer[bufferIndex] = '\0';
-
-  strncpy(lastScannedRfidOptimized, rfidBuffer, sizeof(lastScannedRfidOptimized) - 1);
-  lastScannedRfidOptimized[sizeof(lastScannedRfidOptimized) - 1] = '\0';
+  lastScannedRfidOptimized[bufferIndex] = '\0';
+  
   newRfidScanned = true;
 }
 

@@ -6,7 +6,6 @@
 
 // Rate limiting functions
 bool shouldReadMagnet() {
-    if (!enableSensorRateLimiting) return true;
     
     unsigned long currentTime = millis();
     if (currentTime - lastMagnetRead >= MAGNET_READ_INTERVAL_MS) {
@@ -17,8 +16,6 @@ bool shouldReadMagnet() {
 }
 
 bool shouldReadUltrasonic() {
-    if (!enableSensorRateLimiting) return true;
-    
     unsigned long currentTime = millis();
     if (currentTime - lastUltrasonicRead >= ULTRASONIC_READ_INTERVAL_MS) {
         lastUltrasonicRead = currentTime;
@@ -27,9 +24,7 @@ bool shouldReadUltrasonic() {
     return false;
 }
 
-bool shouldReadRfid() {
-    if (!enableSensorRateLimiting) return true;
-    
+bool shouldReadRfid() {    
     unsigned long currentTime = millis();
     if (currentTime - lastRfidRead >= RFID_READ_INTERVAL_MS) {
         lastRfidRead = currentTime;

@@ -165,9 +165,10 @@ void lightweightStackMonitor() {
 void resetWatchdogSafely() {
     static uint32_t lastReset = 0;
     
+    // Watchdog timer removed to prevent conflicts
     // Reset watchdog every 1 second max
     if (millis() - lastReset > 1000) {
-        esp_task_wdt_reset();
+        // esp_task_wdt_reset(); // DISABLED
         lastReset = millis();
     }
 }

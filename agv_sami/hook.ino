@@ -46,3 +46,9 @@ HookPosition hook(HookPositionMode mode) {
     return STOP_POS;  
   }
 }
+
+// Update hook status function
+void updateHookStatus() {
+  // Simple hook status update - can be expanded later
+  // Currently just a placeholder
+}

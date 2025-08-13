@@ -109,8 +109,6 @@ int getCurrentUltrasonicSlaveId() {
  * Check for obstacles in front of AGV
  */
 void checkObstacles(bool call_stopMusic) {
-  bool previousObstacleState = obstacleDetected;
-  obstacleDetected = false;
     // Determine which safe distance to use based on current sensor
   uint16_t currentMinSafeDistance;
   if (currentUltrasonicSlaveId == SLAVEID_ULTRASONIK_DEPAN) {
@@ -123,6 +121,8 @@ void checkObstacles(bool call_stopMusic) {
 
   if (ultrasonicDistances[2] > 0 && ultrasonicDistances[2] < currentMinSafeDistance) {
     obstacleDetected = true;
+  }else {
+    obstacleDetected = false;
   }
 
   // Check each probe for obstacles

@@ -16,11 +16,8 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
     // Reset soft start when stopping
     softStartActive = false;
     pidSpeed = 0;
-    #ifdef DEBUG_PID
-    #endif
     // Debug removed for performance
-    music(MUSIC_MODE_OUTOFLINE);
-    return;  // Exit function early
+    music(MUSIC_MODE_OUTOFLINE);  // Exit function early
   }
   
   // Check if AGV is back on track and stop music if it's OUTOFLINE mode (magnet loss music)

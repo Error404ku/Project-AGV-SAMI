@@ -33,6 +33,8 @@ void agvMode(AgvState state) {
   }
 }
 
+
+
 // Fungsi ini menangani logika AGV saat berada di gudang.
 void agvWarehouse() {
   static bool trigger = false;
@@ -241,9 +243,7 @@ void agvMoveForward() {
   // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
   if (!obstacleDetected) {
     // Only play normal music if no obstacle music is currently playing
-    if (currentMusicMode != MUSIC_MODE_OBSTACLE) {
       music(MUSIC_MODE_ON);
-    }
     if (exceptErrorPosition && totalSensorAktif > 5) {
       pidLinefollower(0, PID_MODE_MAJU_MASSA);
     } else {
@@ -297,9 +297,7 @@ void agvMoveBackward() {
   // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
   if (!obstacleDetected) {
     // Only play normal music if no obstacle music is currently playing
-    if (currentMusicMode != MUSIC_MODE_OBSTACLE) {
       music(MUSIC_MODE_ON);
-    }
     // Abaikan error jika exceptErrorPosition = true dan segment aktif >5
     if (exceptErrorPosition && totalSensorAktif > 5) {
       pidLinefollower(0, PID_MODE_MUNDUR);  // Error = 0

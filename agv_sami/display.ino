@@ -20,9 +20,41 @@ void displayPrint() {
     lcd.setCursor(0, 0);
     lcd.print("AGV Mode:           ");  // Tambah spasi untuk clear sisa karakter
     lcd.setCursor(0, 1);
-    String stateString = agvStateToString(currentStateAgv);
-    stateString += "                ";  // Tambah spasi untuk clear sisa karakter
-    lcd.print(stateString);
+    
+    // Konversi status AGV ke format yang lebih pendek untuk tampilan
+    String displayString;
+    switch (currentStateAgv) {
+      case AGV_STATE_MOVE_FORWARD:
+        displayString = "Maju";
+        break;
+      case AGV_STATE_MOVE_BACKWARD:
+        displayString = "Mundur";
+        break;
+      case AGV_STATE_TERMINAL_PICKUP:
+        displayString = "Pickup";
+        break;
+      case AGV_STATE_TERMINAL_DROP:
+        displayString = "Drop";
+        break;
+      case AGV_STATE_WAREHOUSE:
+        displayString = "Warehouse";
+        break;
+      case AGV_STATE_STATION:
+        displayString = "Station";
+        break;
+      case AGV_STATE_STOP:
+        displayString = "Stop";
+        break;
+      case AGV_STATE_NULL:
+        displayString = "Standby";
+        break;
+      default:
+        displayString = "Standby";
+        break;
+    }
+    
+    displayString += "                ";  // Tambah spasi untuk clear sisa karakter
+    lcd.print(displayString);
 
     // Update state tracking
     lastDisplayedState = currentStateAgv;

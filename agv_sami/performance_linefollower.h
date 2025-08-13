@@ -6,7 +6,7 @@
 #define PERFORMANCE_LINEFOLLOWER_H
 
 // Rate limiting for sensor readings
-#define MAGNET_READ_INTERVAL_MS 0     // Real-time reading - no rate limiting
+#define MAGNET_READ_INTERVAL_MS 10     // Real-time reading - no rate limiting
 #define ULTRASONIC_READ_INTERVAL_MS 100 // Read ultrasonic every 100ms
 #define RFID_READ_INTERVAL_MS 50      // Read RFID every 50ms
 

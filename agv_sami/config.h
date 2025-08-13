@@ -32,7 +32,7 @@ Preferences stationsPreferences;  // Objek Preferences untuk station yang ditemu
 std::vector<int> targetStationsList;    // Array di RAM untuk menyimpan station yang ditemukan
 #include "menu.h"
 #include <Wiegand.h>
-#include <esp_task_wdt.h>
+// #include <esp_task_wdt.h> // DISABLED - Watchdog removed to prevent conflicts
 
 // Control flag for FreeRTOS mode - defined here for global access
 // FORCE DISABLED for ESP32-S3 due to timer allocation conflict
@@ -198,6 +198,7 @@ int maxItems = 0;
 int menuStartIndex = 0;        // For scrolling menu
 int maxMenuDisplay = 4;        // Maximum items displayed at once
 bool isAgvMode = false;
+bool modeBerhenti = false;
 int currentMenu = 0;           // MENU_MAIN
 
 // --- KONSTANTA MENU ---
@@ -765,7 +766,17 @@ void saveExceptErrorFlag();
 void loadExceptErrorFlag();
 
 // Terminal and display functions
-// void inTerminal();
+// void inTerminal(); // Implemented inline below
+void updateHookStatus();
+void bacaSensorGaris();
+void logicAgv();
+extern bool modeBerhenti;
+
+// Inline implementation of inTerminal
+inline void inTerminal() {
+  // Simple terminal function - placeholder
+  // Can be expanded with actual terminal logic
+}
 void displayPrint();
 void displaySensorData();
 void resetDisplayFlags(); // Reset semua flag display
@@ -879,7 +890,7 @@ extern SemaphoreHandle_t mutexDisplay;
 extern SemaphoreHandle_t mutexPreferences;
 
 extern EventGroupHandle_t eventGroupSystem;
-extern TimerHandle_t timerWatchdog;
+// extern TimerHandle_t timerWatchdog; // DISABLED
 extern TimerHandle_t timerSensorHealth;
 
 // Data structures for FreeRTOS communication
@@ -933,6 +944,10 @@ void createQueuesAndSemaphores();
 extern bool useFreeRTOS; // Flag to enable/disable FreeRTOS mode
 int findRfidStationByRfidId(String rfidId);
 
+  bool firstStopClick = false;
+  unsigned long firstStopTime = 0;
+  const unsigned long doubleClickInterval = 2000;
+  bool displayUpdated = false; 
 // FreeRTOS function declarations removed - using original implementation
 
 #endif

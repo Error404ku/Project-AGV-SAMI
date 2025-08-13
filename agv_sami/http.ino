@@ -421,7 +421,7 @@ void handleSaveWifi() {
       server.send(200, "text/html", html);
       
       // Restart ESP32 setelah 5 detik
-      delay(5000);
+      // delay(5000);
       // NOTE: ESP.restart() disabled during diagnostics to avoid reboot loops
       // ESP.restart();
     } else {
