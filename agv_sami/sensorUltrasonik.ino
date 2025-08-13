@@ -138,6 +138,7 @@ void checkObstacles() {
   if (obstacleDetected && !previousObstacleState) {
     agvStop();
     if (!musicAlreadyPlaying) {
+      stopMusic();
       music(MUSIC_MODE_OBSTACLE);
       musicAlreadyPlaying = true;
     }
