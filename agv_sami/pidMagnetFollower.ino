@@ -19,7 +19,6 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
     #ifdef DEBUG_PID
     #endif
     // Debug removed for performance
-    stopMusic();
     music(MUSIC_MODE_OUTOFLINE);
     return;  // Exit function early
   }
