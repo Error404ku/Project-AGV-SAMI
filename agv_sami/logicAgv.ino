@@ -215,7 +215,7 @@ void agvMoveForward() {
       agvMode(AGV_STATE_WAREHOUSE);
       return;
     } else if (isRfidMatch(currentRfid, getRfidForStation(1)) && exceptErrorPosition != false) {
-      newRfidScanned = false; // Reset flag
+      // newRfidScanned = false; // Reset flag
       exceptErrorPosition = false;
       saveExceptErrorFlag();
     }

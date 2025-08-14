@@ -36,7 +36,6 @@ void music(MusicMode mode) {
       case 2: digitalWrite(pinMusic3, LOW); break;
       case 3: digitalWrite(pinMusic4, LOW); break;
       case 4: digitalWrite(pinMusic5, LOW); break;
-      case 5: digitalWrite(pinMusic6, LOW); break;
     }
   }
 
