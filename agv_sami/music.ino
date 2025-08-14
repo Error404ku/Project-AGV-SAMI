@@ -1,12 +1,4 @@
 void music(MusicMode mode) {
-  Serial.print("Start Music : ");
-  Serial.println(mode);
-
-  if (statusMusic) {
-    Serial.println("Music already on");
-    return;
-  }
-
   statusMusic = true;
   currentMusicMode = mode; // Store current music mode
 
