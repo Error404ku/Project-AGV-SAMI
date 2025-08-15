@@ -165,26 +165,43 @@ int hitungErrorPosisi(uint16_t bitmask) {
 
   // Logika baru: cek dua-duanya lalu ambil dominasi
   int errorKiri = 0, errorKanan = 0;
-
-  if (segmenTerendah < 7) {
-    switch (segmenTerendah) {
-      case 6: errorKiri = -2; break;
-      case 5: errorKiri = -4; break;
-      case 4: errorKiri = -6; break;
-      case 3: errorKiri = -8; break;
-      case 2: errorKiri = -10; break;
-      case 1: errorKiri = -12; break;
+  if (moveStateAgv == AGV_STATE_MOVE_FORWARD) {
+    if (segmenTerendah < 5) {
+      switch (segmenTerendah) {
+        case 4: errorKiri = -2; break;
+        case 3: errorKiri = -4; break;
+        case 2: errorKiri = -6; break;
+        case 1: errorKiri = -8; break;
+      }
     }
-  }
-
-  if (segmenTertinggi > 10) {
-    switch (segmenTertinggi) {
-      case 11: errorKanan = 2; break;
-      case 12: errorKanan = 4; break;
-      case 13: errorKanan = 6; break;
-      case 14: errorKanan = 8; break;
-      case 15: errorKanan = 10; break;
-      case 16: errorKanan = 12; break;
+    if (segmenTertinggi > 12) {
+      switch (segmenTertinggi) {
+        case 13: errorKanan = 2; break;
+        case 14: errorKanan = 4; break;
+        case 15: errorKanan = 6; break;
+        case 16: errorKanan = 8; break;
+      }
+    }
+  }else{
+    if (segmenTerendah < 7) {
+      switch (segmenTerendah) {
+        case 6: errorKiri = -2; break;
+        case 5: errorKiri = -4; break;
+        case 4: errorKiri = -6; break;
+        case 3: errorKiri = -8; break;
+        case 2: errorKiri = -10; break;
+        case 1: errorKiri = -12; break;
+      }
+    }
+    if (segmenTertinggi > 10) {
+      switch (segmenTertinggi) {
+        case 11: errorKanan = 2; break;
+        case 12: errorKanan = 4; break;
+        case 13: errorKanan = 6; break;
+        case 14: errorKanan = 8; break;
+        case 15: errorKanan = 10; break;
+        case 16: errorKanan = 12; break;
+      }
     }
   }
 

@@ -153,6 +153,7 @@ void agvTerminalPickup() {
     bool triggerNaikOtomatis = (currentStateAgv != AGV_STATE_NULL);
     bool triggerNaikManual = (currentStateAgv == AGV_STATE_NULL && START());
     currentRFID = AGV_STATE_TERMINAL_PICKUP;
+    exceptErrorPosition = false;
     if (triggerNaikOtomatis) {
       saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_PICKUP);
       hookPosition = hook(UP_HOOK);
@@ -206,8 +207,8 @@ void agvMoveForward() {
     } else if (isRfidMatch(currentRfid, terminalPickUpRfidId) && currentRFID != AGV_STATE_TERMINAL_PICKUP) {
       stopMusic();
       newRfidScanned = false; // Reset flag
-      exceptErrorPosition = false;
       isHookUp = false;
+      exceptErrorPosition = false;
       saveExceptErrorFlag();
       currentRFID = AGV_STATE_TERMINAL_PICKUP;
       softStartTime = millis();
@@ -228,6 +229,7 @@ void agvMoveForward() {
       // newRfidScanned = false; // Reset flag
       exceptErrorPosition = false;
       saveExceptErrorFlag();
+      return;
     }
   }
 
@@ -240,6 +242,7 @@ void agvMoveForward() {
     for (int i = 0; i < targetStationsList.size(); i++) {
       if (targetStationsList[i] == currentStation) {
         removeTargetStationById(currentStation);
+        stopMusic();
         agvMode(AGV_STATE_STATION);
         return;
       }
@@ -249,7 +252,7 @@ void agvMoveForward() {
   // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
   if (!obstacleDetected) {
     music(MUSIC_MODE_ON);
-    if (exceptErrorPosition && totalSensorAktif > 5) {
+    if (exceptErrorPosition && totalSensorAktif > 6) {
       pidLinefollower(0, PID_MODE_MAJU_MASSA);
     } else {
       if (targetStationsList.size() != 0 || currentStateAgv == AGV_STATE_TERMINAL_PICKUP) {
@@ -292,6 +295,7 @@ void agvMoveBackward() {
       for (int i = 0; i < targetStationsList.size(); i++) {
         if (targetStationsList[i] == currentStation) {
           removeTargetStationById(currentStation);
+          stopMusic();
           moveStateAGV(AGV_STATE_MOVE_BACKWARD);
           agvMode(AGV_STATE_STATION);
           return;
