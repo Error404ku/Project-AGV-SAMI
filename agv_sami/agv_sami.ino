@@ -24,9 +24,24 @@ void setup() {
 }
 
 void loop() {
-  // ===================================================================
-  //                        BACKGROUND TASKS
-  // ===================================================================
+  esp_task_wdt_reset();
+  
+  // Monitor system health (setiap 5 detik)
+  static unsigned long lastSystemCheck = 0;
+  if (millis() - lastSystemCheck > 5000) {
+    size_t freeHeap = ESP.getFreeHeap();
+    if (freeHeap < 15000) { // Less than 15KB free
+      Serial.printf("WARNING: Low memory! Free heap: %d bytes\n", freeHeap);
+      // Stop semua motor untuk menghemat resources
+      pwmMotor(0, 0);
+      hook(STOP_HOOK);
+      if (freeHeap < 8000) {
+        Serial.println("CRITICAL: Memory too low, restarting...");
+        ESP.restart();
+      }
+    }
+    lastSystemCheck = millis();
+  }
   
   server.handleClient();
   loopWifi();  // Handle WiFi connection monitoring
@@ -37,9 +52,9 @@ void loop() {
   }
 
   if (isAgvMode) {
-    // ===================================================================
-    //                        AGV MODE (ORIGINAL IMPLEMENTATION)
-    // ===================================================================
+    
+    // Reset watchdog sebelum operasi sensor
+    esp_task_wdt_reset();
     
     // Original sensor reading
     if (shouldReadUltrasonic()) {
@@ -50,6 +65,10 @@ void loop() {
     }
     
     lamp_flip_flop();
+    
+    // Reset watchdog sebelum operasi motor
+    esp_task_wdt_reset();
+    
     if (currentStateAgv != AGV_STATE_NULL){
       // --- Pembacaan sensor sesuai mode ---
       if (moveStateAgv == AGV_STATE_MOVE_FORWARD) {
@@ -62,16 +81,10 @@ void loop() {
       agvMode(currentStateAgv);
     }
     else if (currentStateAgv == AGV_STATE_NULL){
-      static bool displayUpdated = false;
+      esp_task_wdt_reset();
       if (hookPosition != DOWN_POS){
         hookPosition = hook(DOWN_HOOK);
-        displayUpdated = false; // Reset flag ketika hook masih bergerak
       }else{
-        if (!displayUpdated) {
-          lcd.clear(); // Membersihkan tampilan sebelum menampilkan mode AGV
-          displayPrint();
-          displayUpdated = true; // Set flag agar tidak update lagi
-        }
         agvMode(AGV_STATE_TERMINAL_PICKUP);
       }
     }
@@ -137,8 +150,7 @@ void loop() {
       }
     }
   } else {
-    // Menu Mode
-    // inTerminal();
+    esp_task_wdt_reset();
     agvMode(AGV_STATE_STOP);
     handleMenu();
   }
@@ -146,7 +158,4 @@ void loop() {
   // Reset watchdog timer to prevent reboot
   esp_task_wdt_reset();
   
-  // Small delay to prevent tight loop and allow other tasks to run
-  delay(10);
-
 }

@@ -98,8 +98,8 @@ void loopMagneticSensor() {
       }
       
       unsigned long noMagnetDuration = currentMillis - lastDetectionTime;
-      if (noMagnetDuration >= 5000) { // 5 seconds
-        errorValue = 99; // Set error to 99 after 5 seconds
+      if (noMagnetDuration >= 3000) { // 3 seconds
+        errorValue = 99; // Set error to 99 after 3 seconds
         lastErrorValue = 99;
       } else {
         errorValue = lastErrorValue; // Keep last valid error value
@@ -114,9 +114,9 @@ void loopMagneticSensor() {
       
       // Fast error calculation
       errorValue = hitungErrorPosisi(positionBitmask);
-      if (currentMagnetSlaveId == SLAVEID_MAGNET_BELAKANG){
-        errorValue = errorValue * -1;
-      }
+      // if (currentMagnetSlaveId == SLAVEID_MAGNET_BELAKANG){
+      //   // errorValue = errorValue * 1;
+      // }
       
       // Store last valid error value
       lastErrorValue = errorValue;
@@ -168,25 +168,26 @@ int hitungErrorPosisi(uint16_t bitmask) {
 
   if (segmenTerendah < 7) {
     switch (segmenTerendah) {
-      case 6: errorKiri = -1; break;
-      case 5: errorKiri = -2; break;
-      case 4: errorKiri = -3; break;
-      case 3: errorKiri = -4; break;
-      case 2: errorKiri = -5; break;
-      case 1: errorKiri = -6; break;
+      case 6: errorKiri = -2; break;
+      case 5: errorKiri = -4; break;
+      case 4: errorKiri = -6; break;
+      case 3: errorKiri = -8; break;
+      case 2: errorKiri = -10; break;
+      case 1: errorKiri = -12; break;
     }
   }
 
   if (segmenTertinggi > 10) {
     switch (segmenTertinggi) {
-      case 11: errorKanan = 1; break;
-      case 12: errorKanan = 2; break;
-      case 13: errorKanan = 3; break;
-      case 14: errorKanan = 4; break;
-      case 15: errorKanan = 5; break;
-      case 16: errorKanan = 6; break;
+      case 11: errorKanan = 2; break;
+      case 12: errorKanan = 4; break;
+      case 13: errorKanan = 6; break;
+      case 14: errorKanan = 8; break;
+      case 15: errorKanan = 10; break;
+      case 16: errorKanan = 12; break;
     }
   }
+
 
   // Bandingkan dominasi sisi kiri vs kanan
   if (abs(errorKiri) > abs(errorKanan))

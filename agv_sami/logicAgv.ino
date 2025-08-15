@@ -88,6 +88,8 @@ void agvStation() {
     // Cek apakah masih ada station di StationList
     if (targetStationsList.size() == 0) {
       // Tidak ada station tersisa, ubah ke mode backward
+      softStartTime = millis();
+      softStartActive = true;
       moveStateAgv = AGV_STATE_MOVE_BACKWARD;
       agvMode(AGV_STATE_MOVE_BACKWARD);
     } else {
@@ -132,7 +134,6 @@ void agvTerminalDrop() {
 
 // Fungsi ini menangani logika AGV saat melakukan pengambilan di terminal.
 void agvTerminalPickup() {
-  static bool isHookUp = false;
   modeDisplayTerminalPickup(isHookUp);
   static unsigned long lastReadTime = 0;
   unsigned long currentTime = millis();
@@ -171,6 +172,8 @@ void agvTerminalPickup() {
     if (START()) {
       lastReadTime = currentTime;
       stopCalledPickup = false;
+      softStartTime = millis();
+      softStartActive = true;
       agvMode(AGV_STATE_MOVE_FORWARD);
     }
   }
@@ -196,21 +199,30 @@ void agvMoveForward() {
       // Stop motor sebelum mengubah mode
       pwmMotor(0, 0);
       delay(2000);
+      softStartTime = millis();
+      softStartActive = true;
       agvMode(AGV_STATE_MOVE_BACKWARD);
       return;
     } else if (isRfidMatch(currentRfid, terminalPickUpRfidId) && currentRFID != AGV_STATE_TERMINAL_PICKUP) {
+      stopMusic();
       newRfidScanned = false; // Reset flag
       exceptErrorPosition = false;
+      isHookUp = false;
       saveExceptErrorFlag();
       currentRFID = AGV_STATE_TERMINAL_PICKUP;
+      softStartTime = millis();
+      softStartActive = true;
       agvMode(AGV_STATE_TERMINAL_PICKUP);
       return;
     } else if (isRfidMatch(currentRfid, warehouseRfidId) && currentRFID != AGV_STATE_WAREHOUSE) {
+      stopMusic();
       newRfidScanned = false; // Reset flag
       exceptErrorPosition = true;
       saveExceptErrorFlag();
       currentRFID = AGV_STATE_WAREHOUSE;
       agvMode(AGV_STATE_WAREHOUSE);
+      softStartTime = millis();
+      softStartActive = true;
       return;
     } else if (isRfidMatch(currentRfid, getRfidForStation(1)) && exceptErrorPosition != false) {
       // newRfidScanned = false; // Reset flag
@@ -240,7 +252,7 @@ void agvMoveForward() {
     if (exceptErrorPosition && totalSensorAktif > 5) {
       pidLinefollower(0, PID_MODE_MAJU_MASSA);
     } else {
-      if (targetStationsList.size() != 0 || currentRFID == AGV_STATE_TERMINAL_PICKUP) {
+      if (targetStationsList.size() != 0 || currentStateAgv == AGV_STATE_TERMINAL_PICKUP) {
         pidLinefollower(errorValue, PID_MODE_MAJU_MASSA);  // Error dari sensor magnet
       } else {
         pidLinefollower(errorValue, PID_MODE_MAJU);  // Error dari sensor magnet
@@ -259,7 +271,7 @@ void agvMoveBackward() {
   // Logika pergerakan mundur:
   // Cek apakah RFID warehouse terdeteksi untuk mengabaikan error saat mundur
   String currentRfid = String(lastScannedRfidOptimized);
-  if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, terminalDropRfidId) && currentRFID != AGV_STATE_TERMINAL_DROP) {
+  if (currentRfid.length() > 0 && isRfidMatch(currentRfid, terminalDropRfidId)) {
       newRfidScanned = false; // Reset flag
       currentRFID = AGV_STATE_TERMINAL_DROP;
       agvMode(AGV_STATE_TERMINAL_DROP);
@@ -348,21 +360,6 @@ void loadAllAGVStatesFromPreferences() {
   preferences.end();
 }
 
-// Fungsi untuk memuat moveStateAGV dari Preferences (backward compatibility)
-// AgvState loadmoveStateAGVFromPreferences() {
-//     preferences.begin("agv-state", true);
-//     String stateString = preferences.getString("last_state", "MOVE_FORWARD");
-//     preferences.end();
-
-//     AgvState loadedState = stringToAgvState(stateString);
-//     moveStateAGVVar = loadedState;
-
-//     Serial.println("Last AGV State loaded from Preferences: " + stateString);
-//     return loadedState;
-// }
-
-// Fungsi untuk mengkonversi AgvState ke string
-// Fungsi ini mengkonversi nilai AgvState menjadi representasi string.
 String agvStateToString(AgvState state) {
   switch (state) {
     case AGV_STATE_MOVE_FORWARD:

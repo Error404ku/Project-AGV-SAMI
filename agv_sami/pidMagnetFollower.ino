@@ -4,16 +4,16 @@
 // PID CONTROLLER VARIABLES SUDAH DIPINDAHKAN KE config.h
 // ===================================================================
 void pidLinefollower(int errorPosisi, PidMode mode) {
+  // Reset watchdog timer untuk operasi PID yang intensif
+  esp_task_wdt_reset();
+  
   // Soft start variables
-  static unsigned long softStartTime = 0;
-  static bool softStartActive = false;
-  static int lastMode = -1;
+
   
   // Check for magnet loss error (errorValue = 99)
   if (errorPosisi == 99 && mode != PID_MODE_BERHENTI) {
     // Emergency stop - no magnet detected for 5 seconds
     pwmMotor(0, 0);
-    // Reset soft start when stopping
     softStartActive = false;
     pidSpeed = 0;
     #ifdef DEBUG_PID
@@ -43,13 +43,19 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
     unsigned long currentTime = millis();
     unsigned long elapsedTime = currentTime - softStartTime;
     
-    if (elapsedTime < 2000) { // 2 seconds soft start duration
-      // Gradually increase from 25% to 100% of baseSpeed over 2 seconds
-      int targetSpeed = map(elapsedTime, 0, 2000, baseSpeed / 4, baseSpeed);
+    // Determine target speed based on mode
+    int targetBaseSpeed = baseSpeed;
+    if (mode == PID_MODE_MAJU_MASSA || mode == PID_MODE_MUNDUR_MASSA) {
+      targetBaseSpeed = baseSpeed * 3 / 2;
+    }
+    
+    if (elapsedTime < 5000) { // 5 seconds soft start duration
+      // Gradually increase from 25% to 100% of baseSpeed over 5 seconds
+      int targetSpeed = map(elapsedTime, 0, 5000, targetBaseSpeed / 4, targetBaseSpeed);
       pidSpeed = targetSpeed;
     } else {
       // Soft start complete
-      pidSpeed = baseSpeed;
+      pidSpeed = targetBaseSpeed;
       softStartActive = false;
     }
   } else if (mode == PID_MODE_FORCEMAJU || mode == PID_MODE_FORCEMUNDUR) {
@@ -106,10 +112,7 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
   float koreksi = currentKp * pidError + currentKi * integral + currentKd * derivative;
   int motorKiri = pidSpeed - koreksi;
   int motorKanan = pidSpeed + koreksi;
-  if (PID_MODE_MAJU_MASSA || PID_MODE_MUNDUR_MASSA) {
-    motorKiri = (pidSpeed + (pidSpeed/2)) - koreksi;
-    motorKanan = (pidSpeed + (pidSpeed/2)) + koreksi;
-  }
+
 
   motorKiri = constrain(motorKiri, -maxPwm, maxPwm);
   motorKanan = constrain(motorKanan, -maxPwm, maxPwm);

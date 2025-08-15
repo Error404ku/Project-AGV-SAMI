@@ -419,7 +419,8 @@ const int pwmFrequency = 1000;
 // # Max PWM
 const int maxPwm = 4096;
 const int minPwm = -4096;
-
+bool isHookUp = false;
+bool softStartActive = false;
 // # Pid
 const int numOutputs = 10;
 struct PIDData {
@@ -431,7 +432,8 @@ struct PIDData {
   double lastOutput;
   unsigned long lastComputeTime;
 };
-
+unsigned long softStartTime = 0;
+int lastMode = -1;
 PIDData pidData[numOutputs];
 unsigned long milisRpm = 0;
 int intervalRpm = 200;

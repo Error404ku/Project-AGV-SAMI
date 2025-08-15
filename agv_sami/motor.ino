@@ -1,4 +1,7 @@
 void pwmMotor(int motor1, int motor2) {
+  // Reset watchdog timer untuk mencegah timeout saat operasi motor intensif
+  esp_task_wdt_reset();
+  
   // Safety checks for motor PWM values
   if (abs(motor1) > maxPwm || abs(motor2) > maxPwm) {
     logError(ERROR_MOTOR_CONTROL, "PWM nilai melebihi batas");

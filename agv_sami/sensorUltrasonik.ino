@@ -36,13 +36,6 @@ void loopUltrasonik() {
     return;
   }
   lastReadTime = currentTime;
-  // Ensure ultrasonic slave ID is initialized on first run
-  // static bool firstRun = true;
-  // if (firstRun) {
-  //   ultrasonicNode.begin( SLAVEID_ULTRASONIK_DEPAN, Serial1); // Mengatur ID slave dan port serial
-  //   delay(50); // Allow initialization to complete
-  //   firstRun = false;
-  // }
   
   // Ultra-fast slave ID switching with zero-overhead - INDUSTRY STANDARD
   // Only call begin() when slave ID changes - most efficient approach
@@ -139,6 +132,8 @@ void checkObstacles() {
     agvStop();
     if (!musicAlreadyPlaying) {
       music(MUSIC_MODE_OBSTACLE);
+      softStartTime = millis();
+      softStartActive = true;
       musicAlreadyPlaying = true;
     }
   } else if (!obstacleDetected && previousObstacleState) {
