@@ -35,6 +35,12 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
       softStartActive = true;
       pidSpeed = baseSpeed / 4; // Start with 25% of baseSpeed
     }
+    // Reset PID data when mode changes to prevent carry-over
+    if (mode != lastMode) {
+      pidData[0].integral = 0;
+      pidData[0].derivative = 0;
+      pidData[0].previousError = 0;
+    }
     lastMode = mode;
   }
   
@@ -77,9 +83,6 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
     pidError = -pidError;
   }
 
-  integral += pidError;
-  derivative = pidError - lastError;
-
   // Select PID parameters based on movement mode
   float currentKp, currentKi, currentKd;
   if (mode == PID_MODE_MAJU || mode == PID_MODE_FORCEMAJU) {
@@ -109,9 +112,12 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
     currentKd = kdLinefollower;
   }
 
-  float koreksi = currentKp * pidError + currentKi * integral + currentKd * derivative;
-  int motorKiri = pidSpeed - koreksi;
-  int motorKanan = pidSpeed + koreksi;
+  // Use computePID function with proper integral constraints
+  // setpoint = 0 (target center), input = pidError (current error)
+  double koreksi = computePID(0, 0, pidError, currentKp, currentKi, currentKd, -1000, 1000);
+  
+  int motorKiri = pidSpeed - (int)koreksi;
+  int motorKanan = pidSpeed + (int)koreksi;
 
 
   motorKiri = constrain(motorKiri, -maxPwm, maxPwm);
@@ -152,6 +158,6 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
       break;
   }
   // Serial.println(mode); // Tidak bisa mencetak enum secara langsung
-
-  lastError = pidError;
+  
+  // Note: lastError is now handled inside computePID function via pidData[0].previousError
 }
