@@ -2295,6 +2295,7 @@ void handleResetMenu() {
 void handleResetAgvStateMenu() {
   if (START()) {
     // Reset AGV state to default (STOP)
+    currentRFID = AGV_STATE_TERMINAL_PICKUP;
     currentStateAgv = AGV_STATE_NULL;
     moveStateAgv = AGV_STATE_MOVE_FORWARD;
     savemoveStateAGVToPreferences(moveStateAgv);
