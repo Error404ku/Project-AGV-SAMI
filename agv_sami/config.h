@@ -333,7 +333,7 @@ LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 
 // #Inisialisasi Pin Motor L298N
 #define IN1 48  // Motor kanan direction 1
-#define IN2 45  // Motor kanan direction 2
+#define IN2 38  // Motor kanan direction 2
 #define IN3 4   // Motor kiri direction 1
 #define IN4 5   // Motor kiri direction 2
 #define ENA 35  // Motor kanan enable/PWM
@@ -353,9 +353,6 @@ LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 #define RS485_RX 18
 #define RS485_TX 17
 
-// RS485 control pins for Ultrasonic sensors (Serial2) - separate pins to avoid conflict
-#define MAX485_DE2 37
-#define MAX485_RE2 37
 // RS485 Serial Pins for Ultrasonic sensors (Serial2)
 #define RS485_RX2 11  // Pin 11 untuk RX Serial2
 #define RS485_TX2 46  // Pin 46 untuk TX Serial2
@@ -370,15 +367,7 @@ LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 // #define RX_MAGNET_BACK 3//11
 // #define TX_MAGNET_BACK 8//10
 // #define RX_ULTRASONIK_BACK 9
-// #define TX_ULTRASONIK_BACK 46
-
-// #Inisialisasi Pin Hook Motor
-#define MOTOR_DI1_PIN 20
-#define MOTOR_DI2_PIN 19
-#define MOTOR_PWM_PIN 21
-#define HOOK_PWM_CHANNEL 2
-
-
+// #define TX_ULTRASONIK_BACK 
 // Alamat slave sensor yang diharapkan
 const byte SENSOR_ADDRESS = 0x01;
 const int PACKET_LENGTH = 15;
@@ -562,13 +551,13 @@ extern uint16_t ultrasonicDistances[5];
 #define pinMusic3 16
 #define pinMusic4 14
 #define pinMusic5 37
-#define pinMusic6 38
+#define pinMusic6 2
 
 bool statusMusic = false;
 
 // pin hook 20 dan 19, menggunakan relay
 #define pinHook1 20
-#define pinHook2 19
+#define pinHook2 45
 #define pinMotorHook 21
 
 // Motor inversion settings

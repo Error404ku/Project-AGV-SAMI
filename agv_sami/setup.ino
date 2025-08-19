@@ -171,18 +171,17 @@ void setupRS485(int baudrate) {
 
 void setupRS485_Serial2(int baudrate) {
   Serial.printf("[DEBUG] setupRS485_Serial2 dimulai dengan baudrate: %d\n", baudrate);
-  Serial.printf("[DEBUG] RS485 Serial2 pins - RX: %d, TX: %d, RE: %d, DE: %d\n", RS485_RX2, RS485_TX2, MAX485_RE2, MAX485_DE2);
 
   // Initialize Serial2 for RS485 communication (Ultrasonic sensors)
   Serial2.begin(baudrate, SERIAL_8N1, RS485_RX2, RS485_TX2);
 
   // Setup control pins for MAX485 Serial2 (menggunakan pin terpisah dari Serial1)
-  pinMode(MAX485_RE2, OUTPUT);
-  pinMode(MAX485_DE2, OUTPUT);
+  pinMode(MAX485_RE, OUTPUT);
+  pinMode(MAX485_DE, OUTPUT);
 
   // Set to receive mode (RE=0, DE=0)
-  digitalWrite(MAX485_RE2, 0);
-  digitalWrite(MAX485_DE2, 0);
+  digitalWrite(MAX485_RE, 0);
+  digitalWrite(MAX485_DE, 0);
 
   // Wait for Serial2 to be ready
   delay(100);
