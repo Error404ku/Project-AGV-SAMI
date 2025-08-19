@@ -1,4 +1,16 @@
 extern int totalSensorAktif;  // counter sensor aktif
+// ===================================================================
+// RFID TERMINAL VARIABLES SUDAH DIPINDAHKAN KE config.h
+// ===================================================================
+
+
+
+
+/***********************************************************
+ *  WAREHOUSE & UJUNG RFID FUNCTIONS                     *
+ ***********************************************************/
+
+
 
 void loadWarehouseUjungRfid() {
   preferences.begin("warehouse-ujung", false);
@@ -39,6 +51,11 @@ void saveUjungRfid(String rfidId) {
   Serial.println("Ujung RFID saved: " + rfidId);
 }
 
+
+
+/***********************************************************
+ *  TERMINAL DROP & PICKUP RFID FUNCTIONS                *
+ ***********************************************************/
 void loadTerminalRfid() {
   preferences.begin("terminal-rfid", false);
   terminalDropRfidId = preferences.getString("terminalDrop", "");
