@@ -38,16 +38,6 @@ void loopMagneticSensor() {
     return; // Keluar dari fungsi jika Serial1 belum siap
   }
 
-  
-  // Ensure magnet slave ID is initialized on first call
-  // static bool firstRun = true;
-  // if (firstRun) {
-  //   if (currentMagnetSlaveId == 0) {
-  //     currentMagnetSlaveId = SLAVEID_MAGNET_DEPAN; // default to front sensor
-  //   }
-  //   firstRun = false;
-  // }
-
   // Ultra-fast slave ID switching with zero-overhead - INDUSTRY STANDARD
   // Only call begin() when slave ID changes - most efficient approach
   static int lastSlaveId = -1;
@@ -137,12 +127,119 @@ void loopMagneticSensor() {
   }
 }
 
+// ==================== FILTER GRUP MAGNET TERDEKAT ====================
+/**
+ * Filter grup magnet yang terpisah, hanya mempertahankan grup terdekat dari titik tengah
+ * Hanya diterapkan pada sensor magnet belakang
+ * @param bitmask Bitmask sensor magnet
+ * @return Filtered bitmask dengan hanya grup terdekat
+ */
+uint16_t filterClosestMagnetGroup(uint16_t bitmask) {
+  // Hanya terapkan filter pada sensor magnet belakang
+  if (currentMagnetSlaveId != SLAVEID_MAGNET_BELAKANG) {
+    return bitmask; // Tidak ada filter untuk sensor depan
+  }
+  
+  // Quick check untuk no active segments
+  if (bitmask == 0xFFFF) {
+    return bitmask;
+  }
+  
+  // Deteksi grup magnet yang terpisah
+  bool inGroup = false;
+  int groupStart = -1;
+  int groupEnd = -1;
+  int groupCount = 0;
+  
+  struct MagnetGroup {
+    int start;
+    int end;
+    int centerDistance;
+  };
+  
+  MagnetGroup groups[8]; // Maksimal 8 grup
+  int groupIndex = 0;
+  
+  // Scan untuk menemukan grup-grup terpisah
+  for (int i = 0; i < 16; i++) {
+    bool isActive = !((bitmask >> i) & 0x01);
+    
+    if (isActive && !inGroup) {
+      // Mulai grup baru
+      groupStart = i;
+      inGroup = true;
+    } else if (!isActive && inGroup) {
+      // Akhir grup
+      groupEnd = i - 1;
+      
+      // Hitung jarak ke titik tengah (antara segmen 7 dan 8)
+      int groupCenter = (groupStart + groupEnd) / 2;
+      int centerDistance = abs(groupCenter - 7); // Titik tengah antara 7 dan 8
+      
+      // Simpan grup
+      if (groupIndex < 8) {
+        groups[groupIndex].start = groupStart;
+        groups[groupIndex].end = groupEnd;
+        groups[groupIndex].centerDistance = centerDistance;
+        groupIndex++;
+      }
+      
+      inGroup = false;
+    }
+  }
+  
+  // Handle grup terakhir jika masih aktif
+  if (inGroup) {
+    groupEnd = 15;
+    int groupCenter = (groupStart + groupEnd) / 2;
+    int centerDistance = abs(groupCenter - 7);
+    
+    if (groupIndex < 8) {
+      groups[groupIndex].start = groupStart;
+      groups[groupIndex].end = groupEnd;
+      groups[groupIndex].centerDistance = centerDistance;
+      groupIndex++;
+    }
+  }
+  
+  // Jika hanya ada satu grup atau tidak ada grup, return original
+  if (groupIndex <= 1) {
+    return bitmask;
+  }
+  
+  // Cari grup dengan jarak terdekat ke titik tengah
+  int closestGroupIndex = 0;
+  int minDistance = groups[0].centerDistance;
+  
+  for (int i = 1; i < groupIndex; i++) {
+    if (groups[i].centerDistance < minDistance) {
+      minDistance = groups[i].centerDistance;
+      closestGroupIndex = i;
+    }
+  }
+  
+  // Buat bitmask baru dengan hanya grup terdekat
+  uint16_t filteredBitmask = 0xFFFF; // Mulai dengan semua bit 1 (tidak aktif)
+  
+  // Set bit untuk grup terdekat menjadi 0 (aktif)
+  for (int i = groups[closestGroupIndex].start; i <= groups[closestGroupIndex].end; i++) {
+    if (!((bitmask >> i) & 0x01)) { // Jika bit asli aktif
+      filteredBitmask &= ~(1 << i); // Set bit menjadi 0 (aktif)
+    }
+  }
+  
+  return filteredBitmask;
+}
+
 // ==================== ULTRA-FAST ERROR CALCULATION ====================
 int hitungErrorPosisi(uint16_t bitmask) {
   // Quick check for no active segments
   if (bitmask == 0xFFFF) {
     return 99;
   }
+  
+  // Terapkan filter grup magnet terdekat (hanya untuk sensor belakang)
+  bitmask = filterClosestMagnetGroup(bitmask);
 
   int jumlahSegmenAktif = 0;
   int segmenTertinggi = 0;

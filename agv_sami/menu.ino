@@ -2448,20 +2448,16 @@ void displayMagnetCheck() {
   lcd.print(totalSensorAktif);
   lcd.print("    ");  // Clear remaining characters
 
+  // Display magnet sensor status: 1 = detected, 0 = not detected
   lcd.setCursor(0, 2);
-  lcd.print("Segments:");
-  if (totalSensorAktif > 0) {
-    for (int i = 0; i < 16; i++) {
-      if (jumlahMagnet[i]) {
-        lcd.print(i + 1);
-        lcd.print(",");
-        break;  // Show only first few due to space
-      }
-    }
-  } else {
-    lcd.print("None");
+  // Menampilkan dari kanan ke kiri (sensor 15, 14, 13, ... 0)
+  for (int i = 15; i >= 0; i--) {
+    if (jumlahMagnet[i] == 1) {
+      lcd.print("1");
+    } else {  
+      lcd.print("0");
+    } 
   }
-  lcd.print("        ");  // Clear remaining characters
 
   lcd.setCursor(0, 3);
   // Show current sensor (Front/Back) and controls
