@@ -134,6 +134,7 @@ void checkObstacles() {
       music(MUSIC_MODE_OBSTACLE);
       softStartTime = millis();
       softStartActive = true;
+      pidSpeed = baseSpeed / 4;
       musicAlreadyPlaying = true;
     }
   } else if (!obstacleDetected && previousObstacleState) {

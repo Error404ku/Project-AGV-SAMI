@@ -153,6 +153,9 @@ void loop() {
     esp_task_wdt_reset();
     agvMode(AGV_STATE_STOP);
     handleMenu();
+    softStartTime = millis();
+    softStartActive = true;
+    pidSpeed = baseSpeed / 4;
   }
   
   // Reset watchdog timer to prevent reboot

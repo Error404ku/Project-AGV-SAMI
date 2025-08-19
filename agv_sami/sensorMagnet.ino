@@ -98,7 +98,7 @@ void loopMagneticSensor() {
       }
       
       unsigned long noMagnetDuration = currentMillis - lastDetectionTime;
-      if (noMagnetDuration >= 3000) { // 3 seconds
+      if (noMagnetDuration >= 2000) { // 3 seconds
         errorValue = 99; // Set error to 99 after 3 seconds
         lastErrorValue = 99;
       } else {

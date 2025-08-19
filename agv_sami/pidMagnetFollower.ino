@@ -8,8 +8,6 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
   esp_task_wdt_reset();
   
   // Soft start variables
-
-  
   // Check for magnet loss error (errorValue = 99)
   if (errorPosisi == 99 && mode != PID_MODE_BERHENTI) {
     // Emergency stop - no magnet detected for 5 seconds
