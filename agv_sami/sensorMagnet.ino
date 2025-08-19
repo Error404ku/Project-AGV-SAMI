@@ -88,7 +88,7 @@ void loopMagneticSensor() {
       }
       
       unsigned long noMagnetDuration = currentMillis - lastDetectionTime;
-      if (noMagnetDuration >= 2000) { // 3 seconds
+      if (noMagnetDuration >= 3000) { // 3 seconds
         errorValue = 99; // Set error to 99 after 3 seconds
         lastErrorValue = 99;
       } else {
@@ -265,39 +265,39 @@ int hitungErrorPosisi(uint16_t bitmask) {
   if (moveStateAgv == AGV_STATE_MOVE_FORWARD) {
     if (segmenTerendah < 5) {
       switch (segmenTerendah) {
-        case 4: errorKiri = -10; break;
-        case 3: errorKiri = -20; break;
-        case 2: errorKiri = -30; break;
-        case 1: errorKiri = -40; break;
+        case 4: errorKiri = -5; break;   // Koreksi ringan
+        case 3: errorKiri = -12; break;  // Koreksi sedang
+        case 2: errorKiri = -25; break;  // Koreksi kuat
+        case 1: errorKiri = -40; break;  // Koreksi maksimal
       }
     }
     if (segmenTertinggi > 12) {
       switch (segmenTertinggi) {
-        case 13: errorKanan = 10; break;
-        case 14: errorKanan = 20; break;
-        case 15: errorKanan = 30; break;
-        case 16: errorKanan = 40; break;
+        case 13: errorKanan = 5; break;   // Koreksi ringan
+        case 14: errorKanan = 12; break;  // Koreksi sedang
+        case 15: errorKanan = 25; break;  // Koreksi kuat
+        case 16: errorKanan = 40; break;  // Koreksi maksimal
       }
     }
   }else{
     if (segmenTerendah < 7) {
       switch (segmenTerendah) {
-        case 6: errorKiri = -10; break;
-        case 5: errorKiri = -20; break;
-        case 4: errorKiri = -30; break;
-        case 3: errorKiri = -40; break;
-        case 2: errorKiri = -50; break;
-        case 1: errorKiri = -60; break;
+        case 6: errorKiri = -3; break;   // Koreksi minimal
+        case 5: errorKiri = -8; break;   // Koreksi ringan
+        case 4: errorKiri = -15; break;  // Koreksi sedang
+        case 3: errorKiri = -25; break;  // Koreksi kuat
+        case 2: errorKiri = -35; break;  // Koreksi sangat kuat
+        case 1: errorKiri = -50; break;  // Koreksi maksimal
       }
     }
     if (segmenTertinggi > 10) {
       switch (segmenTertinggi) {
-        case 11: errorKanan = 10; break;
-        case 12: errorKanan = 20; break;
-        case 13: errorKanan = 30; break;
-        case 14: errorKanan = 40; break;
-        case 15: errorKanan = 50; break;
-        case 16: errorKanan = 60; break;
+        case 11: errorKanan = 3; break;   // Koreksi minimal
+        case 12: errorKanan = 8; break;   // Koreksi ringan
+        case 13: errorKanan = 15; break;  // Koreksi sedang
+        case 14: errorKanan = 25; break;  // Koreksi kuat
+        case 15: errorKanan = 35; break;  // Koreksi sangat kuat
+        case 16: errorKanan = 50; break;  // Koreksi maksimal
       }
     }
   }
