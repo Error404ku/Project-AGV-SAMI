@@ -60,9 +60,8 @@ void loop() {
     if (shouldReadUltrasonic()) {
       loopUltrasonik();
     }
-    if (shouldReadMagnet()) {
-      loopMagneticSensor();
-    }
+    
+    loopMagneticSensor();
     
     lamp_flip_flop();
     

@@ -70,14 +70,14 @@ void loopMagneticSensor() {
   }
 
   // Optimized single-read operation
-  uint8_t result = magnetNode.readHoldingRegisters(0x0000, 2);
+  uint8_t result = magnetNode.readHoldingRegisters(0x0001, 1);
   
   if (result == magnetNode.ku8MBSuccess) {
     consecutiveFailures[sensorIndex] = 0;
     
     // Cache sensor data
-    uint16_t medianValue = magnetNode.getResponseBuffer(0);
-    uint16_t positionBitmask = magnetNode.getResponseBuffer(1);
+    // uint16_t medianValue = magnetNode.getResponseBuffer(0);
+    uint16_t positionBitmask = magnetNode.getResponseBuffer(0);
     
     // Fast processing with bit manipulation
     if (positionBitmask == 0xFFFF) {
@@ -88,7 +88,7 @@ void loopMagneticSensor() {
       }
       
       unsigned long noMagnetDuration = currentMillis - lastDetectionTime;
-      if (noMagnetDuration >= 3000) { // 3 seconds
+      if (noMagnetDuration >= 2000) { // 3 seconds
         errorValue = 99; // Set error to 99 after 3 seconds
         lastErrorValue = 99;
       } else {
@@ -262,42 +262,42 @@ int hitungErrorPosisi(uint16_t bitmask) {
 
   // Logika baru: cek dua-duanya lalu ambil dominasi
   int errorKiri = 0, errorKanan = 0;
-  if (moveStateAgv == AGV_STATE_MOVE_FORWARD) {
-    if (segmenTerendah < 5) {
+  if (currentMagnetSlaveId == SLAVEID_MAGNET_DEPAN) {
+    if (segmenTerendah < 6) {
       switch (segmenTerendah) {
-        case 4: errorKiri = -5; break;   // Koreksi ringan
-        case 3: errorKiri = -12; break;  // Koreksi sedang
-        case 2: errorKiri = -25; break;  // Koreksi kuat
-        case 1: errorKiri = -40; break;  // Koreksi maksimal
+        case 5: errorKiri = -3; break;   // Koreksi ringan
+        case 4: errorKiri = -5; break;  // Koreksi sedang
+        case 3: errorKiri = -8; break;  // Koreksi kuat
+        case 2: errorKiri = -13; break;  // Koreksi sangat kuat
+        case 1: errorKiri = -20; break;  // Koreksi maksimal
       }
     }
-    if (segmenTertinggi > 12) {
+    if (segmenTertinggi > 11) {
       switch (segmenTertinggi) {
-        case 13: errorKanan = 5; break;   // Koreksi ringan
-        case 14: errorKanan = 12; break;  // Koreksi sedang
-        case 15: errorKanan = 25; break;  // Koreksi kuat
-        case 16: errorKanan = 40; break;  // Koreksi maksimal
+        case 12: errorKanan = 3; break;   // Koreksi ringan
+        case 13: errorKanan = 5; break;  // Koreksi sedang
+        case 14: errorKanan = 8; break;  // Koreksi kuat
+        case 15: errorKanan = 13; break;  // Koreksi sangat kuat
+        case 16: errorKanan = 20; break;  // Koreksi maksimal
       }
     }
   }else{
-    if (segmenTerendah < 7) {
+    if (segmenTerendah < 6) {
       switch (segmenTerendah) {
-        case 6: errorKiri = -3; break;   // Koreksi minimal
-        case 5: errorKiri = -8; break;   // Koreksi ringan
-        case 4: errorKiri = -15; break;  // Koreksi sedang
-        case 3: errorKiri = -25; break;  // Koreksi kuat
-        case 2: errorKiri = -35; break;  // Koreksi sangat kuat
-        case 1: errorKiri = -50; break;  // Koreksi maksimal
+        case 5: errorKiri = -3; break;   // Koreksi ringan
+        case 4: errorKiri = -5; break;  // Koreksi sedang
+        case 3: errorKiri = -8; break;  // Koreksi kuat
+        case 2: errorKiri = -13; break;  // Koreksi sangat kuat
+        case 1: errorKiri = -20; break;  // Koreksi maksimal
       }
     }
-    if (segmenTertinggi > 10) {
+    if (segmenTertinggi > 11) {
       switch (segmenTertinggi) {
-        case 11: errorKanan = 3; break;   // Koreksi minimal
-        case 12: errorKanan = 8; break;   // Koreksi ringan
-        case 13: errorKanan = 15; break;  // Koreksi sedang
-        case 14: errorKanan = 25; break;  // Koreksi kuat
-        case 15: errorKanan = 35; break;  // Koreksi sangat kuat
-        case 16: errorKanan = 50; break;  // Koreksi maksimal
+        case 12: errorKanan = 3; break;   // Koreksi ringan
+        case 13: errorKanan = 5; break;  // Koreksi sedang
+        case 14: errorKanan = 8; break;  // Koreksi kuat
+        case 15: errorKanan = 13; break;  // Koreksi sangat kuat
+        case 16: errorKanan = 20; break;  // Koreksi maksimal
       }
     }
   }

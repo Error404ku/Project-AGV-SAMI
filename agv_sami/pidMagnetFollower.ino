@@ -112,10 +112,12 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
 
   // Use computePID function with proper integral constraints
   // setpoint = 0 (target center), input = pidError (current error)
-  double koreksi = computePID(0, 0, pidError, currentKp, currentKi, currentKd, -1000, 1000);
+  double minintegral = -500 / currentKi, maxintegral = 500 / currentKi;
+  double koreksi = computePID(0, 0, pidError, currentKp, currentKi, currentKd, minintegral, maxintegral);
   
-  int motorKiri = pidSpeed - (int)koreksi;
-  int motorKanan = pidSpeed + (int)koreksi;
+  int motorKiri = pidSpeed + (int)koreksi;
+
+  int motorKanan = pidSpeed - (int)koreksi;
 
 
   motorKiri = constrain(motorKiri, -maxPwm, maxPwm);

@@ -56,6 +56,9 @@ void agvWarehouse() {
     agvStop();
     modeDisplayWarehouse();
   }else{
+    softStartTime = millis();
+    softStartActive = true;
+    pidSpeed = baseSpeed / 4;
     stopCalledPickup = false; // Reset flag untuk penggunaan berikutnya
     agvMode(AGV_STATE_MOVE_FORWARD);
     trigger = false;
@@ -258,7 +261,7 @@ void agvMoveForward() {
   if (!obstacleDetected) {
     music(MUSIC_MODE_ON);
     if (exceptErrorPosition && totalSensorAktif > 6) {
-      pidLinefollower(0, PID_MODE_MAJU_MASSA);
+      pidLinefollower(0, PID_MODE_MAJU);
     } else {
       if (targetStationsList.size() != 0 || currentStateAgv == AGV_STATE_TERMINAL_PICKUP) {
         pidLinefollower(errorValue, PID_MODE_MAJU_MASSA);  // Error dari sensor magnet
