@@ -135,11 +135,6 @@ void loopMagneticSensor() {
  * @return Filtered bitmask dengan hanya grup terdekat
  */
 uint16_t filterClosestMagnetGroup(uint16_t bitmask) {
-  // Hanya terapkan filter pada sensor magnet belakang
-  if (currentMagnetSlaveId != SLAVEID_MAGNET_BELAKANG) {
-    return bitmask; // Tidak ada filter untuk sensor depan
-  }
-  
   // Quick check untuk no active segments
   if (bitmask == 0xFFFF) {
     return bitmask;
