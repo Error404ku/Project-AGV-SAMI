@@ -175,4 +175,5 @@ void displaySensorData() {
   lcd.setCursor(0, 3);
   lcd.print("Error: ");
   lcd.print(errorValue);
+  lcd.print("   ");
 }
