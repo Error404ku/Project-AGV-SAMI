@@ -260,10 +260,10 @@ void agvMoveForward() {
   // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
   if (!obstacleDetected) {
     music(MUSIC_MODE_ON);
-    if (exceptErrorPosition && totalSensorAktif > 6) {
+    if (exceptErrorPosition && totalSensorAktif > 7) {
       pidLinefollower(0, PID_MODE_MAJU);
     } else {
-      if (targetStationsList.size() != 0 || currentStateAgv == AGV_STATE_TERMINAL_PICKUP) {
+      if (targetStationsList.size() != 0 || currentRFID == AGV_STATE_TERMINAL_PICKUP) {
         pidLinefollower(errorValue, PID_MODE_MAJU_MASSA);  // Error dari sensor magnet
       } else {
         pidLinefollower(errorValue, PID_MODE_MAJU);  // Error dari sensor magnet

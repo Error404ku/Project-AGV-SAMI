@@ -1160,9 +1160,9 @@ void handlePidForwardWithMassaSettings() {
       // Single click - decrement by 0.1
       pidIncrement = 0.1f;
       switch (selectedParam) {
-        case 0: tempKpForwardWithMassa -= pidIncrement; break;
-        case 1: tempKiForwardWithMassa -= pidIncrement; break;
-        case 2: tempKdForwardWithMassa -= pidIncrement; break;
+        case 0: tempKpForwardWithMassa = max(0.0, tempKpForwardWithMassa - pidIncrement); break;
+        case 1: tempKiForwardWithMassa = max(0.0, tempKiForwardWithMassa - pidIncrement); break;
+        case 2: tempKdForwardWithMassa = max(0.0, tempKdForwardWithMassa - pidIncrement); break;
       }
       // Update values in memory
       kpLinefollowerForwardWithMassa = tempKpForwardWithMassa;
@@ -1174,9 +1174,9 @@ void handlePidForwardWithMassaSettings() {
       if (currentMillis - lastLeftPress >= 100) {
         pidIncrement = 1.0f;
         switch (selectedParam) {
-          case 0: tempKpForwardWithMassa -= pidIncrement; break;
-          case 1: tempKiForwardWithMassa -= pidIncrement; break;
-          case 2: tempKdForwardWithMassa -= pidIncrement; break;
+          case 0: tempKpForwardWithMassa = max(0.0, tempKpForwardWithMassa - pidIncrement); break;
+          case 1: tempKiForwardWithMassa = max(0.0, tempKiForwardWithMassa - pidIncrement); break;
+          case 2: tempKdForwardWithMassa = max(0.0, tempKdForwardWithMassa - pidIncrement); break;
         }
         // Update values in memory
         kpLinefollowerForwardWithMassa = tempKpForwardWithMassa;
@@ -1301,9 +1301,9 @@ void handlePidForwardDefaultSettings() {
       // Single click - decrement by 0.1
       pidIncrement = 0.1f;
       switch (selectedParam) {
-        case 0: tempKpForwardDefault -= pidIncrement; break;
-        case 1: tempKiForwardDefault -= pidIncrement; break;
-        case 2: tempKdForwardDefault -= pidIncrement; break;
+        case 0: tempKpForwardDefault = max(0.0, tempKpForwardDefault - pidIncrement); break;
+        case 1: tempKiForwardDefault = max(0.0, tempKiForwardDefault - pidIncrement); break;
+        case 2: tempKdForwardDefault = max(0.0, tempKdForwardDefault - pidIncrement); break;
       }
       // Update values in memory
       kpLinefollowerForwardDefault = tempKpForwardDefault;
@@ -1315,9 +1315,9 @@ void handlePidForwardDefaultSettings() {
       if (currentMillis - lastLeftPress >= 100) {
         pidIncrement = 1.0f;
         switch (selectedParam) {
-          case 0: tempKpForwardDefault -= pidIncrement; break;
-          case 1: tempKiForwardDefault -= pidIncrement; break;
-          case 2: tempKdForwardDefault -= pidIncrement; break;
+          case 0: tempKpForwardDefault = max(0.0, tempKpForwardDefault - pidIncrement); break;
+          case 1: tempKiForwardDefault = max(0.0, tempKiForwardDefault - pidIncrement); break;
+          case 2: tempKdForwardDefault = max(0.0, tempKdForwardDefault - pidIncrement); break;
         }
         // Update values in memory
         kpLinefollowerForwardDefault = tempKpForwardDefault;
@@ -1442,9 +1442,9 @@ void handlePidBackwardWithMassaSettings() {
       // Single click - decrement by 0.1
       pidIncrement = 0.1f;
       switch (selectedParam) {
-        case 0: tempKpBackwardWithMassa -= pidIncrement; break;
-        case 1: tempKiBackwardWithMassa -= pidIncrement; break;
-        case 2: tempKdBackwardWithMassa -= pidIncrement; break;
+        case 0: tempKpBackwardWithMassa = max(0.0, tempKpBackwardWithMassa - pidIncrement); break;
+        case 1: tempKiBackwardWithMassa = max(0.0, tempKiBackwardWithMassa - pidIncrement); break;
+        case 2: tempKdBackwardWithMassa = max(0.0, tempKdBackwardWithMassa - pidIncrement); break;
       }
       // Update values in memory
       kpLinefollowerBackwardWithMassa = tempKpBackwardWithMassa;
@@ -1456,9 +1456,9 @@ void handlePidBackwardWithMassaSettings() {
       if (currentMillis - lastLeftPress >= 100) {
         pidIncrement = 1.0f;
         switch (selectedParam) {
-          case 0: tempKpBackwardWithMassa -= pidIncrement; break;
-          case 1: tempKiBackwardWithMassa -= pidIncrement; break;
-          case 2: tempKdBackwardWithMassa -= pidIncrement; break;
+          case 0: tempKpBackwardWithMassa = max(0.0, tempKpBackwardWithMassa - pidIncrement); break;
+          case 1: tempKiBackwardWithMassa = max(0.0, tempKiBackwardWithMassa - pidIncrement); break;
+          case 2: tempKdBackwardWithMassa = max(0.0, tempKdBackwardWithMassa - pidIncrement); break;
         }
         // Update values in memory
         kpLinefollowerBackwardWithMassa = tempKpBackwardWithMassa;
@@ -1583,9 +1583,9 @@ void handlePidBackwardDefaultSettings() {
       // Single click - decrement by 0.1
       pidIncrement = 0.1f;
       switch (selectedParam) {
-        case 0: tempKpBackwardDefault -= pidIncrement; break;
-        case 1: tempKiBackwardDefault -= pidIncrement; break;
-        case 2: tempKdBackwardDefault -= pidIncrement; break;
+        case 0: tempKpBackwardDefault = max(0.0, tempKpBackwardDefault - pidIncrement); break;
+        case 1: tempKiBackwardDefault = max(0.0, tempKiBackwardDefault - pidIncrement); break;
+        case 2: tempKdBackwardDefault = max(0.0, tempKdBackwardDefault - pidIncrement); break;
       }
       // Update values in memory
       kpLinefollowerBackwardDefault = tempKpBackwardDefault;
@@ -1597,9 +1597,9 @@ void handlePidBackwardDefaultSettings() {
       if (currentMillis - lastLeftPress >= 100) {
         pidIncrement = 1.0f;
         switch (selectedParam) {
-          case 0: tempKpBackwardDefault -= pidIncrement; break;
-          case 1: tempKiBackwardDefault -= pidIncrement; break;
-          case 2: tempKdBackwardDefault -= pidIncrement; break;
+          case 0: tempKpBackwardDefault = max(0.0, tempKpBackwardDefault - pidIncrement); break;
+          case 1: tempKiBackwardDefault = max(0.0, tempKiBackwardDefault - pidIncrement); break;
+          case 2: tempKdBackwardDefault = max(0.0, tempKdBackwardDefault - pidIncrement); break;
         }
         // Update values in memory
         kpLinefollowerBackwardDefault = tempKpBackwardDefault;
