@@ -112,16 +112,24 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
 
   // Use computePID function with proper integral constraints
   // setpoint = 0 (target center), input = pidError (current error)
-  double minintegral = -500 / currentKi, maxintegral = 500 / currentKi;
+  double minintegral, maxintegral;
+  if (currentKi > 0.001) {  // Prevent divide by zero
+    minintegral = -500 / currentKi;
+    maxintegral = 500 / currentKi;
+  } else {
+    // If Ki is zero or near zero, disable integral
+    minintegral = 0;
+    maxintegral = 0;
+  }
   double koreksi = computePID(0, 0, pidError, currentKp, currentKi, currentKd, minintegral, maxintegral);
   
-  int motorKiri = pidSpeed + (int)koreksi;
+  int motorKiri = pidSpeed + (int)koreksi;   // Fixed: subtract correction for left motor
+  int motorKanan = pidSpeed - (int)koreksi;  // Fixed: add correction for right motor
 
-  int motorKanan = pidSpeed - (int)koreksi;
-
-
-  motorKiri = constrain(motorKiri, -maxPwm, maxPwm);
-  motorKanan = constrain(motorKanan, -maxPwm, maxPwm);
+  // Ensure we have headroom for corrections - prevent saturation
+  int maxAllowedPwm = maxPwm - 300;  // Reserve 300 PWM units for correction headroom
+  motorKiri = constrain(motorKiri, -maxAllowedPwm, maxAllowedPwm);
+  motorKanan = constrain(motorKanan, -maxAllowedPwm, maxAllowedPwm);
   switch (mode) {
     case PID_MODE_MAJU:
       pwmMotor(-motorKanan, motorKiri);
@@ -157,6 +165,18 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
       pwmMotor(0, 0);
       break;
   }
+  
+  #ifdef DEBUG_PID
+  // Debug output every 100ms to monitor PID behavior
+  static unsigned long lastDebugTime = 0;
+  if (millis() - lastDebugTime > 100) {
+    Serial.printf("[PID] E=%d V=%d Kp=%.1f Ki=%.1f Kd=%.1f U=%.1f L=%d R=%d\n", 
+                  errorPosisi, pidSpeed, currentKp, currentKi, currentKd, 
+                  koreksi, motorKiri, motorKanan);
+    lastDebugTime = millis();
+  }
+  #endif
+  
   // Serial.println(mode); // Tidak bisa mencetak enum secara langsung
   
   // Note: lastError is now handled inside computePID function via pidData[0].previousError

@@ -1,5 +1,9 @@
 #ifndef CONFIG_H
 #define CONFIG_H
+// Debug flags
+#define DEBUG_PID 1      // Enable PID debugging
+// #define DEBUG_SENSOR 1   // Uncomment to enable sensor debugging
+
 // Include Library
 #include <Wire.h>
 #include <Arduino.h>
@@ -411,14 +415,16 @@ const char* STATIONS_NAMESPACE = "stations";  // Namespace untuk menyimpan stati
 // int rpmKiri = 0;
 // int rpm1, rpm2;
 
-// # Pin Channel PWM
-const int channelKanan = 0;
-const int channelKiri = 1;
+// # PWM Configuration - ESP32 v3.x Migrasi
+// CATATAN: channelKanan dan channelKiri tidak lagi digunakan di ESP32 v3.x
+// karena ledcAttach() otomatis mengatur channel
+const int channelKanan = 2;  // Legacy - untuk kompatibilitas mundur
+const int channelKiri = 3;   // Legacy - untuk kompatibilitas mundur
 
-// # PWM Resolution
+// # PWM Resolution (masih sama di v3.x)
 const int pwmResolution = 12;
 
-// # PWM Frequency
+// # PWM Frequency (masih sama di v3.x)
 const int pwmFrequency = 5000;
 
 // # Max PWM

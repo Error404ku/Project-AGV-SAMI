@@ -7,20 +7,19 @@ void setupMotor() {
   pinMode(ENA, OUTPUT);
   pinMode(ENB, OUTPUT);
 
-  // Setup PWM for enable pins (ENA dan ENB)
-  ledcSetup(channelKanan, pwmFrequency, pwmResolution);
-  ledcAttachPin(ENA, channelKanan);
-
-  ledcSetup(channelKiri, pwmFrequency, pwmResolution);
-  ledcAttachPin(ENB, channelKiri);
+  // Setup PWM for enable pins (ENA dan ENB) - ESP32 v3.x API
+  // ledcSetup() dan ledcAttachPin() diganti dengan ledcAttach()
+  ledcAttach(ENA, pwmFrequency, pwmResolution);
+  ledcAttach(ENB, pwmFrequency, pwmResolution);
 
   // Matikan motor saat startup
   digitalWrite(IN1, LOW);
   digitalWrite(IN2, LOW);
   digitalWrite(IN3, LOW);
   digitalWrite(IN4, LOW);
-  ledcWrite(channelKanan, 0);
-  ledcWrite(channelKiri, 0);
+  // ESP32 v3.x: gunakan pin langsung, bukan channel
+  analogWrite(ENA, 0);
+  analogWrite(ENB, 0);
 }
 
 void setupMusic() {
