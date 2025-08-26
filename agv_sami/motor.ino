@@ -1,3 +1,6 @@
+// Motor control via Serial Communication to ESP32 Slave
+// This replaces direct motor control with serial commands
+
 void pwmMotor(int motor1, int motor2) {
   // Reset watchdog timer untuk mencegah timeout saat operasi motor intensif
   esp_task_wdt_reset();
@@ -28,39 +31,6 @@ void pwmMotor(int motor1, int motor2) {
     motor2 = -motor2;
   }
 
-  // Kontrol Motor Kanan (motor1) menggunakan L298N
-  if (motor1 > 0) {
-    // Motor kanan maju
-    digitalWrite(IN1, HIGH);
-    digitalWrite(IN2, LOW);
-    analogWrite(ENA, motor1);  // ESP32 v3.x: gunakan analogWrite dengan pin langsung
-  } else if (motor1 < 0) {
-    // Motor kanan mundur
-    digitalWrite(IN1, LOW);
-    digitalWrite(IN2, HIGH);
-    analogWrite(ENA, abs(motor1));  // ESP32 v3.x: gunakan analogWrite dengan pin langsung
-  } else {
-    // Motor kanan stop
-    digitalWrite(IN1, LOW);
-    digitalWrite(IN2, LOW);
-    analogWrite(ENA, 0);  // ESP32 v3.x: gunakan analogWrite dengan pin langsung
-  }
-
-  // Kontrol Motor Kiri (motor2) menggunakan L298N
-  if (motor2 > 0) {
-    // Motor kiri maju
-    digitalWrite(IN3, HIGH);
-    digitalWrite(IN4, LOW);
-    analogWrite(ENB, motor2);  // ESP32 v3.x: gunakan analogWrite dengan pin langsung
-  } else if (motor2 < 0) {
-    // Motor kiri mundur
-    digitalWrite(IN3, LOW);
-    digitalWrite(IN4, HIGH);
-    analogWrite(ENB, abs(motor2));  // ESP32 v3.x: gunakan analogWrite dengan pin langsung
-  } else {
-    // Motor kiri stop
-    digitalWrite(IN3, LOW);
-    digitalWrite(IN4, LOW);
-    analogWrite(ENB, 0);  // ESP32 v3.x: gunakan analogWrite dengan pin langsung
-  }
+  // Kirim perintah ke ESP32 motor controller
+  kirimPerintahMotor(motor2, motor1); // motor2=kiri, motor1=kanan
 }

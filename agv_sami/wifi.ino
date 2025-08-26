@@ -16,8 +16,8 @@ void setupWifi() {
   WiFi.softAP(ap_ssid, ap_password);
   WiFi.softAPConfig(IPAddress(192, 168, 121, 14), IPAddress(192, 168, 121, 14), IPAddress(255, 255, 255, 0));
   
-  Serial.println("WiFi setup completed - AP mode active for configuration");
-  Serial.println("WiFi connection will be handled in main loop");
+  // Serial.println() - removed for production
+  // Serial.println() - removed for production
 }
 
 // Fungsi untuk memulai koneksi WiFi - dipanggil saat tombol START ditekan
@@ -42,10 +42,10 @@ void startWifiConnection() {
   
   // Only attempt connection if credentials are available
   if (strlen(ssid) > 0 && strlen(password) > 0) {
-    Serial.printf("Attempting WiFi connection to: %s\n", ssid);
+    // Serial.printf("Attempting WiFi connection to: %s\n", ssid);
     WiFi.begin(ssid, password);
   } else {
-    Serial.println("No WiFi credentials available - staying in AP mode");
+    // Serial.println() - removed for production
     isConnectingWifi = false;
   }
   

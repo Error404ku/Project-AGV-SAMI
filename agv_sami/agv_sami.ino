@@ -4,7 +4,6 @@
 // extern bool modeMundur; // Removed - not used
 
 void setup() {
-  Serial.begin(115200);
   setupAll();
 
   // Initialize performance optimization system
@@ -12,7 +11,6 @@ void setup() {
 
   // Load all AGV states efficiently in one call
   loadAllAGVStatesFromPreferences();
-  Serial.println("SETUP SELESAI - Performance Optimization Active");
 
   // Initialize ultrasonic sensor if not already done
   static bool ultrasonicSensorInitialized = false;
@@ -26,17 +24,17 @@ void setup() {
 void loop() {
   esp_task_wdt_reset();
   
-  // Monitor system health (setiap 5 detik)
+  // Monitor system health (setiap 5 detik) - debug disabled
   static unsigned long lastSystemCheck = 0;
   if (millis() - lastSystemCheck > 5000) {
     size_t freeHeap = ESP.getFreeHeap();
     if (freeHeap < 15000) { // Less than 15KB free
-      Serial.printf("WARNING: Low memory! Free heap: %d bytes\n", freeHeap);
+      // Low memory warning disabled for production
       // Stop semua motor untuk menghemat resources
       pwmMotor(0, 0);
       hook(STOP_HOOK);
       if (freeHeap < 8000) {
-        Serial.println("CRITICAL: Memory too low, restarting...");
+        // Critical memory restart disabled for production
         ESP.restart();
       }
     }
@@ -99,7 +97,6 @@ void loop() {
         // First click detected
         firstStopClick = true;
         firstStopTime = currentTime;
-        Serial.println("[AGV_EXIT] First STOP click detected. Click again within 2 seconds to exit AGV mode.");
         
         // Show message on LCD
         lcd.clear();
@@ -111,7 +108,6 @@ void loop() {
         // Check if second click is within interval
         if (currentTime - firstStopTime <= doubleClickInterval) {
           // Valid double click - exit AGV mode
-          Serial.println("[AGV_EXIT] Double click confirmed. Exiting AGV mode.");
           agvMode(AGV_STATE_STOP);
           isAgvMode = false;
           resetDisplayFlags(); // Reset semua flag display
@@ -126,7 +122,6 @@ void loop() {
           // Second click too late, treat as new first click
           firstStopClick = true;
           firstStopTime = currentTime;
-          Serial.println("[AGV_EXIT] Second click too late. Starting new double click sequence.");
           
           // Show message on LCD
           lcd.clear();
@@ -141,7 +136,6 @@ void loop() {
       if (firstStopClick && (millis() - firstStopTime > doubleClickInterval)) {
         firstStopClick = false;
         firstStopTime = 0;
-        Serial.println("[AGV_EXIT] Double click timeout. Reset to normal AGV display.");
         
         // Reset display to normal AGV mode
         lcd.clear();

@@ -354,7 +354,7 @@ void savemoveStateAGVToPreferences(AgvState lastState) {
   preferences.putString("last_state", stateString);
   preferences.end();
 
-  Serial.println("Last AGV State saved to Preferences: " + stateString);
+  // Serial.println() - removed for production
 }
 
 // Fungsi gabungan untuk memuat semua state AGV dari Preferences
@@ -408,7 +408,7 @@ void saveCurrentStateAGVToPreferences(AgvState currentState) {
   preferences.putString("current_state", stateString);
   preferences.end();
 
-  Serial.println("AGV State saved to Preferences: " + stateString);
+  // Serial.println() - removed for production
 }
 
 // Fungsi untuk mengkonversi string ke AgvState
@@ -444,6 +444,6 @@ AgvState stringToAgvState(String stateString) {
 //     AgvState loadedState = stringToAgvState(stateString);
 //     currentStateAgv = loadedState;
 
-//     Serial.println("Current AGV State loaded from Preferences: " + stateString);
+//     // Serial.println() - removed for production
 //     return loadedState;
 // }

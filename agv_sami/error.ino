@@ -32,55 +32,42 @@
   - HTTP parsing errors are logged in http.ino
 */
 
-void error(int code, String text) {
-  // Stop all motors immediately for safety
-  pwmMotor(0, 0);
-
-  // Display error on LCD
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Error Code : ");
-  lcd.print(code);
-  lcd.setCursor(0, 1);
-  lcd.print("Error Text : ");
-  lcd.setCursor(0, 2);
-  lcd.print(text.substring(0, 20));  // Limit text to LCD width
-  if (text.length() > 20) {
-    lcd.setCursor(0, 3);
-    lcd.print(text.substring(20, 40));  // Continue on next line
+void systemError(int code, String text) {
+  // Simplified error handling for production
+  // Critical error - system stops
+  if (code < 100) {
+    // Log critical error (commented for production)
+    // Serial.print("CRITICAL ERROR - Code: ");
+    // Serial.print(code);
+    // Serial.print(" - ");
+    // Serial.println(text);
+    
+    // For critical errors, stop motors
+    motorStop();
+    
+    // Could add LED indication or buzzer alarm here
+    // Enter infinite loop to halt system
+    while(true) {
+      delay(1000);
+    }
   }
+  
+  // For warnings (code >= 100), just continue
+}
 
-  // Also print to Serial for debugging
-  Serial.print("SYSTEM ERROR - Code: ");
-  Serial.print(code);
-  Serial.print(" - ");
-  Serial.println(text);
-
-  // Attempt error recovery instead of infinite loop
-  if (!attemptErrorRecovery(code)) {
-    // If recovery fails, enter safe mode but allow system monitoring
-    Serial.println("CRITICAL ERROR - Entering safe mode");
-
-    // Set system to safe state
-    systemInErrorState = true;
-
-    // Start error recovery timer for periodic retry
-    startTimer(&errorRecoveryTimer, 10000);  // Retry every 10 seconds
-
-    // Continue with limited functionality instead of complete halt
-    return;
-  } else {
-    Serial.println("Error recovery successful - system resumed");
-    systemInErrorState = false;
-  }
+void systemWarning(int code, String text) {
+  // Serial.print("WARNING - Code: ");
+  // Serial.print(code);
+  // Serial.print(" - ");
+  // Serial.println(text);
 }
 
 // Non-fatal error function - logs error but continues operation
 void logError(int code, String text) {
-  Serial.print("WARNING - Code: ");
-  Serial.print(code);
-  Serial.print(" - ");
-  Serial.println(text);
+  // Serial.print("WARNING - Code: ");
+  // Serial.print(code);
+  // Serial.print(" - ");
+  // Serial.println(text);
 
   // Could also briefly show on LCD without stopping system
   // For now, just log to Serial

@@ -80,22 +80,22 @@ void uji_tombol() {
 
   if (digitalRead(upPin) == HIGH) {
     lcd.print("UP ");
-    Serial.println("Tombol UP ditekan");
+    // Serial.println() - removed for production
   } else if (digitalRead(leftPin) == HIGH) {
     lcd.print("LF ");
-    Serial.println("Tombol LEFT ditekan");
+    // Serial.println() - removed for production
   } else if (digitalRead(rightPin) == HIGH) {
     lcd.print("RT ");
-    Serial.println("Tombol RIGHT ditekan");
+    // Serial.println() - removed for production
   } else if (digitalRead(downPin) == HIGH) {
     lcd.print("DN ");
-    Serial.println("Tombol DOWN ditekan");
+    // Serial.println() - removed for production
   } else if (digitalRead(startPin) == HIGH) {
     lcd.print("Start  ");
-    Serial.println("Tombol START ditekan");
+    // Serial.println() - removed for production
   } else if (digitalRead(stopPin) == HIGH) {
     lcd.print("Stop  ");
-    Serial.println("Tombol STOP ditekan");
+    // Serial.println() - removed for production
   } else {
     lcd.print("       ");  // Clear if no button pressed
   }

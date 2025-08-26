@@ -90,29 +90,29 @@ bool wasTimerTriggered(Timer* timer) {
 // void printPerformanceStats() {
 //   if (totalLoops == 0) return;
 
-//   Serial.println("\n=== PERFORMANCE STATS ===");
-//   Serial.print("Loop Time (us) - Current: ");
-//   Serial.print(loopExecutionTime);
-//   Serial.print(", Max: ");
-//   Serial.print(maxLoopTime);
-//   Serial.print(", Min: ");
-//   Serial.println(minLoopTime);
+//   // Serial.println() - removed for production
+//   // Serial.print() - removed for production
+//   // Serial.print() - removed for production
+//   // Serial.print() - removed for production
+//   // Serial.print() - removed for production
+//   // Serial.print() - removed for production
+//   // Serial.println() - removed for production
 
-//   Serial.print("Memory - Free: ");
-//   Serial.print(freeHeapSize);
-//   Serial.print(" bytes, Min Free: ");
-//   Serial.print(minFreeHeap);
-//   Serial.println(" bytes");
+//   // Serial.print() - removed for production
+//   // Serial.print() - removed for production
+//   // Serial.print() - removed for production
+//   // Serial.print() - removed for production
+//   // Serial.println() - removed for production
 
-//   Serial.print("Total Loops: ");
-//   Serial.println(totalLoops);
+//   // Serial.print() - removed for production
+//   // Serial.println() - removed for production
 
 //   // Calculate average loop time
-//   Serial.print("Loop Frequency: ");
-//   Serial.print(1000000.0 / loopExecutionTime);
-//   Serial.println(" Hz");
+//   // Serial.print() - removed for production
+//   // Serial.print() - removed for production
+//   // Serial.println() - removed for production
 
-//   Serial.println("========================\n");
+//   // Serial.println() - removed for production
 // }
 
 void resetPerformanceStats() {
@@ -163,13 +163,13 @@ const int maxErrorRecoveryAttempts = 3;
 void initErrorRecovery() {
   systemInErrorState = false;
   errorRecoveryAttempts = 0;
-  Serial.println("Error recovery system initialized");
+  // Serial.println() - removed for production
 }
 
 // Fungsi untuk mereset flag except error position
 void resetExceptErrorFlag() {
   exceptErrorPosition = false;
-  Serial.println("Except error position flag reset");
+  // Serial.println() - removed for production
 }
 
 // Fungsi untuk menyimpan flag except error position ke preferences
@@ -185,7 +185,7 @@ void loadExceptErrorFlag() {
   preferences.begin("except-error", true);
   exceptErrorPosition = preferences.getBool("position", false);
   preferences.end();
-  Serial.println("Except error position flag loaded: " + String(exceptErrorPosition));
+  // Serial.println() - removed for production
 }
 
 bool attemptErrorRecovery(int errorCode) {
@@ -196,10 +196,10 @@ bool attemptErrorRecovery(int errorCode) {
   errorRecoveryAttempts++;
   systemInErrorState = true;
 
-  Serial.print("Attempting error recovery #");
-  Serial.print(errorRecoveryAttempts);
-  Serial.print(" for error code: ");
-  Serial.println(errorCode);
+  // Serial.print() - removed for production
+  // Serial.print() - removed for production
+  // Serial.print() - removed for production
+  // Serial.println() - removed for production
 
   // Start recovery timer
   startTimer(&errorRecoveryTimer, 5000);
@@ -285,7 +285,7 @@ bool recoverWifiConnection() {
 void checkErrorRecovery() {
   if (systemInErrorState && checkTimer(&errorRecoveryTimer)) {
     systemInErrorState = false;
-    Serial.println("Error recovery timeout - system resumed");
+    // Serial.println() - removed for production
   }
 }
 
@@ -293,7 +293,7 @@ void checkErrorRecovery() {
  *  INITIALIZATION                                        *
  ***********************************************************/
 void initPerformanceOptimization() {
-  Serial.println("Initializing Performance Optimization System...");
+  // Serial.println() - removed for production
 
   // Initialize timers
   stopTimer(&stopPelanPelanTimer);
@@ -312,7 +312,7 @@ void initPerformanceOptimization() {
   setStatusJalan("BERHENTI");
   setCurrentMode("WAREHOUSE");
 
-  Serial.println("Performance Optimization System initialized successfully!");
+  // Serial.println() - removed for production
 }
 
 /***********************************************************

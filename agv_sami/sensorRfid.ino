@@ -35,8 +35,8 @@ void pinStateChanged() {
 // Notifies when a reader has been connected or disconnected.
 // Instead of a message, the seconds parameter can be anything you want -- Whatever you specify on `wiegand.onStateChange()`
 void stateChanged(bool plugged, const char* message) {
-  Serial.print(message);
-  Serial.println(plugged ? "CONNECTED" : "DISCONNECTED");
+  // Serial.print() - removed for production
+  // Serial.println() - removed for production
 }
 
 // Notifies when a card was read.
@@ -204,7 +204,7 @@ void clearAllRfidStations() {
   }
   rfidStationCount = 0;
 
-  Serial.println("All RFID stations cleared");
+  // Serial.println() - removed for production
 }
 
 // Function to check if current RFID matches a station and return station ID (optimized)

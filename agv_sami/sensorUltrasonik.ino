@@ -11,7 +11,7 @@ void setUltrasonicSlaveId(int slaveId) {
   if (slaveId >= 1 && slaveId <= 247) {  // Valid Modbus RTU range
     if (currentUltrasonicSlaveId != slaveId) {
       currentUltrasonicSlaveId = slaveId;
-      Serial.printf("Ultrasonic slave ID set to: %d\n", slaveId);
+      // Serial.printf("Ultrasonic slave ID set to: %d\n", slaveId);
       // begin() will be called automatically in loopUltrasonik() when ID changes
     }
   }

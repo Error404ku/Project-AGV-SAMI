@@ -30,8 +30,8 @@ void loadWarehouseUjungRfid() {
     saveUjungRfid(ujungRfidId);
   }
   
-  Serial.println("Loaded Warehouse RFID: " + warehouseRfidId);
-  Serial.println("Loaded Ujung RFID: " + ujungRfidId);
+  // Serial.println() - removed for production
+  // Serial.println() - removed for production
 
 }
 
@@ -40,7 +40,7 @@ void saveWarehouseRfid(String rfidId) {
   preferences.putString("warehouseRfid", rfidId);
   preferences.end();
   warehouseRfidId = rfidId;
-  Serial.println("Warehouse RFID saved: " + rfidId);
+  // Serial.println() - removed for production
 }
 
 void saveUjungRfid(String rfidId) {
@@ -48,7 +48,7 @@ void saveUjungRfid(String rfidId) {
   preferences.putString("ujungRfid", rfidId);
   preferences.end();
   ujungRfidId = rfidId;
-  Serial.println("Ujung RFID saved: " + rfidId);
+  // Serial.println() - removed for production
 }
 
 
@@ -62,8 +62,8 @@ void loadTerminalRfid() {
   terminalPickUpRfidId = preferences.getString("terminalPickUp", "");
   preferences.end();
   
-  Serial.println("Loaded Terminal Drop RFID: " + terminalDropRfidId);
-  Serial.println("Loaded Terminal PickUp RFID: " + terminalPickUpRfidId);
+  // Serial.println() - removed for production
+  // Serial.println() - removed for production
 }
 
 void saveTerminalDropRfid(String rfidId) {
@@ -71,7 +71,7 @@ void saveTerminalDropRfid(String rfidId) {
   preferences.putString("terminalDrop", rfidId);
   preferences.end();
   terminalDropRfidId = rfidId;
-  Serial.println("Terminal Drop RFID saved: " + rfidId);
+  // Serial.println() - removed for production
 }
 
 void saveTerminalPickUpRfid(String rfidId) {
@@ -79,5 +79,5 @@ void saveTerminalPickUpRfid(String rfidId) {
   preferences.putString("terminalPickUp", rfidId);
   preferences.end();
   terminalPickUpRfidId = rfidId;
-  Serial.println("Terminal PickUp RFID saved: " + rfidId);
+  // Serial.println() - removed for production
 }

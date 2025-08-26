@@ -166,7 +166,7 @@ void saveSettings() {
   kdLinefollowerBackwardDefault = tempKdBackwardDefault;
 
   // Debug: Print saved values in saveSettings
-  Serial.println("=== All PID Values Saved in saveSettings() ===");
+  // Serial.println() - removed for production
 
   // Apply Motor values
   baseSpeed = tempBaseSpeed;
@@ -1836,10 +1836,10 @@ void handleMotorTest() {
       pwmMotor(0, 0);
       break;
     case 1:  // FORWARD
-      pwmMotor(-baseSpeed, baseSpeed);
+      pwmMotor(baseSpeed, -baseSpeed);
       break;
     case 2:  // BACKWARD
-      pwmMotor(baseSpeed, -baseSpeed);
+      pwmMotor(-baseSpeed, baseSpeed);
       break;
     case 3:  // LEFT
       pwmMotor(baseSpeed, baseSpeed);
@@ -2238,11 +2238,11 @@ void handleResetMenu() {
     tempKdBackwardDefault = 0.0;
     
     // Debug: Print reset values
-    Serial.println("=== PID Values Reset to Defaults ===");
-    Serial.println("Reset Forward PID WithMassa - Kp: " + String(tempKpForwardWithMassa) + ", Ki: " + String(tempKiForwardWithMassa) + ", Kd: " + String(tempKdForwardWithMassa));
-    Serial.println("Reset Forward PID Default - Kp: " + String(tempKpForwardDefault) + ", Ki: " + String(tempKiForwardDefault) + ", Kd: " + String(tempKdForwardDefault));
-    Serial.println("Reset Backward PID WithMassa - Kp: " + String(tempKpBackwardWithMassa) + ", Ki: " + String(tempKiBackwardWithMassa) + ", Kd: " + String(tempKdBackwardWithMassa));
-    Serial.println("Reset Backward PID Default - Kp: " + String(tempKpBackwardDefault) + ", Ki: " + String(tempKiBackwardDefault) + ", Kd: " + String(tempKdBackwardDefault));
+    // Serial.println() - removed for production
+    // Serial.println() - removed for production
+    // Serial.println() - removed for production
+    // Serial.println() - removed for production
+    // Serial.println() - removed for production
 
     // Reset Motor values to defaults
     tempBaseSpeed = 1000;
@@ -2592,12 +2592,12 @@ void handleUltrasonicCheck() {
   }
   
   if (LEFT() && (currentTime - lastSwitchTime >= SWITCH_DEBOUNCE)) {
-    Serial.println("[INFO] Switching to FRONT ultrasonic sensor");
+    // Serial.println() - removed for production
     // Switch to front ultrasonic sensor
     setUltrasonicSlaveId(SLAVEID_ULTRASONIK_DEPAN);
     lastSwitchTime = currentTime;
   } else if (RIGHT() && (currentTime - lastSwitchTime >= SWITCH_DEBOUNCE)) {
-    Serial.println("[INFO] Switching to BACK ultrasonic sensor");
+    // Serial.println() - removed for production
     // Switch to back ultrasonic sensor
     setUltrasonicSlaveId(SLAVEID_ULTRASONIK_BELAKANG);
     lastSwitchTime = currentTime;

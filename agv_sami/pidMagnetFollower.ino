@@ -123,8 +123,8 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
   }
   double koreksi = computePID(0, 0, pidError, currentKp, currentKi, currentKd, minintegral, maxintegral);
   
-  int motorKiri = pidSpeed + (int)koreksi;   // Fixed: subtract correction for left motor
-  int motorKanan = pidSpeed - (int)koreksi;  // Fixed: add correction for right motor
+  int motorKiri = pidSpeed - (int)koreksi;   // Fixed: subtract correction for left motor
+  int motorKanan = pidSpeed + (int)koreksi;  // Fixed: add correction for right motor
 
   // Ensure we have headroom for corrections - prevent saturation
   int maxAllowedPwm = maxPwm - 300;  // Reserve 300 PWM units for correction headroom
@@ -132,16 +132,16 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
   motorKanan = constrain(motorKanan, -maxAllowedPwm, maxAllowedPwm);
   switch (mode) {
     case PID_MODE_MAJU:
-      pwmMotor(-motorKanan, motorKiri);
+      pwmMotor(motorKanan, -motorKiri);
       break;
     case PID_MODE_MAJU_MASSA:
-      pwmMotor(-motorKanan, motorKiri);
+      pwmMotor(motorKanan, -motorKiri);
       break;
     case PID_MODE_MUNDUR:
-      pwmMotor(motorKanan, -motorKiri);
+      pwmMotor(-motorKanan, motorKiri);
       break;
     case PID_MODE_MUNDUR_MASSA:
-      pwmMotor(motorKanan, -motorKiri);
+      pwmMotor(-motorKanan, motorKiri);
       break;
     case PID_MODE_FORCEMUNDUR:
       pwmMotor(-pidSpeed, pidSpeed);
@@ -170,14 +170,14 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
   // Debug output every 100ms to monitor PID behavior
   static unsigned long lastDebugTime = 0;
   if (millis() - lastDebugTime > 100) {
-    Serial.printf("[PID] E=%d V=%d Kp=%.1f Ki=%.1f Kd=%.1f U=%.1f L=%d R=%d\n", 
-                  errorPosisi, pidSpeed, currentKp, currentKi, currentKd, 
-                  koreksi, motorKiri, motorKanan);
+    // Serial.printf("[PID] E=%d V=%d Kp=%.1f Ki=%.1f Kd=%.1f U=%.1f L=%d R=%d\n", 
+    //               errorPosisi, pidSpeed, currentKp, currentKi, currentKd, 
+    //               koreksi, motorKiri, motorKanan);
     lastDebugTime = millis();
   }
   #endif
   
-  // Serial.println(mode); // Tidak bisa mencetak enum secara langsung
+  // // Serial.println() - removed for production // Tidak bisa mencetak enum secara langsung
   
   // Note: lastError is now handled inside computePID function via pidData[0].previousError
 }

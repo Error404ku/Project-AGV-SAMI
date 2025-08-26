@@ -1,8 +1,23 @@
 #ifndef CONFIG_H
 #define CONFIG_H
-// Debug flags
-#define DEBUG_PID 1      // Enable PID debugging
-// #define DEBUG_SENSOR 1   // Uncomment to enable sensor debugging
+// Debug flags - DISABLED untuk production
+#define DEBUG_PID 0        // Disable PID debugging
+#define DEBUG_SENSOR 0     // Disable sensor debugging
+#define DEBUG_MOTOR 0      // Disable motor debugging
+#define DEBUG_SETUP 0      // Disable setup debugging
+#define DEBUG_WIFI 0       // Disable WiFi debugging
+#define DEBUG_PERFORMANCE 0 // Disable performance debugging
+
+// Debug macros - hanya aktif jika debug flag enabled
+#if DEBUG_SETUP
+  #define DEBUG_PRINT(x) Serial.print(x)
+  #define DEBUG_PRINTLN(x) Serial.println(x)
+  #define DEBUG_PRINTF(x, ...) Serial.printf(x, __VA_ARGS__)
+#else
+  #define DEBUG_PRINT(x)
+  #define DEBUG_PRINTLN(x)
+  #define DEBUG_PRINTF(x, ...)
+#endif
 
 // Include Library
 #include <Wire.h>
