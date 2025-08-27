@@ -3,6 +3,10 @@
 // PID Data array definition
 PIDData pidData[numOutputs];
 
+// Motor PWM output variables definition
+int pwmKanan = 0;  // PWM Motor Kanan
+int pwmKiri = 0;   // PWM Motor Kiri
+
 // Error logging function
 void logError(int errorCode, const char* message) {
   Serial.print("[ERROR ");

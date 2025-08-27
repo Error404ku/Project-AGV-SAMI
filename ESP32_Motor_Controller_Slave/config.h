@@ -34,8 +34,8 @@ volatile long enc_kanan = 0;
 volatile long enc_kiri = 0;
 
 // RPM Variables
-float rpm_depan_kanan = 0;
-float rpm_depan_kiri = 0;
+int rpm_kanan = 0;
+int rpm_kiri = 0;
 int perRotasi = 892;  // pulses per rotation
 
 // Timing Variables for RPM calculation
@@ -57,10 +57,24 @@ extern PIDData pidData[numOutputs];
 // Error Codes
 #define ERROR_PID_CALCULATION 1001
 
+// RPM Configuration
+#define minrpm 0
+#define maxrpm 90    // RPM maksimal adalah 90
+
+// PWM Configuration for PID - 12-bit PWM (0-4095)
+#define pwm_zero 0
+#define pwm_min -4095  // PWM minimum (reverse direction)
+#define pwm_max 4095   // PWM maximum (forward direction)
+
+// Motor PWM output variables
+extern int pwmKanan;  // PWM Motor Kanan 
+extern int pwmKiri;   // PWM Motor Kiri
+
 int leftSpeed = 0;
 int rightSpeed = 0;
 
 // Function declarations
 void logError(int errorCode, const char* message);
+void rpmMotor(int rpm1, int rpm2);  // PID RPM function
 
 #endif // CONFIG_H 
