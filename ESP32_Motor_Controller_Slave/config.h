@@ -84,9 +84,9 @@ extern const unsigned long intervalrpm;
 
 // PID Configuration Structure
 struct PIDConfig {
-  double kp = 2.0;
-  double ki = 0.15;
-  double kd = 0.0;
+  double kp;
+  double ki;
+  double kd;
 };
 
 // PID Data Structure

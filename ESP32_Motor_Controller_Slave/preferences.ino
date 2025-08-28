@@ -5,22 +5,7 @@ void loadPIDParameters() {
   const double DEFAULT_KD = 0.0;
   
   // Open preferences in read-only mode
-  if (!preferences.begin("pid_config", true)) {
-    Serial.println("ERROR: Failed to open preferences for reading");
-    // Set default values jika tidak bisa membaca
-    pidConfig.kp = DEFAULT_KP;
-    pidConfig.ki = DEFAULT_KI;
-    pidConfig.kd = DEFAULT_KD;
-    Serial.println("Using default PID values due to preferences error");
-    return;
-  }
-  
-  delay(50);
-  
-  // Check if PID parameters exist
-  bool hasKp = preferences.isKey("kp");
-  bool hasKi = preferences.isKey("ki");
-  bool hasKd = preferences.isKey("kd");
+  preferences.begin("pid_config", true);
   
   // Load PID parameters dengan default values jika tidak ada
   pidConfig.kp = preferences.getDouble("kp", DEFAULT_KP);
@@ -30,27 +15,14 @@ void loadPIDParameters() {
   preferences.end();
   
   // Debug output lebih detail
-  Serial.println("PID Parameters loaded from flash:");
-  if (hasKp) {
-    Serial.printf("  Kp: %.4f (stored in flash)\n", pidConfig.kp);
-  } else {
-    Serial.printf("  Kp: %.4f (using default, not found in flash)\n", pidConfig.kp);
-  }
-  
-  if (hasKi) {
-    Serial.printf("  Ki: %.4f (stored in flash)\n", pidConfig.ki);
-  } else {
-    Serial.printf("  Ki: %.4f (using default, not found in flash)\n", pidConfig.ki);
-  }
-  
-  if (hasKd) {
-    Serial.printf("  Kd: %.4f (stored in flash)\n", pidConfig.kd);
-  } else {
-    Serial.printf("  Kd: %.4f (using default, not found in flash)\n", pidConfig.kd);
-  }
+  Serial.println("PID Parameters loaded from flash:" + String(pidConfig.kp, 4) + "," + String(pidConfig.ki, 4) + "," + String(pidConfig.kd, 4));
 }
 
 void savePIDParameters() {
+  static double tempKp = pidConfig.kp;
+  static double tempKi = pidConfig.ki;
+  static double tempKd = pidConfig.kd;
+
   // Open preferences in write mode
   if (!preferences.begin("pid_config", false)) {
     Serial.println("ERROR: Failed to open preferences for writing");
@@ -60,30 +32,16 @@ void savePIDParameters() {
   delay(50);
   
   // Save PID parameters
-  preferences.putDouble("kp", pidConfig.kp);
-  preferences.putDouble("ki", pidConfig.ki);
-  preferences.putDouble("kd", pidConfig.kd);
-  
+  tempKp = preferences.putDouble("kp", tempKp);
+  tempKi = preferences.putDouble("ki", tempKi);
+  tempKd = preferences.putDouble("kd", tempKd);
+
   // Flush untuk memastikan data ditulis ke flash
   preferences.end();
-  
-  // Verifikasi penyimpanan - buka kembali preferences dan baca nilai
-  preferences.begin("pid_config", true);
-  double verifyKp = preferences.getDouble("kp", -1.0);
-  double verifyKi = preferences.getDouble("ki", -1.0);
-  double verifyKd = preferences.getDouble("kd", -1.0);
-  preferences.end();
-  
-  // Tampilkan hasil verifikasi
-  Serial.println("PID Parameters saved to flash memory:");
-  Serial.printf("  Kp: %.4f (Verified: %.4f)\n", pidConfig.kp, verifyKp);
-  Serial.printf("  Ki: %.4f (Verified: %.4f)\n", pidConfig.ki, verifyKi);
-  Serial.printf("  Kd: %.4f (Verified: %.4f)\n", pidConfig.kd, verifyKd);
-  
-  // Periksa apakah nilai tersimpan dengan benar
-  if (verifyKp != pidConfig.kp || verifyKi != pidConfig.ki || verifyKd != pidConfig.kd) {
-    Serial.println("WARNING: PID parameter verification failed! Values may not be saved correctly.");
-  }
+
+  tempKp = pidConfig.kp;
+  tempKi = pidConfig.ki;
+  tempKd = pidConfig.kd;
 }
 
 void resetPIDParameters() {
