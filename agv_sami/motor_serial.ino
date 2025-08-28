@@ -1,91 +1,186 @@
 // Motor Serial Communication - ESP32 Master
-// Mengirim perintah motor ke ESP32 kedua via Serial0
+// RPM-based motor control via Serial communication to ESP32 motor controller
 
 void setupMotorSerial() {
   // Inisialisasi Serial0 untuk komunikasi dengan ESP32 kedua
   Serial.begin(115200);
-  delay(1000); // Tunggu ESP32 motor siap
+  
+  // Request PID data dari motor controller saat startup
+  requestPidDataFromSlave();
 }
 
-void kirimPerintahMotor(int speedKiri, int speedKanan) {
-  // Format perintah: "L[speed]R[speed]\n"
-  // Contoh: "L150R-100\n" (kiri maju 150, kanan mundur 100)
+// =============== NEW RPM-BASED FUNCTIONS ===============
+
+void kirimPerintahRPM(int rpmKiri, int rpmKanan) {
+  // Batasi RPM dalam range yang aman (10-90)
+  rpmKiri = constrain(rpmKiri, -90, 90);
+  rpmKanan = constrain(rpmKanan, -90, 90);
   
-  // Batasi kecepatan dalam range 12-bit PWM
+  String perintah = "RPM" + String(rpmKanan) + "," + String(rpmKiri);
+  Serial.println(perintah);
+}
+
+// =============== ESSENTIAL LEGACY PWM SUPPORT ===============
+// Only keep essential functions for AGV operations compatibility
+
+void kirimPerintahMotor(int speedKiri, int speedKanan) {
   speedKiri = constrain(speedKiri, -4095, 4095);
   speedKanan = constrain(speedKanan, -4095, 4095);
   
-  String perintah = "L" + String(speedKiri) + "R" + String(speedKanan) + "\n";
-  Serial.print(perintah);
+  String perintah = "L" + String(speedKiri) + "R" + String(speedKanan);
+  Serial.println(perintah);
 }
 
-void motorMaju(int speed) {
-  // Pastikan speed dalam range 12-bit PWM
-  speed = constrain(speed, 0, 4095);
-  kirimPerintahMotor(speed, speed);
-}
-
-void motorMundur(int speed) {
-  // Pastikan speed dalam range 12-bit PWM
-  speed = constrain(speed, 0, 4095);
-  kirimPerintahMotor(-speed, -speed);
-}
-
-void motorKiri(int speed) {
-  // Pastikan speed dalam range 12-bit PWM
-  speed = constrain(speed, 0, 4095);
-  kirimPerintahMotor(-speed, speed);
-}
-
-void motorKanan(int speed) {
-  // Pastikan speed dalam range 12-bit PWM
-  speed = constrain(speed, 0, 4095);
-  kirimPerintahMotor(speed, -speed);
-}
-
-void motorBerhenti() {
-  kirimPerintahMotor(0, 0);
-}
-
-void motorManual(int speedKiri, int speedKanan) {
-  kirimPerintahMotor(speedKiri, speedKanan);
-}
-
-void aturKecepatanMotor(int kecepatanKiri, int kecepatanKanan) {
-  kirimPerintahMotor(kecepatanKiri, kecepatanKanan);
-}
-
-// Fungsi dengan range persentase (0-100%) yang akan dikonversi ke 12-bit PWM
-void motorPersentase(int persenKiri, int persenKanan) {
-  // Konversi persentase (-100% to 100%) ke 12-bit PWM (-4095 to 4095)
-  int speedKiri = (persenKiri * 4095) / 100;
-  int speedKanan = (persenKanan * 4095) / 100;
-  
-  kirimPerintahMotor(speedKiri, speedKanan);
-}
-
-// Fungsi untuk kompatibilitas dengan kode lama
-void setMotorSpeeds(int leftSpeed, int rightSpeed) {
-  kirimPerintahMotor(leftSpeed, rightSpeed);
-}
-
-// Fungsi tambahan untuk kompatibilitas
+// Essential stop function for error handling
 void motorStop() {
-  kirimPerintahMotor(0, 0);
+  kirimPerintahRPM(0, 0);  // Use RPM stop command instead of PWM
 }
 
-void motorForward(int speed) {
-  motorMaju(speed);
+void handleMotorControllerSerial() {
+  // Check for incoming data from motor controller
+  while (Serial.available()) {
+    char inChar = (char)Serial.read();
+    
+    if (inChar == '\n') {
+      motorControllerStringComplete = true;
+    } else {
+      motorControllerBuffer += inChar;
+    }
+  }
+  
+  // Process complete message
+  if (motorControllerStringComplete) {
+    processMotorControllerMessage(motorControllerBuffer);
+    motorControllerBuffer = "";
+    motorControllerStringComplete = false;
+  }
 }
 
-void motorBackward(int speed) {
-  motorMundur(speed);
+// Function to send PID values TO motor controller
+void sendPidValues(double kp, double ki, double kd) {
+  // Kosongkan buffer serial dulu
+  while (Serial.available()) {
+    Serial.read();
+  }
+  
+  // Pastikan dalam range yang valid di sisi slave (kp <= 100, ki <= 10, kd <= 10)
+  kp = constrain(kp, 0, 100);
+  ki = constrain(ki, 0, 10);
+  kd = constrain(kd, 0, 10);
+  
+  // Format pesan PID dengan presisi yang tepat
+  String pidCommand = "PID" + String(kp, 3) + "," + String(ki, 3) + "," + String(kd, 3);
+  
+  // Kirim perintah PID
+  Serial.println(pidCommand);
+  
+  // Tampilkan informasi di Serial Monitor
+  Serial.println("Sending PID command: " + pidCommand);
+  
+  // Simpan juga secara lokal sebagai cadangan
+  motorPidKp = kp;
+  motorPidKi = ki;
+  motorPidKd = kd;
+  
+  // Tambahkan delay kecil untuk memastikan pengiriman
+  delay(50);
 }
 
-void motorTurnLeft(int speed) {
-  motorKiri(speed);
+
+// Function to process messages FROM motor controller (including startup PIDVALUES)
+void processMotorControllerMessage(String message) {
+  message.trim();
+  
+  // Handle PIDVALUES command from motor controller
+  if (message.startsWith("PIDVALUES:")) {
+    String pidData = message.substring(10); // Remove "PIDVALUES:"
+    
+    int firstComma = pidData.indexOf(',');
+    int secondComma = pidData.indexOf(',', firstComma + 1);
+    
+    if (firstComma > 0 && secondComma > firstComma) {
+      double kp = pidData.substring(0, firstComma).toDouble();
+      double ki = pidData.substring(firstComma + 1, secondComma).toDouble(); 
+      double kd = pidData.substring(secondComma + 1).toDouble();
+      
+      // Update AGV_SAMI variables with values from motor controller
+      motorPidKp = kp;
+      motorPidKi = ki;
+      motorPidKd = kd;
+      tempMotorPidKp = kp;  // Update temp variables for menu display
+      tempMotorPidKi = ki;
+      tempMotorPidKd = kd;
+      
+      // Set flag bahwa PID data telah diterima
+      pidDataReceived = true;
+      systemReadyToRun = true;
+      
+      // Display konfirmasi di LCD
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("PID Data Received");
+      lcd.setCursor(0, 1);
+      lcd.print("System Ready");
+      delay(1000);
+    }
+  }
 }
 
-void motorTurnRight(int speed) {
-  motorKanan(speed);
+// Fungsi untuk meminta data PID dari motor controller slave
+void requestPidDataFromSlave() {
+  pidDataReceived = false;
+  systemReadyToRun = false;
+  pidRequestStartTime = millis();
+  
+  // Display status di LCD
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Requesting PID...");
+  lcd.setCursor(0, 1);
+  lcd.print("From Motor Slave");
+  
+  // Kirim perintah PIDSHOW ke motor controller
+  Serial.println("PIDSHOW");
+}
+
+// Fungsi untuk mengecek apakah sistem siap untuk running
+bool checkSystemReadyStatus() {
+  if (pidDataReceived && systemReadyToRun) {
+    return true;
+  }
+  
+  // Cek timeout
+  if (millis() - pidRequestStartTime > PID_REQUEST_TIMEOUT) {
+    // Timeout - tampilkan error dan set default values
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("PID Request");
+    lcd.setCursor(0, 1);
+    lcd.print("TIMEOUT - Default");
+    delay(1000);
+    
+    // Set default PID values jika timeout
+    motorPidKp = 1.0;
+    motorPidKi = 0.15;
+    motorPidKd = 0.0;
+    tempMotorPidKp = 1.0;
+    tempMotorPidKi = 0.15;
+    tempMotorPidKd = 0.0;
+    
+    systemReadyToRun = true; // Allow system to proceed with defaults
+    return true;
+  }
+  
+  // Retry request setiap 1 detik
+  static unsigned long lastRetry = 0;
+  if (millis() - lastRetry > 1000) {
+    Serial.println("PIDSHOW"); // Retry request
+    lastRetry = millis();
+    
+    // Update display
+    lcd.setCursor(0, 1);
+    lcd.print("Waiting...      ");
+  }
+  
+  return false;
 }

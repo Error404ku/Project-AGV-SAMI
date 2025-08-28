@@ -65,6 +65,12 @@ void initMenuTempVariables() {
   selectedMusicPin = 0;
   tempMinSafeDistanceFront = minSafeDistanceFront;
   tempMinSafeDistanceBack = minSafeDistanceBack;
+  
+  // Initialize Motor Control temp variables
+  tempMaxMotorRpm = maxMotorRpm;
+  tempMotorPidKp = motorPidKp;
+  tempMotorPidKi = motorPidKi;
+  tempMotorPidKd = motorPidKd;
 }
 
 // Global display functions
@@ -138,6 +144,12 @@ void saveSettings() {
   preferences.putUShort("SafeDistFront", tempMinSafeDistanceFront);
   preferences.putUShort("SafeDistBack", tempMinSafeDistanceBack);
 
+  // Save Motor Control settings
+  preferences.putInt("maxMotorRpm", tempMaxMotorRpm);
+  preferences.putDouble("motorPidKp", tempMotorPidKp);
+  preferences.putDouble("motorPidKi", tempMotorPidKi);
+  preferences.putDouble("motorPidKd", tempMotorPidKd);
+
   // Apply PID values
   kpLinefollower = tempKp;
   kiLinefollower = tempKi;
@@ -204,7 +216,7 @@ void displayMainMenu() {
     "Target Settings",    // selectedItem 4 -> MENU_TARGET_SETTINGS (4)
     "Reset Settings",     // selectedItem 5 -> MENU_RESET (5)
     "RFID Settings",      // selectedItem 6 -> MENU_RFID_SETTINGS (6)
-    "Motor Settings",     // selectedItem 7 -> MENU_MOTOR_SETTINGS (18)
+    "Motor Settings",     // selectedItem 7 -> MENU_MOTOR_SETTINGS (18) - Updated to show sub menu
     "Motor Invert",       // selectedItem 8 -> MENU_MOTOR_INVERT (19)
     "Music Settings",     // selectedItem 9 -> MENU_MUSIC_SETTINGS (20)
     "Music Test",         // selectedItem 10 -> MENU_MUSIC_TEST (21)
@@ -294,7 +306,7 @@ void handleMenu() {
   switch (currentMenu) {
     case MENU_MAIN:
       displayMainMenu();
-      pwmMotor(0,0);
+      rpmMotor(0,0);  // Use RPM stop command
       stopMusic();
       digitalWrite(lampPin, HIGH);
       if (currentMillis - lastButtonPress >= buttonDelay) {
@@ -304,6 +316,10 @@ void handleMenu() {
         } else if (DOWN()) {
           selectedItem = (selectedItem + 1) % maxItems;
           lastButtonPress = currentMillis;
+        } else if (STOP()) {
+          currentMenu = MENU_MAIN;
+          selectedItem = 0;
+          menuNeedsRefresh = true;  
         } else if (START()) {
           // Map selectedItem to corresponding menu constants
           switch (selectedItem) {
@@ -352,9 +368,10 @@ void handleMenu() {
               menuNeedsRefresh = true;
               break;
               
-            case 7:  // Motor Settings
+            case 7:  // Motor Settings - Updated to show sub menu
               lcd.clear();
               currentMenu = MENU_MOTOR_SETTINGS; // 18
+              selectedItem = 0;  // Reset selection for submenu
               menuNeedsRefresh = true;
               break;
               
@@ -420,7 +437,6 @@ void handleMenu() {
         }
       }
       break;
-
     case MENU_MOTOR_TEST:
       displayMotorTest();
       handleMotorTest();
@@ -501,6 +517,26 @@ void handleMenu() {
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handleMotorSettings();
         if (LEFT() || RIGHT() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_SPEED_SETTING:
+      displaySpeedSetting();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleSpeedSetting();
+        if (LEFT() || RIGHT() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_PID_RPM_SETTING:
+      displayPidRpmSetting();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handlePidRpmSetting();
+        if (LEFT() || RIGHT() || UP() || DOWN() || START() || STOP()) {
           lastButtonPress = currentMillis;
         }
       }
@@ -822,7 +858,7 @@ void handleMenu() {
   }
 }
 void displayMotorTest() {
-  displayMenuHeader("Motor Test");
+  displayMenuHeader("Motor Test (RPM)");
 
   lcd.setCursor(0, 1);
   lcd.print("UP:Maju DOWN:Mundur");
@@ -830,13 +866,13 @@ void displayMotorTest() {
   lcd.print("LF:Kiri RT:Kanan");
   lcd.setCursor(0, 3);
 
-  // Show current motor state
+  // Show current motor state with RPM info
   switch (motorTestState) {
     case 0: lcd.print("Status: STOP    "); break;
-    case 1: lcd.print("Status: MAJU    "); break;
-    case 2: lcd.print("Status: MUNDUR  "); break;
-    case 3: lcd.print("Status: KIRI    "); break;
-    case 4: lcd.print("Status: KANAN   "); break;
+    case 1: lcd.print("Status: MAJU " + String(testMotorRpm) + "R"); break;
+    case 2: lcd.print("Status: MNDR " + String(testMotorRpm) + "R"); break;  
+    case 3: lcd.print("Status: KIRI " + String(testMotorRpm) + "R"); break;
+    case 4: lcd.print("Status: KNAN " + String(testMotorRpm) + "R"); break;
   }
 
   lcd.setCursor(15, 3);
@@ -1763,31 +1799,29 @@ void displayRfidSettings() {
 }
 
 void displayMotorSettings() {
-  displayMenuHeader("Motor Settings");
-
-  lcd.setCursor(0, 1);
-  lcd.print("Base Speed:");
-
-  lcd.setCursor(0, 2);
-  lcd.print("> ");
-  // Convert PWM (100-4000) to percentage (0-100%)
-  int percentage = map(tempBaseSpeed, 100, 4000, 0, 100);
-  lcd.print(percentage);
-  lcd.print("%");
+  static bool needsRefresh = true;
+  static int lastSelectedItem = -1;
   
-  // Show PWM value in smaller text
-  lcd.setCursor(8, 2);
-  lcd.print("(");
-  lcd.print(tempBaseSpeed);
-  lcd.print("PWM)");
-
-  // Show range indicator
-  lcd.setCursor(0, 3);
-  lcd.print("Range: 0-100%");
-
-  // Show controls on last row corner
-  lcd.setCursor(12, 3);
-  lcd.print("B:OK");
+  if (needsRefresh || selectedItem != lastSelectedItem) {
+    lcd.clear();
+    displayMenuHeader("Motor Settings:");
+    
+    String menuItems[2] = {
+      "Speed Setting",      // selectedItem 0 -> MENU_SPEED_SETTING (46)
+      "PID RPM"            // selectedItem 1 -> MENU_PID_RPM_SETTING (47)
+    };
+    
+    for (int i = 0; i < 2; i++) {
+      lcd.setCursor(0, i + 1);
+      displayIndicator(i, selectedItem);
+      lcd.print(menuItems[i]);
+    }
+    
+    displayMenuFooter("A:OK B:Back");
+    
+    needsRefresh = false;
+    lastSelectedItem = selectedItem;
+  }
 }
 
 void displayResetMenu() {
@@ -1823,29 +1857,29 @@ void handleMotorTest() {
     motorTestState = 4;  // Set to right
   } else if (STOP()) {
     motorTestState = 0;  // Stop motor
-    pwmMotor(0, 0);
+    rpmMotor(0, 0);  // Use RPM stop command
     currentMenu = MENU_MAIN;
     menuStartIndex = 0;
     menuNeedsRefresh = true;
     return;
   }
 
-  // Execute continuous motor movement based on state
+  // Execute continuous motor movement based on state - RPM mode
   switch (motorTestState) {
     case 0:  // STOP
-      pwmMotor(0, 0);
+      rpmMotor(0, 0);  // Use RPM command
       break;
     case 1:  // FORWARD
-      pwmMotor(baseSpeed, -baseSpeed);
+      rpmMotor(testMotorRpm, testMotorRpm);  // Both motors forward
       break;
-    case 2:  // BACKWARD
-      pwmMotor(-baseSpeed, baseSpeed);
+    case 2:  // BACKWARD  
+      rpmMotor(-testMotorRpm, -testMotorRpm);  // Both motors backward
       break;
     case 3:  // LEFT
-      pwmMotor(baseSpeed, baseSpeed);
+      rpmMotor(-testMotorRpm, testMotorRpm);  // Left motor backward, right forward
       break;
     case 4:  // RIGHT
-      pwmMotor(-baseSpeed, -baseSpeed);
+      rpmMotor(testMotorRpm, -testMotorRpm);  // Left motor forward, right backward
       break;
   }
 }
@@ -2177,31 +2211,30 @@ void handleRfidSettings() {
 }
 
 void handleMotorSettings() {
-  if (LEFT()) {
-    // Decrease by 5% (equivalent to ~195 PWM)
-    int currentPercentage = map(tempBaseSpeed, 100, 4000, 0, 100);
-    currentPercentage = max(0, currentPercentage - 5);
-    tempBaseSpeed = map(currentPercentage, 0, 100, 100, 4000);
-  } else if (RIGHT()) {
-    // Increase by 5% (equivalent to ~195 PWM)
-    int currentPercentage = map(tempBaseSpeed, 100, 4000, 0, 100);
-    currentPercentage = min(100, currentPercentage + 5);
-    tempBaseSpeed = map(currentPercentage, 0, 100, 100, 4000);
+  if (UP()) {
+    selectedItem = (selectedItem - 1 + 2) % 2;
+    menuNeedsRefresh = true;
+  } else if (DOWN()) {
+    selectedItem = (selectedItem + 1) % 2;
+    menuNeedsRefresh = true;
+  } else if (START()) {
+    lcd.clear();
+    switch (selectedItem) {
+      case 0:  // Speed Setting
+        currentMenu = MENU_SPEED_SETTING;
+        break;
+      case 1:  // PID RPM
+        currentMenu = MENU_PID_RPM_SETTING;
+        selectedItem = 0;  // Reset for PID menu
+        break;
+    }
+    menuNeedsRefresh = true;
   } else if (STOP()) {
-    // Save motor settings
-    baseSpeed = tempBaseSpeed;
-    saveSettings();
+    // Back to main menu
     currentMenu = MENU_MAIN;
-    menuStartIndex = 0;  // Reset scroll position
+    selectedItem = 7;  // Return to Motor Settings item
     menuNeedsRefresh = true;
   }
-  // else if (X()) {
-  //   // Cancel changes
-  //   tempBaseSpeed = baseSpeed;
-  //   currentMenu = MENU_MAIN;
-  //   menuStartIndex = 0; // Reset scroll position
-  //   menuNeedsRefresh = true;
-  // }
 }
 
 void handleResetMenu() {
@@ -3717,6 +3750,156 @@ void handleMusicSettings() {
     currentMenu = MENU_MAIN;
     selectedMusicItem = 0;
     menuStartIndex = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+// =============================================
+// MOTOR SETTINGS SUB MENU FUNCTIONS
+// =============================================
+
+void displaySpeedSetting() {
+  static bool needsRefresh = true;
+  static int lastTempMaxMotorRpm = -1;
+  
+  if (needsRefresh || tempMaxMotorRpm != lastTempMaxMotorRpm) {
+    lcd.clear();
+    displayMenuHeader("Speed Setting:");
+    
+    lcd.setCursor(0, 1);
+    lcd.print("Max RPM:");
+    
+    lcd.setCursor(0, 2);
+    lcd.print("> ");
+    lcd.print(tempMaxMotorRpm);
+    lcd.print(" RPM");
+    
+    // Show range
+    lcd.setCursor(0, 3);
+    lcd.print("Range: 10-90 RPM");
+    
+    needsRefresh = false;
+    lastTempMaxMotorRpm = tempMaxMotorRpm;
+  }
+}
+
+void handleSpeedSetting() {
+  if (LEFT()) {
+    tempMaxMotorRpm = max(10, tempMaxMotorRpm - 5);
+    menuNeedsRefresh = true;
+  } else if (RIGHT()) {
+    tempMaxMotorRpm = min(90, tempMaxMotorRpm + 5);
+    menuNeedsRefresh = true;
+  } else if (STOP()) {
+    // Save speed setting and send to motor controller
+    maxMotorRpm = tempMaxMotorRpm;
+    
+    // Save to preferences
+    preferences.begin("agv-settings", false);
+    preferences.putInt("maxMotorRpm", maxMotorRpm);
+    preferences.end();
+    
+    // Back to Motor Settings menu
+    currentMenu = MENU_MOTOR_SETTINGS;
+    selectedItem = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+void displayPidRpmSetting() {
+  static bool needsRefresh = true;
+  static int lastSelectedParam = -1;
+  static double lastValues[3] = {-1, -1, -1};
+  
+  if (needsRefresh || selectedItem != lastSelectedParam ||
+      tempMotorPidKp != lastValues[0] || tempMotorPidKi != lastValues[1] || 
+      tempMotorPidKd != lastValues[2]) {
+    
+    lcd.clear();
+    displayMenuHeader("PID Setting:");
+    
+    String params[3] = {"Kp:", "Ki:", "Kd:"};
+    double values[3] = {tempMotorPidKp, tempMotorPidKi, tempMotorPidKd};
+    
+    for (int i = 0; i < 3; i++) {
+      lcd.setCursor(0, i + 1);
+      if (i == selectedItem) {
+        lcd.print("> ");
+      } else {
+        lcd.print("  ");
+      }
+      lcd.print(params[i]);
+      lcd.print(values[i], 3);
+    }
+    
+    needsRefresh = false;
+    lastSelectedParam = selectedItem;
+    lastValues[0] = tempMotorPidKp;
+    lastValues[1] = tempMotorPidKi;
+    lastValues[2] = tempMotorPidKd;
+  }
+}
+
+void handlePidRpmSetting() {
+  if (UP()) {
+    selectedItem = (selectedItem - 1 + 3) % 3;
+    menuNeedsRefresh = true;
+  } else if (DOWN()) {
+    selectedItem = (selectedItem + 1) % 3;
+    menuNeedsRefresh = true;
+  } else if (LEFT()) {
+    // Decrease selected parameter
+    switch (selectedItem) {
+      case 0:  // Kp
+        tempMotorPidKp = max(0.0, tempMotorPidKp - 0.1);
+        break;
+      case 1:  // Ki
+        tempMotorPidKi = max(0.0, tempMotorPidKi - 0.01);
+        break;
+      case 2:  // Kd
+        tempMotorPidKd = max(0.0, tempMotorPidKd - 0.01);
+        break;
+    }
+    menuNeedsRefresh = true;
+  } else if (RIGHT()) {
+    // Increase selected parameter
+    switch (selectedItem) {
+      case 0:  // Kp
+        tempMotorPidKp = min(100.0, tempMotorPidKp + 0.1);
+        break;
+      case 1:  // Ki
+        tempMotorPidKi = min(10.0, tempMotorPidKi + 0.01);
+        break;
+      case 2:  // Kd
+        tempMotorPidKd = min(10.0, tempMotorPidKd + 0.01);
+        break;
+    }
+    menuNeedsRefresh = true;
+  } else if (START() || STOP() ) {
+    // Save PID settings and send to motor controller
+    motorPidKp = tempMotorPidKp;
+    motorPidKi = tempMotorPidKi;
+    motorPidKd = tempMotorPidKd;
+
+    // Send PID values using the dedicated function
+    sendPidValues(motorPidKp, motorPidKi, motorPidKd);
+    
+    // Show confirmation
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("PID Command Sent!");
+    lcd.setCursor(0, 1);
+    lcd.print("Kp:" + String(motorPidKp, 2));
+    lcd.setCursor(0, 2);
+    lcd.print("Ki:" + String(motorPidKi, 3));
+    lcd.setCursor(0, 3);
+    lcd.print("Kd:" + String(motorPidKd, 3));
+    delay(1000);
+    menuNeedsRefresh = true;
+    
+    // Back to Motor Settings menu
+    currentMenu = MENU_MOTOR_SETTINGS;
+    selectedItem = 1;
     menuNeedsRefresh = true;
   }
 }

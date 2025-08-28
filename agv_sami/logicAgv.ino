@@ -187,7 +187,7 @@ void agvTerminalPickup() {
 
 // Fungsi ini menghentikan pergerakan AGV.
 void agvStop() {
-  pwmMotor(0, 0);
+  rpmMotor(0, 0);  // Use RPM stop command
   return;
 }
 
@@ -203,7 +203,7 @@ void agvMoveForward() {
     if (isRfidMatch(currentRfid, ujungRfidId)) {
       newRfidScanned = false; // Reset flag
       // Stop motor sebelum mengubah mode
-      pwmMotor(0, 0);
+      rpmMotor(0, 0);  // Use RPM stop command
       delay(2000);
       softStartTime = millis();
       softStartActive = true;

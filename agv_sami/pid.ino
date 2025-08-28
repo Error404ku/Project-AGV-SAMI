@@ -1,4 +1,4 @@
-double computePID(int index, double setpoint, double input, double Kp, double Ki, double Kd, int Minintegral, double Maxintegral) {
+double computePID(int index, double setpoint, double input, double Kp, double Ki, double Kd, double Minintegral, double Maxintegral) {
   // Validate input parameters
   if (index < 0 || index >= numOutputs) {
     logError(ERROR_PID_CALCULATION, "PID index tidak valid");

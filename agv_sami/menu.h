@@ -37,6 +37,10 @@
 #define MENU_PID_BACKWARD_WITHMASSA 36
 #define MENU_PID_BACKWARD_DEFAULT 37
 
+// Motor Settings Sub Menu
+#define MENU_SPEED_SETTING 46
+#define MENU_PID_RPM_SETTING 47
+
 // External variables from other files
 extern int targetStation[2];
 // extern int targetStationFromKomputer[]; // Removed - not used
@@ -91,5 +95,20 @@ void displayMusicSettings();
 void handleMusicSettings();
 void displayMusicSubmenu(const char* title, int* currentPin);
 void handleMusicSubmenu(int* targetPin);
+
+// Motor Settings Sub Menu functions (modified from old Motor Settings)
+void displayMotorSettings();  // Updated to show sub menu
+void handleMotorSettings();   // Updated to handle sub menu navigation
+void displaySpeedSetting();
+void handleSpeedSetting();
+void displayPidRpmSetting();
+void handlePidRpmSetting();
+
+// RFID functions that were missing declarations
+String getRfidForStation(int stationId);
+
+// Motor functions that were missing declarations  
+void rpmMotor(int rpmKiri, int rpmKanan);
+void motorStop();
 
 #endif

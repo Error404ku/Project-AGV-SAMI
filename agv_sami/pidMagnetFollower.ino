@@ -11,7 +11,7 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
   // Check for magnet loss error (errorValue = 99)
   if (errorPosisi == 99 && mode != PID_MODE_BERHENTI) {
     // Emergency stop - no magnet detected for 5 seconds
-    pwmMotor(0, 0);
+    rpmMotor(0, 0);  // Use RPM stop command
     softStartActive = false;
     pidSpeed = 0;
     #ifdef DEBUG_PID
@@ -111,58 +111,66 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
   }
 
   // Use computePID function with proper integral constraints
-  // setpoint = 0 (target center), input = pidError (current error)
+  // setpoint = 0 (target center), input = -pidError (current error with correct sign)
   double minintegral, maxintegral;
   if (currentKi > 0.001) {  // Prevent divide by zero
-    minintegral = -500 / currentKi;
-    maxintegral = 500 / currentKi;
+    minintegral = -500.0 / currentKi;
+    maxintegral = 500.0 / currentKi;
   } else {
     // If Ki is zero or near zero, disable integral
-    minintegral = 0;
-    maxintegral = 0;
+    minintegral = 0.0;
+    maxintegral = 0.0;
   }
-  double koreksi = computePID(0, 0, pidError, currentKp, currentKi, currentKd, minintegral, maxintegral);
+  // Fix: Use correct error sign - pidError is already the deviation from center
+  double koreksi = computePID(0, 0, -pidError, currentKp, currentKi, currentKd, minintegral, maxintegral);
   
   int motorKiri = pidSpeed - (int)koreksi;   // Fixed: subtract correction for left motor
   int motorKanan = pidSpeed + (int)koreksi;  // Fixed: add correction for right motor
 
-  // Ensure we have headroom for corrections - prevent saturation
-  int maxAllowedPwm = maxPwm - 300;  // Reserve 300 PWM units for correction headroom
-  motorKiri = constrain(motorKiri, -maxAllowedPwm, maxAllowedPwm);
-  motorKanan = constrain(motorKanan, -maxAllowedPwm, maxAllowedPwm);
+  // Convert PWM values to RPM values for motor control
+  // PWM range: ~0-4000, RPM range: 0-90
+  // Use proportional scaling based on maxMotorRpm setting
+  
+  // Convert motor corrections to RPM scale
+  int rpmKiri = map(constrain(motorKiri, -maxPwm, maxPwm), -maxPwm, maxPwm, -maxMotorRpm, maxMotorRpm);
+  int rpmKanan = map(constrain(motorKanan, -maxPwm, maxPwm), -maxPwm, maxPwm, -maxMotorRpm, maxMotorRpm);
+  
+  // Convert base speed to RPM for direct commands
+  int baseSpeedRPM = map(constrain(pidSpeed, 0, maxPwm), 0, maxPwm, 0, maxMotorRpm);
+  
   switch (mode) {
     case PID_MODE_MAJU:
-      pwmMotor(motorKanan, -motorKiri);
+      rpmMotor(-rpmKiri, rpmKanan);  // RPM: left motor, right motor
       break;
     case PID_MODE_MAJU_MASSA:
-      pwmMotor(motorKanan, -motorKiri);
+      rpmMotor(-rpmKiri, rpmKanan);  // RPM: left motor, right motor
       break;
     case PID_MODE_MUNDUR:
-      pwmMotor(-motorKanan, motorKiri);
+      rpmMotor(rpmKiri, -rpmKanan);  // RPM: reverse direction
       break;
     case PID_MODE_MUNDUR_MASSA:
-      pwmMotor(-motorKanan, motorKiri);
+      rpmMotor(rpmKiri, -rpmKanan);  // RPM: reverse direction
       break;
     case PID_MODE_FORCEMUNDUR:
-      pwmMotor(-pidSpeed, pidSpeed);
+      rpmMotor(baseSpeedRPM, -baseSpeedRPM);  // Force backward with RPM
       break;
     case PID_MODE_FORCEMAJU:
-      pwmMotor(pidSpeed, -pidSpeed);
+      rpmMotor(-baseSpeedRPM, baseSpeedRPM);  // Force forward with RPM
       break;
     case PID_MODE_STOPPELANPELAN:
       if (!sudahStopPelanPelan) {
-        pwmMotor(-pidSpeed / 2, pidSpeed / 2);
+        rpmMotor(baseSpeedRPM / 2, -baseSpeedRPM / 2);  // Gradual stop with RPM
         startTimer(&stopPelanPelanTimer, 500);
         sudahStopPelanPelan = true;
       } else if (checkTimer(&stopPelanPelanTimer)) {
-        pwmMotor(0, 0);
+        rpmMotor(0, 0);
       } else if (!isTimerActive(&stopPelanPelanTimer)) {
-        pwmMotor(0, 0);
+        rpmMotor(0, 0);
       }
       break;
     case PID_MODE_BERHENTI:
     case PID_MODE_DEFAULT:
-      pwmMotor(0, 0);
+      rpmMotor(0, 0);
       break;
   }
   

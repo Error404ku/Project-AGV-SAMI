@@ -2,8 +2,8 @@ void setupMotor() {
   // Setup komunikasi serial dengan ESP32 motor controller
   setupMotorSerial(); // Panggil fungsi setup motor serial yang benar
    
-  // Test komunikasi
-  kirimPerintahMotor(0, 0); // Stop semua motor saat startup
+  // Test komunikasi - use RPM command for stopping
+  kirimPerintahRPM(0, 0); // Stop semua motor saat startup dengan RPM command
 }
 
 void setupMusic() {
@@ -302,6 +302,13 @@ void setupMenu() {
   tempMinSafeDistanceFront = preferences.getUShort("SafeDistFront", 30);
   tempMinSafeDistanceBack = preferences.getUShort("SafeDistBack", 20);
 
+  // Load Motor Control settings
+  tempMaxMotorRpm = preferences.getInt("maxMotorRpm", 90);
+  // PID parameters are managed by motor controller, set defaults
+  tempMotorPidKp = 1.0;   // Default value, not loaded from preferences
+  tempMotorPidKi = 0.15;  // Default value, not loaded from preferences  
+  tempMotorPidKd = 0.0;   // Default value, not loaded from preferences
+
   // Apply PID values
   kpLinefollower = tempKp;
   kiLinefollower = tempKi;
@@ -349,6 +356,13 @@ void setupMenu() {
   // Apply Ultrasonic settings
   minSafeDistanceFront = tempMinSafeDistanceFront;
   minSafeDistanceBack = tempMinSafeDistanceBack;
+
+  // Apply Motor Control settings
+  maxMotorRpm = tempMaxMotorRpm;
+  // PID parameters are managed by motor controller
+  motorPidKp = tempMotorPidKp;     // Default values only
+  motorPidKi = tempMotorPidKi;     // Default values only
+  motorPidKd = tempMotorPidKd;     // Default values only
 
   preferences.end();
 

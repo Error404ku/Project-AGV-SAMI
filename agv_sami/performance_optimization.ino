@@ -249,7 +249,7 @@ bool recoverSensorCommunication() {
 
 bool recoverMotorControl() {
   // Stop all motors
-  pwmMotor(0, 0);
+  rpmMotor(0, 0);  // Use RPM stop command
   delay(100);
 
   // Reinitialize motor pins if needed

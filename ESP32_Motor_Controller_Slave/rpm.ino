@@ -1,19 +1,21 @@
-#include "config.h"
 
 // PID RPM Control Function untuk 2 motor
 void rpmMotor(int rpm1, int rpm2) {
-  // PID Constants - Tuning parameters
-  double kp = 1.0;     // Proportional gain
-  double ki = 0.15;    // Integral gain  
-  double kd = 0.05;    // Derivative gain
+  // Gunakan PID parameters dari preferences
+  double kp = pidConfig.kp;
+  double ki = pidConfig.ki; 
+  double kd = pidConfig.kd;
   
-  // Integral constraints
-  double minintegral = -1023 / ki;
-  double maxintegral = 1023 / ki;
+  // Hitung integral limits berdasarkan Ki
+  double minintegral = (ki != 0) ? -4095.0 / ki : -1000.0;
+  double maxintegral = (ki != 0) ? 4095.0 / ki : 1000.0;
     
   // Constrain RPM to valid range
   rpm1 = constrain(rpm1, -maxrpm, maxrpm);
   rpm2 = constrain(rpm2, -maxrpm, maxrpm);
+  
+  // Debug output
+  Serial.printf("Target RPM - Kanan: %d, Kiri: %d\n", rpm1, rpm2);
   
   // ===== MOTOR KANAN (Motor 1) PID Control =====
   if (rpm1 > 0) {

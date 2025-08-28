@@ -258,6 +258,19 @@ double tempKi = 0.0;           // Will be initialized from kiLinefollower
 double tempKd = 0.0;           // Will be initialized from kdLinefollower
 int tempBaseSpeed = 2000;      // Will be initialized from baseSpeed
 
+// Motor RPM Control Variables
+int maxMotorRpm = 90;           // Maximum RPM for motor control (0-90)
+int tempMaxMotorRpm = 90;       // Temporary variable for menu editing
+double motorPidKp = 1.0;        // PID Kp for motor RPM control
+double motorPidKi = 0.15;       // PID Ki for motor RPM control  
+double motorPidKd = 0.0;        // PID Kd for motor RPM control
+double tempMotorPidKp = 1.0;    // Temporary Kp for menu editing
+double tempMotorPidKi = 0.15;   // Temporary Ki for menu editing
+double tempMotorPidKd = 0.0;    // Temporary Kd for menu editing
+
+// Motor Test RPM Settings
+int testMotorRpm = 30;          // Default RPM for motor testing (safe speed)
+
 // Target settings
 bool useAutoTarget = false;         // New variable to track target source
 int manualTargetCount = 2;          // Default to 2 targets for manual mode
@@ -745,6 +758,10 @@ HookPosition hook(HookPositionMode mode);
 // PID and motor control functions
 void pidLinefollower(int error, PidMode mode);
 void pwmMotor(int leftSpeed, int rightSpeed);
+void handleMotorControllerSerial();
+void sendPidValues(double kp, double ki, double kd);
+void requestPidDataFromSlave();
+bool checkSystemReadyStatus();
 
 // Button functions
 bool START();
@@ -836,6 +853,15 @@ void clearAllRfidStations();
 bool deleteRfidStation(int stationId);
 bool addRfidStation(int stationId, String rfidId);
 int findRfidStationByRfidId(String rfidId);
+
+String motorControllerBuffer = "";
+bool motorControllerStringComplete = false;
+
+// Startup PID synchronization flags
+bool pidDataReceived = false;           // Flag untuk menandakan PID data telah diterima dari slave
+bool systemReadyToRun = false;         // Flag untuk menandakan sistem siap masuk loop
+unsigned long pidRequestStartTime = 0; // Timestamp untuk timeout PID request
+const unsigned long PID_REQUEST_TIMEOUT = 5000; // Timeout 5 detik untuk PID request
 
 // FreeRTOS function declarations removed - using original implementation
 

@@ -33,7 +33,7 @@ void pembacaan_RPM() {
     // Debug output yang muncul setiap 1 detik
     Serial.print("Encoder - Kanan: "); Serial.print(tempEncKanan);
     Serial.print(" pulses, Kiri: "); Serial.print(tempEncKiri); Serial.print(" pulses");
-    Serial.print(" | RPM Kanan: "); Serial.print(rpm_kanan, 2);
-    Serial.print(", RPM Kiri: "); Serial.println(rpm_kiri, 2);
+    Serial.print(" | RPM Kanan: "); Serial.print(rpm_depan_kanan, 2);
+    Serial.print(", RPM Kiri: "); Serial.println(rpm_depan_kiri, 2);
   }
 }

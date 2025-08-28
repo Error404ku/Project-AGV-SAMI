@@ -19,10 +19,45 @@ void setup() {
     ultrasonicSensorInitialized = true;
   }
 
+  // Wait for PID data from motor controller slave before proceeding
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Waiting for PID");
+  lcd.setCursor(0, 1);
+  lcd.print("Data from Slave");
+  
+  // Loop until PID data is received or timeout
+  while (!checkSystemReadyStatus()) {
+    // Handle incoming serial data while waiting
+    handleMotorControllerSerial();
+    delay(50); // Small delay to prevent watchdog issues
+    esp_task_wdt_reset(); // Reset watchdog
+  }
+  
+  // System is now ready
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("AGV System");
+  lcd.setCursor(0, 1);
+  lcd.print("READY TO RUN");
+  delay(1000);
 }
 
 void loop() {
   esp_task_wdt_reset();
+  
+  // Only proceed with normal operations if system is ready
+  if (!systemReadyToRun) {
+    // Keep trying to get PID data if not received yet
+    handleMotorControllerSerial();
+    if (!checkSystemReadyStatus()) {
+      delay(100);
+      return; // Don't proceed with normal loop until ready
+    }
+  }
+  
+  // Handle incoming serial data from motor controller
+  handleMotorControllerSerial();
   
   // Monitor system health (setiap 5 detik) - debug disabled
   static unsigned long lastSystemCheck = 0;
@@ -31,7 +66,7 @@ void loop() {
     if (freeHeap < 15000) { // Less than 15KB free
       // Low memory warning disabled for production
       // Stop semua motor untuk menghemat resources
-      pwmMotor(0, 0);
+      rpmMotor(0, 0);  // Use RPM stop command
       hook(STOP_HOOK);
       if (freeHeap < 8000) {
         // Critical memory restart disabled for production

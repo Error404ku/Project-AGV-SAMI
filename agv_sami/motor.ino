@@ -1,5 +1,39 @@
 // Motor control via Serial Communication to ESP32 Slave
 // This replaces direct motor control with serial commands
+// Now supporting both PWM and RPM modes for full conversion
+
+// =============== NEW RPM-BASED MOTOR CONTROL ===============
+
+void rpmMotor(int rpmKiri, int rpmKanan) {
+  // Reset watchdog timer untuk mencegah timeout saat operasi motor intensif
+  esp_task_wdt_reset();
+  
+  // Safety checks for motor RPM values (10-90 range)
+  if (abs(rpmKiri) > 90 || abs(rpmKanan) > 90) {
+    logError(ERROR_MOTOR_CONTROL, "RPM nilai melebihi batas");
+    rpmKiri = constrain(rpmKiri, -90, 90);
+    rpmKanan = constrain(rpmKanan, -90, 90);
+  }
+
+  // Apply Y-axis inversion (maju-mundur) if enabled  
+  if (invertMotorY) {
+    rpmKiri = -rpmKiri;
+    rpmKanan = -rpmKanan;
+  }
+
+  // Apply individual motor inversion
+  if (invertMotorKanan) {
+    rpmKanan = -rpmKanan;
+  }
+  if (invertMotorKiri) {
+    rpmKiri = -rpmKiri;
+  }
+
+  // Kirim perintah RPM ke ESP32 motor controller
+  kirimPerintahRPM(rpmKiri, rpmKanan); // Direct RPM command
+}
+
+// =============== LEGACY PWM MOTOR CONTROL ===============
 
 void pwmMotor(int motor1, int motor2) {
   // Reset watchdog timer untuk mencegah timeout saat operasi motor intensif
