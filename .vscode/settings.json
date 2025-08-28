@@ -1,7 +1,7 @@
 {
   "files.associations": {
-    "*.embeddedhtml": "html",
     "*.dbclient-js": "javascript",
+    "*.embeddedhtml": "html",
     "array": "cpp",
     "string_view": "cpp",
     "initializer_list": "cpp",
@@ -10,6 +10,7 @@
     "vector": "cpp",
     "xhash": "cpp",
     "xstring": "cpp",
-    "xutility": "cpp"
+    "xutility": "cpp",
+    "numbers": "cpp"
   }
 }

@@ -3,7 +3,7 @@ void setupMotor() {
   setupMotorSerial(); // Panggil fungsi setup motor serial yang benar
    
   // Test komunikasi - use RPM command for stopping
-  kirimPerintahRPM(0, 0); // Stop semua motor saat startup dengan RPM command
+  sendRPM(0, 0); // Stop semua motor saat startup dengan RPM command
 }
 
 void setupMusic() {

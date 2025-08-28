@@ -30,7 +30,7 @@ void rpmMotor(int rpmKiri, int rpmKanan) {
   }
 
   // Kirim perintah RPM ke ESP32 motor controller
-  kirimPerintahRPM(rpmKiri, rpmKanan); // Direct RPM command
+  sendRPM(rpmKiri, rpmKanan); // Direct RPM command
 }
 
 // =============== LEGACY PWM MOTOR CONTROL ===============
@@ -66,5 +66,5 @@ void pwmMotor(int motor1, int motor2) {
   }
 
   // Kirim perintah ke ESP32 motor controller
-  kirimPerintahMotor(motor2, motor1); // motor2=kiri, motor1=kanan
+  sendMotorCommand(motor2, motor1); // motor2=kiri, motor1=kanan
 }

@@ -24,10 +24,7 @@ void savePIDParameters() {
   static double tempKd = pidConfig.kd;
 
   // Open preferences in write mode
-  if (!preferences.begin("pid_config", false)) {
-    Serial.println("ERROR: Failed to open preferences for writing");
-    return;
-  }
+  preferences.begin("pid_config", false);
   
   delay(50);
   
@@ -42,29 +39,6 @@ void savePIDParameters() {
   tempKp = pidConfig.kp;
   tempKi = pidConfig.ki;
   tempKd = pidConfig.kd;
-}
-
-void resetPIDParameters() {
-  // Reset to default values - harus konsisten dengan default di loadPIDParameters
-  const double DEFAULT_KP = 1.0;
-  const double DEFAULT_KI = 0.15;
-  const double DEFAULT_KD = 0.0;
-  
-  // Set nilai default
-  pidConfig.kp = DEFAULT_KP;
-  pidConfig.ki = DEFAULT_KI;
-  pidConfig.kd = DEFAULT_KD;
-  
-  // Save default values
-  savePIDParameters();
-  
-  // Debug output
-  Serial.println("PID Parameters reset to defaults:");
-  Serial.printf("  Kp: %.4f, Ki: %.4f, Kd: %.4f\n", 
-                pidConfig.kp, pidConfig.ki, pidConfig.kd);
-                
-  // Kirim konfirmasi ke AGV SAMI bahwa nilai telah direset
-  Serial1.println("PIDVALUES:" + String(pidConfig.kp, 3) + "," + 
-                 String(pidConfig.ki, 3) + "," + String(pidConfig.kd, 3));
-  Serial.println("Reset PID values sent to master via Serial1");
+  Serial.println("PID Parameters saved to flash:" + String(tempKp, 4) + "," + String(tempKi, 4) + "," + String(tempKd, 4));
+  Serial.println("PIDVALUES:" + String(pidConfig.kp, 3) + "," + String(pidConfig.ki, 3) + "," + String(pidConfig.kd, 3));
 }

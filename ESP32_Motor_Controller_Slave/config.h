@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <Preferences.h>
+#include <esp_task_wdt.h>
 
 // Pin Motor 1
 #define MOTOR1_D1   4
@@ -149,7 +150,6 @@ void logError(int errorCode, const char* message);
 void rpmMotor(int rpm1, int rpm2);  // PID RPM function
 void loadPIDParameters();           // Load PID from preferences
 void savePIDParameters();           // Save PID to preferences
-void resetPIDParameters();          // Reset PID to defaults
 void handleSerialCommand(String command);  // Handle serial commands
 void printHelp();                   // Print help information
 void stopAllMotors();              // Stop all motors

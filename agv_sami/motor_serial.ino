@@ -11,7 +11,7 @@ void setupMotorSerial() {
 
 // =============== NEW RPM-BASED FUNCTIONS ===============
 
-void kirimPerintahRPM(int rpmKiri, int rpmKanan) {
+void sendRPM(int rpmKiri, int rpmKanan) {
   // Batasi RPM dalam range yang aman (10-90)
   rpmKiri = constrain(rpmKiri, -90, 90);
   rpmKanan = constrain(rpmKanan, -90, 90);
@@ -23,7 +23,7 @@ void kirimPerintahRPM(int rpmKiri, int rpmKanan) {
 // =============== ESSENTIAL LEGACY PWM SUPPORT ===============
 // Only keep essential functions for AGV operations compatibility
 
-void kirimPerintahMotor(int speedKiri, int speedKanan) {
+void sendMotorCommand(int speedKiri, int speedKanan) {
   speedKiri = constrain(speedKiri, -4095, 4095);
   speedKanan = constrain(speedKanan, -4095, 4095);
   
@@ -33,7 +33,7 @@ void kirimPerintahMotor(int speedKiri, int speedKanan) {
 
 // Essential stop function for error handling
 void motorStop() {
-  kirimPerintahRPM(0, 0);  // Use RPM stop command instead of PWM
+  sendRPM(0, 0);  // Use RPM stop command instead of PWM
 }
 
 void handleMotorControllerSerial() {

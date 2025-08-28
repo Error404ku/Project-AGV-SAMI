@@ -1,26 +1,27 @@
 void serialEvent() {
-  while (Serial1.available()) {  // Ubah kembali ke Serial untuk komunikasi dengan Master
+  // Batasi jumlah karakter yang dibaca setiap loop untuk mencegah WDT reset.
+  int maxCharsPerLoop = 64;
+  int charsRead = 0;
+
+  while (Serial1.available() && charsRead < maxCharsPerLoop) {
     char inChar = (char)Serial1.read();
-    
+    charsRead++;
+
     if (inChar == '\n') {
       stringComplete = true;
+      break; // Keluar dari loop setelah menemukan newline
     } else {
       inputString += inChar;
     }
   }
+
+  // Reset watchdog timer jika ada aktivitas serial untuk mencegah timeout.
+  if (charsRead > 0) {
+    esp_task_wdt_reset();
+  }
 }
 
 void processCommand(String command) {
-  // Handle different types of commands
-  handleSerialCommand(command);
-}
-
-void handleSerialCommand(String command) {
-  command.trim();  // Remove whitespace
-  command.toUpperCase();  // Convert to uppercase for consistency
-  
-  Serial.println("Received command: " + command);  // Debug message stays on Serial
-  
   if (command.startsWith("PID")) {  // TERAKHIR untuk set nilai PID
     String params = command.substring(3); // harus "PID<kp>,<ki>,<kd>" tanpa ':'
     int firstComma = params.indexOf(',');
@@ -52,7 +53,6 @@ void handleSerialCommand(String command) {
       }
 
     }
-
   } else if (command.startsWith("RPM")) {
     // RPM Motor command: RPM30,25 (kanan, kiri)
     String params = command.substring(3);
@@ -61,10 +61,6 @@ void handleSerialCommand(String command) {
     if (commaPos > 0) {
       int rpm1 = params.substring(0, commaPos).toInt();
       int rpm2 = params.substring(commaPos + 1).toInt();
-      
-      Serial.printf("RPM Command - Kanan: %d, Kiri: %d\n", rpm1, rpm2);  // Debug
-      Serial.printf("Using PID - Kp: %.4f, Ki: %.4f, Kd: %.4f\n", 
-                    pidConfig.kp, pidConfig.ki, pidConfig.kd);  // Debug
       rpmMotor(rpm1, rpm2);  // Response to Master
     }
     
@@ -73,9 +69,6 @@ void handleSerialCommand(String command) {
     Serial1.println("PIDVALUES:" + String(pidConfig.kp, 3) + "," + String(pidConfig.ki, 3) + "," + String(pidConfig.kd, 3));
     Serial.println("PID values sent to master via Serial1");  // Debug message
     
-  } else if (command.startsWith("PIDRESET") || command.startsWith("PR")) {
-    // Reset PID to defaults (PR = shortcut)
-    resetPIDParameters();    
   } else if (command.startsWith("STOP") || command.startsWith("S")) {
     // Emergency stop (S = shortcut)
     stopAllMotors();
