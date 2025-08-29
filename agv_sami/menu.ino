@@ -1019,16 +1019,16 @@ void handleMotorTestRPM() {
       sendRPM(0, 0);  // Use RPM command
       break;
     case 1:  // FORWARD
-      sendRPM(testMotorRpm, testMotorRpm);  // Both motors forward
+      sendRPM(maxMotorRpm, maxMotorRpm);  // Both motors forward
       break;
-    case 2:  // BACKWARD  
-      sendRPM(-testMotorRpm, -testMotorRpm);  // Both motors backward
+    case 2:  // BACKWARD
+      sendRPM(-maxMotorRpm, -maxMotorRpm);  // Both motors backward
       break;
     case 3:  // LEFT
-      sendRPM(-testMotorRpm, testMotorRpm);  // Left motor backward, right forward
+      sendRPM(-maxMotorRpm, maxMotorRpm);  // Left motor backward, right forward
       break;
     case 4:  // RIGHT
-      sendRPM(testMotorRpm, -testMotorRpm);  // Left motor forward, right backward
+      sendRPM(maxMotorRpm, -maxMotorRpm);  // Left motor forward, right backward
       break;
   }
 }
@@ -4011,7 +4011,7 @@ void handlePidRpmSetting() {
     lcd.setCursor(0, 3);
     lcd.print("Kd:" + String(motorPidKd, 3));
     delay(1000);
-    menuNeedsRefresh = true;
+    // menuNeedsRefresh = true;
     
     // Back to Motor Settings menu
     currentMenu = MENU_MOTOR_SETTINGS;
