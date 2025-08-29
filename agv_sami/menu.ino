@@ -1960,10 +1960,9 @@ void displayRfidSettings() {
 }
 
 void displayMotorSettings() {
-  static bool needsRefresh = true;
   static int lastSelectedItem = -1;
   
-  if (needsRefresh || selectedItem != lastSelectedItem) {
+  if (menuNeedsRefresh || selectedItem != lastSelectedItem) {
     lcd.clear();
     displayMenuHeader("Motor Settings:");
     
@@ -1980,7 +1979,7 @@ void displayMotorSettings() {
     
     displayMenuFooter("A:OK B:Back");
     
-    needsRefresh = false;
+    menuNeedsRefresh = false;
     lastSelectedItem = selectedItem;
   }
 }
@@ -2344,9 +2343,11 @@ void handleMotorSettings() {
     lcd.clear();
     switch (selectedItem) {
       case 0:  // Speed Setting
+        lcd.clear();
         currentMenu = MENU_SPEED_SETTING;
         break;
       case 1:  // PID RPM
+        lcd.clear();
         currentMenu = MENU_PID_RPM_SETTING;
         selectedItem = 0;  // Reset for PID menu
         break;
@@ -2354,8 +2355,10 @@ void handleMotorSettings() {
     menuNeedsRefresh = true;
   } else if (STOP()) {
     // Back to main menu
+    lcd.clear();
     currentMenu = MENU_MAIN;
     selectedItem = 7;  // Return to Motor Settings item
+    menuStartIndex = 0;
     menuNeedsRefresh = true;
   }
 }
@@ -3923,8 +3926,10 @@ void handleSpeedSetting() {
     preferences.end();
     
     // Back to Motor Settings menu
+    lcd.clear();
     currentMenu = MENU_MOTOR_SETTINGS;
     selectedItem = 0;
+    menuStartIndex = 0;
     menuNeedsRefresh = true;
   }
 }
@@ -4021,8 +4026,10 @@ void handlePidRpmSetting() {
     // menuNeedsRefresh = true;
     
     // Back to Motor Settings menu
+    lcd.clear();
     currentMenu = MENU_MOTOR_SETTINGS;
     selectedItem = 1;
+    menuStartIndex = 0;
     menuNeedsRefresh = true;
   }
 }
