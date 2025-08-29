@@ -199,7 +199,7 @@ void displayMainMenu() {
   String menuItems[16] = {
     "AGV Mode",           // selectedItem 0 -> MENU_AGV_MODE (1)
     "Reset AGV State",    // selectedItem 1 -> MENU_RESET_AGV_STATE (25)
-    "Motor Test",         // selectedItem 2 -> MENU_MOTOR_TEST_SUBMENU (2)
+    "Motor Test",         // selectedItem 2 -> MENU_MOTOR_TEST (2)
     "PID Settings",       // selectedItem 3 -> MENU_PID_SETTINGS (3)
     "Target Settings",    // selectedItem 4 -> MENU_TARGET_SETTINGS (4)
     "Reset Settings",     // selectedItem 5 -> MENU_RESET (5)
@@ -328,7 +328,7 @@ void handleMenu() {
             case 2:  // Motor Test
               lcd.clear();
               selectedItem = 0;  // Reset selection for submenu
-              currentMenu = MENU_MOTOR_TEST_SUBMENU; // 2 - Go to submenu
+              currentMenu = MENU_MOTOR_TEST; // 2 - Go to submenu
               menuNeedsRefresh = true;
               break;
               
@@ -863,10 +863,9 @@ void handleMenu() {
 }
 // ====== MOTOR TEST SUBMENU FUNCTIONS ======
 void displayMotorTest() {
-  static bool needsRefresh = true;
   static int lastSelectedItem = -1;
   
-  if (needsRefresh || selectedItem != lastSelectedItem) {
+  if (menuNeedsRefresh || selectedItem != lastSelectedItem) {
     lcd.clear();
     displayMenuHeader("Motor Test Mode:");
     
@@ -883,7 +882,7 @@ void displayMotorTest() {
     
     displayMenuFooter("A:Select B:Back");
     
-    needsRefresh = false;
+    menuNeedsRefresh = false;
     lastSelectedItem = selectedItem;
   }
 }
@@ -900,17 +899,21 @@ void handleMotorTest() {
     motorTestState = 0;  // Reset motor state
     switch (selectedItem) {
       case 0:  // PWM Control
+        lcd.clear();
         currentMenu = MENU_MOTOR_TEST_PWM;
         break;
       case 1:  // RPM Control
+        lcd.clear();
         currentMenu = MENU_MOTOR_TEST_RPM;
         break;
     }
     menuNeedsRefresh = true;
   } else if (STOP()) {
     // Back to main menu
+    lcd.clear();
     currentMenu = MENU_MAIN;
     selectedItem = 2;  // Return to Motor Test item
+    menuStartIndex = 0;
     menuNeedsRefresh = true;
   }
 }
@@ -948,8 +951,10 @@ void handleMotorTestPWM() {
   } else if (STOP()) {
     motorTestState = 0;  // Stop motor
     sendMotorCommand(0, 0);  // Use PWM stop command
+    lcd.clear();
     currentMenu = MENU_MOTOR_TEST;
     selectedItem = 0;  // Return to PWM selection
+    menuStartIndex = 0;
     menuNeedsRefresh = true;
     return;
   }
@@ -1007,8 +1012,10 @@ void handleMotorTestRPM() {
   } else if (STOP()) {
     motorTestState = 0;  // Stop motor
     sendRPM(0, 0);  // Use RPM stop command
+    lcd.clear();
     currentMenu = MENU_MOTOR_TEST;
     selectedItem = 1;  // Return to RPM selection
+    menuStartIndex = 0;
     menuNeedsRefresh = true;
     return;
   }
