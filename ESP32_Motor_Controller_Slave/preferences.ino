@@ -1,7 +1,7 @@
 void loadPIDParameters() {
   // Nilai default yang konsisten untuk digunakan di seluruh kode
-  const double DEFAULT_KP = 1.0;  // Konsisten dengan resetPIDParameters
-  const double DEFAULT_KI = 0.15;
+  const double DEFAULT_KP = 0.5;  // Nilai lebih konservatif
+  const double DEFAULT_KI = 0.01; // Nilai lebih konservatif
   const double DEFAULT_KD = 0.0;
   
   // Open preferences in read-only mode
@@ -14,31 +14,72 @@ void loadPIDParameters() {
   
   preferences.end();
   
+  // Batasi nilai-nilai PID untuk keamanan
+  pidConfig.kp = constrain(pidConfig.kp, 0.0, 10.0);
+  pidConfig.ki = constrain(pidConfig.ki, 0.0, 1.0);
+  pidConfig.kd = constrain(pidConfig.kd, 0.0, 1.0);
+  
   // Debug output lebih detail
   Serial.println("PID Parameters loaded from flash:" + String(pidConfig.kp, 4) + "," + String(pidConfig.ki, 4) + "," + String(pidConfig.kd, 4));
 }
 
 void savePIDParameters() {
-  static double tempKp = pidConfig.kp;
-  static double tempKi = pidConfig.ki;
-  static double tempKd = pidConfig.kd;
+  // Batasi nilai PID untuk keamanan sebelum menyimpan
+  pidConfig.kp = constrain(pidConfig.kp, 0.0, 10.0);
+  pidConfig.ki = constrain(pidConfig.ki, 0.0, 1.0);
+  pidConfig.kd = constrain(pidConfig.kd, 0.0, 1.0);
 
   // Open preferences in write mode
   preferences.begin("pid_config", false);
   
-  delay(50);
+  delay(50); // Berikan waktu untuk flash operation
   
   // Save PID parameters
-  tempKp = preferences.putDouble("kp", tempKp);
-  tempKi = preferences.putDouble("ki", tempKi);
-  tempKd = preferences.putDouble("kd", tempKd);
+  preferences.putDouble("kp", pidConfig.kp);
+  preferences.putDouble("ki", pidConfig.ki);
+  preferences.putDouble("kd", pidConfig.kd);
 
   // Flush untuk memastikan data ditulis ke flash
   preferences.end();
 
-  tempKp = pidConfig.kp;
-  tempKi = pidConfig.ki;
-  tempKd = pidConfig.kd;
-  Serial.println("PID Parameters saved to flash:" + String(tempKp, 4) + "," + String(tempKi, 4) + "," + String(tempKd, 4));
+  Serial.println("PID Parameters saved to flash:" + String(pidConfig.kp, 4) + "," + String(pidConfig.ki, 4) + "," + String(pidConfig.kd, 4));
   Serial.println("PIDVALUES:" + String(pidConfig.kp, 3) + "," + String(pidConfig.ki, 3) + "," + String(pidConfig.kd, 3));
+}
+
+// Fungsi untuk reset PID parameters ke nilai default
+void resetPIDParameters() {
+  // Reset PID parameters dengan nilai konservatif yang lebih aman
+  pidConfig.kp = 0.5;  // Nilai lebih kecil untuk kp
+  pidConfig.ki = 0.01; // Nilai lebih kecil untuk ki
+  pidConfig.kd = 0.0;  // Biasanya kd tidak dibutuhkan untuk kontrol motor sederhana
+  
+  // Save ke flash memory
+  savePIDParameters();
+  
+  Serial.println("PID Parameters reset to default values");
+  Serial.println("KP: " + String(pidConfig.kp, 4) + 
+                 ", KI: " + String(pidConfig.ki, 4) + 
+                 ", KD: " + String(pidConfig.kd, 4));
+}
+
+// Fungsi untuk reset spesifik PID controller
+void resetPID(int index) {
+  if (index >= 0 && index < numOutputs) {
+    pidData[index].error = 0;
+    pidData[index].integral = 0;
+    pidData[index].previousError = 0;
+    pidData[index].derivative = 0;
+    Serial.printf("Reset PID controller %d\n", index);
+  }
+}
+
+// Fungsi untuk kirim PID parameters ke master ESP32
+void sendPIDToMaster() {
+  // Format string: CMD:PID:KP:KI:KD
+  String pidString = "CMD:PID:" + String(pidConfig.kp, 4) + ":" + 
+                    String(pidConfig.ki, 4) + ":" + String(pidConfig.kd, 4);
+  
+  // Kirim ke master
+  Serial1.println(pidString);
+  Serial.println("Sent PID to master: " + pidString);
 }

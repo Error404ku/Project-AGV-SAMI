@@ -29,6 +29,10 @@ void pembacaan_RPM() {
     // Perhitungan RPM: (pulses * 60000) / (interval_ms * pulses_per_rotation)
     rpm_depan_kanan = (float)(tempEncKanan * 60000) / (intervalrpm * perRotasi);
     rpm_depan_kiri = (float)(tempEncKiri * 60000) / (intervalrpm * perRotasi);
+    
+    // Filter noise - set nilai sangat kecil ke 0
+    if (fabs(rpm_depan_kanan) < 0.1) rpm_depan_kanan = 0.0;
+    if (fabs(rpm_depan_kiri) < 0.1) rpm_depan_kiri = 0.0;
 
     // Debug output yang muncul setiap 1 detik
     Serial.print("Encoder - Kanan: "); Serial.print(tempEncKanan);

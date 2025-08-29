@@ -11,6 +11,7 @@ void setupMotorSerial() {
 
 // =============== NEW RPM-BASED FUNCTIONS ===============
 
+
 void sendRPM(int rpmKiri, int rpmKanan) {
   // Batasi RPM dalam range yang aman (10-90)
   rpmKiri = constrain(rpmKiri, -90, 90);
@@ -134,6 +135,7 @@ void processMotorControllerMessage(String message) {
       // Update current RPM values
       currentRpmKanan = rpmKanan;
       currentRpmKiri = rpmKiri;
+    }
   }
 }
 

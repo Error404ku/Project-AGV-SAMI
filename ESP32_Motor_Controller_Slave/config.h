@@ -25,8 +25,8 @@
 #define PWM_CHANNEL_1 0
 #define PWM_CHANNEL_2 1
 
-#define EncoderKananPin 39 //45
-#define EncoderKiriPin 37
+#define EncoderKananPin 37 //45
+#define EncoderKiriPin 39
 
 // Variables declarations (defined in main .ino file)
 extern String inputString;
@@ -63,8 +63,8 @@ extern const unsigned long intervalrpm;
 #define PWM_CHANNEL_1 0
 #define PWM_CHANNEL_2 1
 
-#define EncoderKananPin 39 //45
-#define EncoderKiriPin 37
+#define EncoderKananPin 37//45
+#define EncoderKiriPin 39
 
 // Variables declarations (defined in main .ino file)
 extern String inputString;
@@ -99,10 +99,13 @@ struct PIDData {
 };
 
 // PID Configuration
-#define numOutputs 2  // Number of PID controllers (for 2 motors) // Preferences object
+#define numOutputs 2  // Number of PID controllers (for 2 motors: kanan dan kiri)
 
 // Error Codes
 #define ERROR_PID_CALCULATION 1001
+#define ERROR_OVERFLOW 1002
+#define ERROR_INVALID_INPUT 1003
+#define ERROR_INVALID_OUTPUT 1004
 
 // RPM Configuration
 #define minrpm 0
@@ -146,8 +149,7 @@ extern int leftSpeed;
 extern int rightSpeed;
 
 // Function declarations
-void logError(int errorCode, const char* message);
-void rpmMotor(int rpm1, int rpm2);  // PID RPM function
+void logError(int errorCode, const char* message); // PID RPM function
 void loadPIDParameters();           // Load PID from preferences
 void savePIDParameters();           // Save PID to preferences
 void handleSerialCommand(String command);  // Handle serial commands

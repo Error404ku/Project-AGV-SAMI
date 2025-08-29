@@ -963,19 +963,19 @@ void handleMotorTestPWM() {
   // Execute continuous motor movement based on state - PWM mode
   switch (motorTestState) {
     case 0:  // STOP
-      sendMotorCommand(0, 0);  // Use PWM command
+      pwmMotor(0, 0);  // Use PWM command
       break;
     case 1:  // FORWARD
-      sendMotorCommand(testMotorSpeed, testMotorSpeed);  // Both motors forward
+      pwmMotor(-testMotorSpeed, testMotorSpeed);  // Both motors forward
       break;
     case 2:  // BACKWARD  
-      sendMotorCommand(-testMotorSpeed, -testMotorSpeed);  // Both motors backward
+      pwmMotor(testMotorSpeed, -testMotorSpeed);  // Both motors backward
       break;
     case 3:  // LEFT
-      sendMotorCommand(-testMotorSpeed, testMotorSpeed);  // Left motor backward, right forward
+      pwmMotor(testMotorSpeed, testMotorSpeed);  // Left motor backward, right forward
       break;
     case 4:  // RIGHT
-      sendMotorCommand(testMotorSpeed, -testMotorSpeed);  // Left motor forward, right backward
+      pwmMotor(-testMotorSpeed, -testMotorSpeed);  // Left motor forward, right backward
       break;
   }
 }
@@ -1019,19 +1019,19 @@ void handleMotorTestRPM() {
   // Execute continuous motor movement based on state - RPM mode
   switch (motorTestState) {
     case 0:  // STOP
-      sendRPM(0, 0);  // Use RPM command
+      rpmMotor(0, 0);  // Use RPM command
       break;
     case 1:  // FORWARD
-      sendRPM(maxMotorRpm, maxMotorRpm);  // Both motors forward
+      rpmMotor(-maxMotorRpm, maxMotorRpm);  // Both motors forward
       break;
     case 2:  // BACKWARD
-      sendRPM(-maxMotorRpm, -maxMotorRpm);  // Both motors backward
+      rpmMotor(maxMotorRpm, maxMotorRpm);  // Both motors backward
       break;
     case 3:  // LEFT
-      sendRPM(-maxMotorRpm, maxMotorRpm);  // Left motor backward, right forward
+      rpmMotor(maxMotorRpm, maxMotorRpm);  // Left motor backward, right forward
       break;
     case 4:  // RIGHT
-      sendRPM(maxMotorRpm, -maxMotorRpm);  // Left motor forward, right backward
+      rpmMotor(-maxMotorRpm, -maxMotorRpm);  // Left motor forward, right backward
       break;
   }
 }

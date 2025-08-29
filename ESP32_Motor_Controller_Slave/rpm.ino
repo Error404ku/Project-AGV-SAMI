@@ -1,9 +1,9 @@
 
 // PID RPM Control Function untuk 2 motor
-void rpmMotor(int rpm1, int rpm2) {
+void rpmMotor(float rpm1, float rpm2) {
   // Gunakan PID parameters dari preferences
-  double kp = pidConfig.kp;
-  double ki = pidConfig.ki; 
+  double kp = 0;
+  double ki = 20; 
   double kd = pidConfig.kd;
   
   // Hitung integral limits berdasarkan Ki
@@ -15,7 +15,6 @@ void rpmMotor(int rpm1, int rpm2) {
   rpm2 = constrain(rpm2, -maxrpm, maxrpm);
   
   // Debug output
-  Serial.printf("Target RPM - Kanan: %d, Kiri: %d\n", rpm1, rpm2);
   
   // ===== MOTOR KANAN (Motor 1) PID Control =====
   if (rpm1 > 0) {
@@ -56,6 +55,20 @@ void rpmMotor(int rpm1, int rpm2) {
   }
   
   // Apply PWM values to motors
+  Serial.printf("Error RPM (double) - Kanan: %.2f, Kiri: %.2f\n", pidData[0].error, pidData[1].error);
+  
+  // Reset PID jika nilai error terlalu besar - nilai threshold lebih ketat
+  if (fabs(pidData[0].error) > 50.0 || fabs(pidData[1].error) > 50.0) {
+    pidData[0].integral = 0;
+    pidData[1].integral = 0;
+    // Jangan reset error value, biar PID masih bisa bereaksi
+    Serial.println("WARNING: Error besar, mereset PID integral");
+  }
+  
+  // Validasi akhir PWM output
+  pwmKanan = constrain(pwmKanan, pwm_min, pwm_max);
+  pwmKiri = constrain(pwmKiri, pwm_min, pwm_max);
+  
   setMotorSpeed(1, pwmKanan);  // Motor 1 = Kanan
   setMotorSpeed(2, pwmKiri);   // Motor 2 = Kiri
 }
@@ -63,7 +76,7 @@ void rpmMotor(int rpm1, int rpm2) {
 // Helper function untuk set target RPM dengan validasi
 void setTargetRPM(int rpmKanan, int rpmKiri) {
   // Validasi input RPM
-  rpmKanan = constrain(rpmKanan, -maxrpm, maxrpm);  // *2 karena akan dibagi 2 di rpmMotor
+  rpmKanan = constrain(rpmKanan, -maxrpm, maxrpm);
   rpmKiri = constrain(rpmKiri, -maxrpm, maxrpm);
   
   // Panggil PID RPM control

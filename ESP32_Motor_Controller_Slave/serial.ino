@@ -56,6 +56,10 @@ void processCommand(String command) {
       }
 
     }
+  } else if(command.startsWith("RPMSHOW") || command.startsWith("RS")) {
+    // Show current motor speeds in sendMotorStatusToMaster format (RS = shortcut)
+    Serial1.println("RPMSHOW:" + String(rpm_depan_kanan, 1) + "," + String(rpm_depan_kiri, 1));
+    Serial.println("RPM values sent to master via Serial1");  // Debug message
   } else if (command.startsWith("RPM")) {
     // RPM Motor command: RPM30,25 (kanan, kiri)
     String params = command.substring(3);
@@ -68,16 +72,12 @@ void processCommand(String command) {
       Serial.printf("RPM Command Received - Kanan: %d RPM, Kiri: %d RPM\n", rpmKanan, rpmKiri);
       
       // Gunakan fungsi setMotorSpeedRPM untuk kontrol yang konsisten
-      setTargetRPM(rpmKanan, rpmKiri);  
+      rpmMotor(rpmKanan, rpmKiri);  
     } else {
       Serial.println("ERROR: Invalid RPM command format! Use RPM<kanan>,<kiri>");
       Serial1.println("ERROR:INVALID_RPM_CMD");
     }
 
-  }else if(command.startsWith("RPMSHOW") || command.startsWith("RS")) {
-    // Show current motor speeds in sendMotorStatusToMaster format (RS = shortcut)
-    Serial1.println("RPMSHOW:" + String(rpm_depan_kanan) + "," + String(rpm_depan_kiri));
-    Serial.println("RPM values sent to master via Serial1");  // Debug message
   }else if (command.startsWith("PIDSHOW") || command.startsWith("PS")) {
     // Show current PID parameters in sendPIDToMaster format (PS = shortcut)
     Serial1.println("PIDVALUES:" + String(pidConfig.kp, 3) + "," + String(pidConfig.ki, 3) + "," + String(pidConfig.kd, 3));
@@ -138,8 +138,9 @@ bool parseCommand(String command, int &leftSpeed, int &rightSpeed) {
   return true;
 }
 
+// Commented out to avoid duplication with preferences.ino
 // Function to send current PID parameters to AGV_SAMI on startup
-void sendPIDToMaster() {
-  Serial1.println("PIDVALUES:" + String(pidConfig.kp, 3) + "," + String(pidConfig.ki, 3) + "," + String(pidConfig.kd, 3));
-  Serial.println("PID values sent to master via Serial1");  // Debug message
-}
+// void sendPIDToMaster() {
+//   Serial1.println("PIDVALUES:" + String(pidConfig.kp, 3) + "," + String(pidConfig.ki, 3) + "," + String(pidConfig.kd, 3));
+//   Serial.println("PID values sent to master via Serial1");  // Debug message
+// }

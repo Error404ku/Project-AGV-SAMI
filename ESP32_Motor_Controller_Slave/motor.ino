@@ -22,17 +22,17 @@ void setMotorSpeed(int motor, int speed) {
     // Forward direction
     digitalWrite(d1Pin, HIGH);
     digitalWrite(d2Pin, LOW);
-    ledcWrite(pwmPin, pwmValue);
+    analogWrite(pwmPin, pwmValue);
   } else if (speed < 0) {
     // Reverse direction
     digitalWrite(d1Pin, LOW);
     digitalWrite(d2Pin, HIGH);
-    ledcWrite(pwmPin, pwmValue);
+    analogWrite(pwmPin, pwmValue);
   } else {
     // Stop motor
     digitalWrite(d1Pin, LOW);
     digitalWrite(d2Pin, LOW);
-    ledcWrite(pwmPin, 0);
+    analogWrite(pwmPin, 0);
   }
 }
 
