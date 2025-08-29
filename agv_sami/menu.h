@@ -7,7 +7,7 @@
 
 // Menu states
 #define MENU_MAIN 0
-#define MENU_MOTOR_TEST_SUBMENU 2  // Motor Test changed to submenu
+#define MENU_MOTOR_TEST 2  // Motor Test changed to submenu
 #define MENU_PID_SETTINGS 3
 #define MENU_TARGET_SETTINGS 4
 #define MENU_AGV_MODE 1

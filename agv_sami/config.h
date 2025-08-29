@@ -268,6 +268,10 @@ double tempMotorPidKp = 1.0;    // Temporary Kp for menu editing
 double tempMotorPidKi = 0.15;   // Temporary Ki for menu editing
 double tempMotorPidKd = 0.0;    // Temporary Kd for menu editing
 
+// Current RPM values received from motor controller
+float currentRpmKanan = 0.0;    // Current actual RPM of right motor
+float currentRpmKiri = 0.0;     // Current actual RPM of left motor
+
 // Motor Test Settings
 int testMotorRpm = 30;          // Default RPM for motor testing (safe speed)
 int testMotorSpeed = 500;       // Default PWM speed for motor testing (safe speed)
@@ -763,6 +767,7 @@ void handleMotorControllerSerial();
 void sendPidValues(double kp, double ki, double kd);
 void requestPidDataFromSlave();
 bool checkSystemReadyStatus();
+void requestRpmDataFromSlave();
 
 // Button functions
 bool START();

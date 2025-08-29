@@ -294,7 +294,7 @@ void handleMenu() {
   switch (currentMenu) {
     case MENU_MAIN:
       displayMainMenu();
-      rpmMotor(0,0);  // Use RPM stop command
+      motorStop();  // Use RPM stop command
       stopMusic();
       digitalWrite(lampPin, HIGH);
       if (currentMillis - lastButtonPress >= buttonDelay) {
@@ -328,7 +328,7 @@ void handleMenu() {
             case 2:  // Motor Test
               lcd.clear();
               selectedItem = 0;  // Reset selection for submenu
-              currentMenu = MENU_MOTOR_TEST_SUBMENU; // 2 - Go to submenu
+              currentMenu = MENU_MOTOR_TEST; // 2 - Go to submenu
               menuNeedsRefresh = true;
               break;
               
@@ -442,6 +442,7 @@ void handleMenu() {
       break;
 
     case MENU_MOTOR_TEST_RPM:
+      requestRpmDataFromSlave();
       displayMotorTestRPM();
       handleMotorTestRPM();
       break;
@@ -982,16 +983,11 @@ void displayMotorTestRPM() {
   lcd.setCursor(0, 2);
   lcd.print("LF:Kiri RT:Kanan");
   lcd.setCursor(0, 3);
-
+  lcd.print("R: ");
+  lcd.print(currentRpmKanan);
+  lcd.print(", L: ");
+  lcd.print(currentRpmKiri);
   // Show current motor state with RPM info
-  switch (motorTestState) {
-    case 0: lcd.print("Status: STOP    "); break;
-    case 1: lcd.print("Status: MAJU " + String(testMotorRpm) + "R"); break;
-    case 2: lcd.print("Status: MNDR " + String(testMotorRpm) + "R"); break;  
-    case 3: lcd.print("Status: KIRI " + String(testMotorRpm) + "R"); break;
-    case 4: lcd.print("Status: KNAN " + String(testMotorRpm) + "R"); break;
-  }
-
   displayMenuFooter("B:Back");
 }
 

@@ -73,8 +73,12 @@ void processCommand(String command) {
       Serial.println("ERROR: Invalid RPM command format! Use RPM<kanan>,<kiri>");
       Serial1.println("ERROR:INVALID_RPM_CMD");
     }
-    
-  } else if (command.startsWith("PIDSHOW") || command.startsWith("PS")) {
+
+  }else if(command.startsWith("RPMSHOW") || command.startsWith("RS")) {
+    // Show current motor speeds in sendMotorStatusToMaster format (RS = shortcut)
+    Serial1.println("RPMSHOW:" + String(rpm_depan_kanan) + "," + String(rpm_depan_kiri));
+    Serial.println("RPM values sent to master via Serial1");  // Debug message
+  }else if (command.startsWith("PIDSHOW") || command.startsWith("PS")) {
     // Show current PID parameters in sendPIDToMaster format (PS = shortcut)
     Serial1.println("PIDVALUES:" + String(pidConfig.kp, 3) + "," + String(pidConfig.ki, 3) + "," + String(pidConfig.kd, 3));
     Serial.println("PID values sent to master via Serial1");  // Debug message
@@ -87,8 +91,6 @@ void processCommand(String command) {
     pidData[0].error = 0;
     pidData[1].integral = 0;
     pidData[1].error = 0;
-  
-  // Motor With PWM
   } else if (command.startsWith("L") && command.indexOf("R") > 0) {
     // Motor command format L<val>R<val> (dari sendMotorCommand atau manual input)
     // Contoh: L100R-50, L0R0, L-200R300

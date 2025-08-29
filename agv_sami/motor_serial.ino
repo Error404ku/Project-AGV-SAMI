@@ -33,7 +33,7 @@ void sendMotorCommand(int speedKiri, int speedKanan) {
 
 // Essential stop function for error handling
 void motorStop() {
-  sendRPM(0, 0);  // Use RPM stop command instead of PWM
+  pwmMotor(0,0);  // Use RPM stop command instead of PWM
 }
 
 void handleMotorControllerSerial() {
@@ -123,6 +123,23 @@ void processMotorControllerMessage(String message) {
       lcd.print("System Ready");
       delay(1000);
     }
+  }else if (message.startsWith("RPMSHOW")) {
+    String rpmData = message.substring(8); // Remove "RPMSHOW:"
+    
+    int commaPos = rpmData.indexOf(',');
+    if (commaPos > 0) {
+      float rpmKanan = rpmData.substring(0, commaPos).toFloat();
+      float rpmKiri = rpmData.substring(commaPos + 1).toFloat();
+      
+      // Update current RPM values (gunakan variabel yang sesuai)
+      currentRpmKanan = rpmKanan;
+      currentRpmKiri = rpmKiri;
+      
+      // Optional: Display current RPM on Serial Monitor for debugging
+      Serial.printf("Current RPM - Kanan: %.2f, Kiri: %.2f\n", currentRpmKanan, currentRpmKiri);
+    } else {
+      Serial.println("ERROR: Invalid RPMSHOW data format");
+    }
   }
 }
 
@@ -184,3 +201,10 @@ bool checkSystemReadyStatus() {
   
   return false;
 }
+
+// Fungsi untuk meminta data RPM current dari motor controller slave
+void requestRpmDataFromSlave() {
+  // Kirim perintah RPMSHOW ke motor controller
+  Serial.println("RPMSHOW");
+}
+
