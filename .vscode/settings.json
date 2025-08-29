@@ -11,6 +11,10 @@
     "xhash": "cpp",
     "xstring": "cpp",
     "xutility": "cpp",
-    "numbers": "cpp"
+    "numbers": "cpp",
+    "deque": "cpp",
+    "string": "cpp",
+    "unordered_map": "cpp",
+    "system_error": "cpp"
   }
 }
