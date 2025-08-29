@@ -22,6 +22,9 @@ void serialEvent() {
 }
 
 void processCommand(String command) {
+  command.trim();  // Remove whitespace
+  Serial.println("Received command: " + command);  // Debug message
+  
   if (command.startsWith("PID")) {  // TERAKHIR untuk set nilai PID
     String params = command.substring(3); // harus "PID<kp>,<ki>,<kd>" tanpa ':'
     int firstComma = params.indexOf(',');
@@ -59,9 +62,16 @@ void processCommand(String command) {
     int commaPos = params.indexOf(',');
     
     if (commaPos > 0) {
-      int rpm1 = params.substring(0, commaPos).toInt();
-      int rpm2 = params.substring(commaPos + 1).toInt();
-      rpmMotor(rpm1, rpm2);  // Response to Master
+      int rpmKanan = params.substring(0, commaPos).toInt();
+      int rpmKiri = params.substring(commaPos + 1).toInt();
+      
+      Serial.printf("RPM Command Received - Kanan: %d RPM, Kiri: %d RPM\n", rpmKanan, rpmKiri);
+      
+      // Gunakan fungsi setMotorSpeedRPM untuk kontrol yang konsisten
+      setTargetRPM(rpmKanan, rpmKiri);  
+    } else {
+      Serial.println("ERROR: Invalid RPM command format! Use RPM<kanan>,<kiri>");
+      Serial1.println("ERROR:INVALID_RPM_CMD");
     }
     
   } else if (command.startsWith("PIDSHOW") || command.startsWith("PS")) {
@@ -76,20 +86,30 @@ void processCommand(String command) {
     pidData[0].integral = 0;
     pidData[0].error = 0;
     pidData[1].integral = 0;
-    pidData[1].error = 0;    
-  } else if (parseCommand(command, leftSpeed, rightSpeed)) {
-    // Legacy motor command format L<val>R<val>
-    setMotorSpeed(1, leftSpeed);   // Motor kiri
-    setMotorSpeed(2, rightSpeed);  // Motor kanan
-    Serial.printf("Direct PWM Control - Left: %d, Right: %d\n", leftSpeed, rightSpeed);
-    
-  } else {
-    stopAllMotors();
-    // Reset PID integrals
-    pidData[0].integral = 0;
-    pidData[0].error = 0;
-    pidData[1].integral = 0;
     pidData[1].error = 0;
+  
+  // Motor With PWM
+  } else if (command.startsWith("L") && command.indexOf("R") > 0) {
+    // Motor command format L<val>R<val> (dari sendMotorCommand atau manual input)
+    // Contoh: L100R-50, L0R0, L-200R300
+    if (parseCommand(command, leftSpeed, rightSpeed)) {
+      setMotorSpeed(1, leftSpeed);   // Motor kiri
+      setMotorSpeed(2, rightSpeed);  // Motor kanan
+      Serial.printf("Motor Command Received - Left: %d, Right: %d\n", leftSpeed, rightSpeed);
+      
+      // Kirim konfirmasi kembali ke master
+      Serial1.println("MOTOR_SET:L" + String(leftSpeed) + "R" + String(rightSpeed));
+    } else {
+      Serial.println("ERROR: Invalid motor command format!");
+      Serial1.println("ERROR:INVALID_MOTOR_CMD");
+    }
+  } else {
+    // stopAllMotors();
+    // // Reset PID integrals
+    // pidData[0].integral = 0;
+    // pidData[0].error = 0;
+    // pidData[1].integral = 0;
+    // pidData[1].error = 0;
   }
 }
 

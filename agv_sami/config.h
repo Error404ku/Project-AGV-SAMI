@@ -268,8 +268,9 @@ double tempMotorPidKp = 1.0;    // Temporary Kp for menu editing
 double tempMotorPidKi = 0.15;   // Temporary Ki for menu editing
 double tempMotorPidKd = 0.0;    // Temporary Kd for menu editing
 
-// Motor Test RPM Settings
+// Motor Test Settings
 int testMotorRpm = 30;          // Default RPM for motor testing (safe speed)
+int testMotorSpeed = 500;       // Default PWM speed for motor testing (safe speed)
 
 // Target settings
 bool useAutoTarget = false;         // New variable to track target source

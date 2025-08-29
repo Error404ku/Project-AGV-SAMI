@@ -7,7 +7,7 @@
 
 // Menu states
 #define MENU_MAIN 0
-#define MENU_MOTOR_TEST 2
+#define MENU_MOTOR_TEST_SUBMENU 2  // Motor Test changed to submenu
 #define MENU_PID_SETTINGS 3
 #define MENU_TARGET_SETTINGS 4
 #define MENU_AGV_MODE 1
@@ -41,6 +41,10 @@
 #define MENU_SPEED_SETTING 46
 #define MENU_PID_RPM_SETTING 47
 
+// Motor Test Sub Menu (MENU_MOTOR_TEST is now 2, defined above)
+#define MENU_MOTOR_TEST_PWM 49
+#define MENU_MOTOR_TEST_RPM 50
+
 // External variables from other files
 extern int targetStation[2];
 // extern int targetStationFromKomputer[]; // Removed - not used
@@ -60,11 +64,11 @@ extern bool isAgvMode;
 void setupMenu();
 void handleMenu();
 void displayMainMenu();
-void displayMotorTest();
+void displayMotorTest();  // Changed from displayMotorTest to submenu
 void displayPidSettings();
 void displayTargetSettings();
 void displayWifiSettings();
-void handleMotorTest();
+void handleMotorTest();  // Changed from handleMotorTest to submenu
 void handlePidSettings();
 void handlePidSubmenu();
 
@@ -103,6 +107,12 @@ void displaySpeedSetting();
 void handleSpeedSetting();
 void displayPidRpmSetting();
 void handlePidRpmSetting();
+
+// Motor Test Sub Menu functions (displayMotorTest and handleMotorTest declared above)
+void displayMotorTestPWM();
+void handleMotorTestPWM();
+void displayMotorTestRPM();
+void handleMotorTestRPM();
 
 // RFID functions that were missing declarations
 String getRfidForStation(int stationId);

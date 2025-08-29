@@ -1,18 +1,6 @@
 #include "menu.h"
 
-// Menu states - Synchronized with menu.h
-#define MENU_MAIN 0
-#define MENU_AGV_MODE 1
-#define MENU_MOTOR_TEST 2
-#define MENU_PID_SETTINGS 3
-#define MENU_TARGET_SETTINGS 4
-#define MENU_RESET 5
-#define MENU_RFID_SETTINGS 6
-#define MENU_WIFI_SETTINGS 14
-#define MENU_MOTOR_SETTINGS 18
-#define MENU_MOTOR_INVERT 19
-#define MENU_MUSIC_SETTINGS 20
-#define MENU_MUSIC_TEST 21
+// Using menu.h definitions only - removed duplicates
 #define MENU_MUSIC_ON 40
 #define MENU_MUSIC_OBSTACLE 41
 #define MENU_MUSIC_STATION 42
@@ -211,7 +199,7 @@ void displayMainMenu() {
   String menuItems[16] = {
     "AGV Mode",           // selectedItem 0 -> MENU_AGV_MODE (1)
     "Reset AGV State",    // selectedItem 1 -> MENU_RESET_AGV_STATE (25)
-    "Motor Test",         // selectedItem 2 -> MENU_MOTOR_TEST (2)
+    "Motor Test",         // selectedItem 2 -> MENU_MOTOR_TEST_SUBMENU (2)
     "PID Settings",       // selectedItem 3 -> MENU_PID_SETTINGS (3)
     "Target Settings",    // selectedItem 4 -> MENU_TARGET_SETTINGS (4)
     "Reset Settings",     // selectedItem 5 -> MENU_RESET (5)
@@ -339,7 +327,8 @@ void handleMenu() {
               
             case 2:  // Motor Test
               lcd.clear();
-              currentMenu = MENU_MOTOR_TEST; // 2
+              selectedItem = 0;  // Reset selection for submenu
+              currentMenu = MENU_MOTOR_TEST_SUBMENU; // 2 - Go to submenu
               menuNeedsRefresh = true;
               break;
               
@@ -439,7 +428,22 @@ void handleMenu() {
       break;
     case MENU_MOTOR_TEST:
       displayMotorTest();
-      handleMotorTest();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleMotorTest();
+        if (UP() || DOWN() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_MOTOR_TEST_PWM:
+      displayMotorTestPWM();
+      handleMotorTestPWM();
+      break;
+
+    case MENU_MOTOR_TEST_RPM:
+      displayMotorTestRPM();
+      handleMotorTestRPM();
       break;
 
     case MENU_PID_SETTINGS:
@@ -857,7 +861,120 @@ void handleMenu() {
       
   }
 }
+// ====== MOTOR TEST SUBMENU FUNCTIONS ======
 void displayMotorTest() {
+  static bool needsRefresh = true;
+  static int lastSelectedItem = -1;
+  
+  if (needsRefresh || selectedItem != lastSelectedItem) {
+    lcd.clear();
+    displayMenuHeader("Motor Test Mode:");
+    
+    String menuItems[2] = {
+      "PWM Control",       // selectedItem 0 -> MENU_MOTOR_TEST_PWM (49)
+      "RPM Control"        // selectedItem 1 -> MENU_MOTOR_TEST_RPM (50)
+    };
+    
+    for (int i = 0; i < 2; i++) {
+      lcd.setCursor(0, i + 1);
+      displayIndicator(i, selectedItem);
+      lcd.print(menuItems[i]);
+    }
+    
+    displayMenuFooter("A:Select B:Back");
+    
+    needsRefresh = false;
+    lastSelectedItem = selectedItem;
+  }
+}
+
+void handleMotorTest() {
+  if (UP()) {
+    selectedItem = (selectedItem - 1 + 2) % 2;
+    menuNeedsRefresh = true;
+  } else if (DOWN()) {
+    selectedItem = (selectedItem + 1) % 2;
+    menuNeedsRefresh = true;
+  } else if (START()) {
+    lcd.clear();
+    motorTestState = 0;  // Reset motor state
+    switch (selectedItem) {
+      case 0:  // PWM Control
+        currentMenu = MENU_MOTOR_TEST_PWM;
+        break;
+      case 1:  // RPM Control
+        currentMenu = MENU_MOTOR_TEST_RPM;
+        break;
+    }
+    menuNeedsRefresh = true;
+  } else if (STOP()) {
+    // Back to main menu
+    currentMenu = MENU_MAIN;
+    selectedItem = 2;  // Return to Motor Test item
+    menuNeedsRefresh = true;
+  }
+}
+
+void displayMotorTestPWM() {
+  displayMenuHeader("Motor Test (PWM)");
+
+  lcd.setCursor(0, 1);
+  lcd.print("UP:Maju DOWN:Mundur");
+  lcd.setCursor(0, 2);
+  lcd.print("LF:Kiri RT:Kanan");
+  lcd.setCursor(0, 3);
+
+  // Show current motor state with PWM info
+  switch (motorTestState) {
+    case 0: lcd.print("Status: STOP    "); break;
+    case 1: lcd.print("Status: MAJU PWM"); break;
+    case 2: lcd.print("Status: MNDR PWM"); break;  
+    case 3: lcd.print("Status: KIRI PWM"); break;
+    case 4: lcd.print("Status: KNAN PWM"); break;
+  }
+
+  displayMenuFooter("B:Back");
+}
+
+void handleMotorTestPWM() {
+  if (UP()) {
+    motorTestState = 1;  // Set to forward
+  } else if (DOWN()) {
+    motorTestState = 2;  // Set to backward
+  } else if (LEFT()) {
+    motorTestState = 3;  // Set to left
+  } else if (RIGHT()) {
+    motorTestState = 4;  // Set to right
+  } else if (STOP()) {
+    motorTestState = 0;  // Stop motor
+    sendMotorCommand(0, 0);  // Use PWM stop command
+    currentMenu = MENU_MOTOR_TEST;
+    selectedItem = 0;  // Return to PWM selection
+    menuNeedsRefresh = true;
+    return;
+  }
+
+  // Execute continuous motor movement based on state - PWM mode
+  switch (motorTestState) {
+    case 0:  // STOP
+      sendMotorCommand(0, 0);  // Use PWM command
+      break;
+    case 1:  // FORWARD
+      sendMotorCommand(testMotorSpeed, testMotorSpeed);  // Both motors forward
+      break;
+    case 2:  // BACKWARD  
+      sendMotorCommand(-testMotorSpeed, -testMotorSpeed);  // Both motors backward
+      break;
+    case 3:  // LEFT
+      sendMotorCommand(-testMotorSpeed, testMotorSpeed);  // Left motor backward, right forward
+      break;
+    case 4:  // RIGHT
+      sendMotorCommand(testMotorSpeed, -testMotorSpeed);  // Left motor forward, right backward
+      break;
+  }
+}
+
+void displayMotorTestRPM() {
   displayMenuHeader("Motor Test (RPM)");
 
   lcd.setCursor(0, 1);
@@ -875,8 +992,45 @@ void displayMotorTest() {
     case 4: lcd.print("Status: KNAN " + String(testMotorRpm) + "R"); break;
   }
 
-  lcd.setCursor(15, 3);
-  lcd.print("B:OK");
+  displayMenuFooter("B:Back");
+}
+
+void handleMotorTestRPM() {
+  if (UP()) {
+    motorTestState = 1;  // Set to forward
+  } else if (DOWN()) {
+    motorTestState = 2;  // Set to backward
+  } else if (LEFT()) {
+    motorTestState = 3;  // Set to left
+  } else if (RIGHT()) {
+    motorTestState = 4;  // Set to right
+  } else if (STOP()) {
+    motorTestState = 0;  // Stop motor
+    sendRPM(0, 0);  // Use RPM stop command
+    currentMenu = MENU_MOTOR_TEST;
+    selectedItem = 1;  // Return to RPM selection
+    menuNeedsRefresh = true;
+    return;
+  }
+
+  // Execute continuous motor movement based on state - RPM mode
+  switch (motorTestState) {
+    case 0:  // STOP
+      sendRPM(0, 0);  // Use RPM command
+      break;
+    case 1:  // FORWARD
+      sendRPM(testMotorRpm, testMotorRpm);  // Both motors forward
+      break;
+    case 2:  // BACKWARD  
+      sendRPM(-testMotorRpm, -testMotorRpm);  // Both motors backward
+      break;
+    case 3:  // LEFT
+      sendRPM(-testMotorRpm, testMotorRpm);  // Left motor backward, right forward
+      break;
+    case 4:  // RIGHT
+      sendRPM(testMotorRpm, -testMotorRpm);  // Left motor forward, right backward
+      break;
+  }
 }
 
 void displayPidSettings() {
@@ -1844,44 +1998,6 @@ void displayResetAgvStateMenu() {
   lcd.print("default (STOP)");
   lcd.setCursor(0, 3);
   lcd.print("A:Reset   B:Cancel");
-}
-
-void handleMotorTest() {
-  if (UP()) {
-    motorTestState = 1;  // Set to forward
-  } else if (DOWN()) {
-    motorTestState = 2;  // Set to backward
-  } else if (LEFT()) {
-    motorTestState = 3;  // Set to left
-  } else if (RIGHT()) {
-    motorTestState = 4;  // Set to right
-  } else if (STOP()) {
-    motorTestState = 0;  // Stop motor
-    rpmMotor(0, 0);  // Use RPM stop command
-    currentMenu = MENU_MAIN;
-    menuStartIndex = 0;
-    menuNeedsRefresh = true;
-    return;
-  }
-
-  // Execute continuous motor movement based on state - RPM mode
-  switch (motorTestState) {
-    case 0:  // STOP
-      rpmMotor(0, 0);  // Use RPM command
-      break;
-    case 1:  // FORWARD
-      rpmMotor(testMotorRpm, testMotorRpm);  // Both motors forward
-      break;
-    case 2:  // BACKWARD  
-      rpmMotor(-testMotorRpm, -testMotorRpm);  // Both motors backward
-      break;
-    case 3:  // LEFT
-      rpmMotor(-testMotorRpm, testMotorRpm);  // Left motor backward, right forward
-      break;
-    case 4:  // RIGHT
-      rpmMotor(testMotorRpm, -testMotorRpm);  // Left motor forward, right backward
-      break;
-  }
 }
 
 void handlePidSettings() {
