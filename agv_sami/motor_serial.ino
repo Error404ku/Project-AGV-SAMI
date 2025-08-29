@@ -123,7 +123,7 @@ void processMotorControllerMessage(String message) {
       lcd.print("System Ready");
       delay(1000);
     }
-  }else if (message.startsWith("RPMSHOW")) {
+  }else if (message.startsWith("RPMSHOW:")) {
     String rpmData = message.substring(8); // Remove "RPMSHOW:"
     
     int commaPos = rpmData.indexOf(',');
@@ -131,15 +131,9 @@ void processMotorControllerMessage(String message) {
       float rpmKanan = rpmData.substring(0, commaPos).toFloat();
       float rpmKiri = rpmData.substring(commaPos + 1).toFloat();
       
-      // Update current RPM values (gunakan variabel yang sesuai)
+      // Update current RPM values
       currentRpmKanan = rpmKanan;
       currentRpmKiri = rpmKiri;
-      
-      // Optional: Display current RPM on Serial Monitor for debugging
-      Serial.printf("Current RPM - Kanan: %.2f, Kiri: %.2f\n", currentRpmKanan, currentRpmKiri);
-    } else {
-      Serial.println("ERROR: Invalid RPMSHOW data format");
-    }
   }
 }
 
@@ -204,7 +198,10 @@ bool checkSystemReadyStatus() {
 
 // Fungsi untuk meminta data RPM current dari motor controller slave
 void requestRpmDataFromSlave() {
-  // Kirim perintah RPMSHOW ke motor controller
+  // Kosongkan buffer serial dulu untuk menghindari buffer overflow
+  while (Serial.available()) {
+    Serial.read();
+  }
   Serial.println("RPMSHOW");
 }
 
