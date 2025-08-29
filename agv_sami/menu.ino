@@ -3881,10 +3881,9 @@ void handleMusicSettings() {
 // =============================================
 
 void displaySpeedSetting() {
-  static bool needsRefresh = true;
   static int lastTempMaxMotorRpm = -1;
   
-  if (needsRefresh || tempMaxMotorRpm != lastTempMaxMotorRpm) {
+  if (menuNeedsRefresh || tempMaxMotorRpm != lastTempMaxMotorRpm) {
     lcd.clear();
     displayMenuHeader("Speed Setting:");
     
@@ -3900,7 +3899,7 @@ void displaySpeedSetting() {
     lcd.setCursor(0, 3);
     lcd.print("Range: 10-90 RPM");
     
-    needsRefresh = false;
+    menuNeedsRefresh = false;
     lastTempMaxMotorRpm = tempMaxMotorRpm;
   }
 }
@@ -3931,11 +3930,10 @@ void handleSpeedSetting() {
 }
 
 void displayPidRpmSetting() {
-  static bool needsRefresh = true;
   static int lastSelectedParam = -1;
   static double lastValues[3] = {-1, -1, -1};
   
-  if (needsRefresh || selectedItem != lastSelectedParam ||
+  if (menuNeedsRefresh || selectedItem != lastSelectedParam ||
       tempMotorPidKp != lastValues[0] || tempMotorPidKi != lastValues[1] || 
       tempMotorPidKd != lastValues[2]) {
     
@@ -3956,7 +3954,7 @@ void displayPidRpmSetting() {
       lcd.print(values[i], 3);
     }
     
-    needsRefresh = false;
+    menuNeedsRefresh = false;
     lastSelectedParam = selectedItem;
     lastValues[0] = tempMotorPidKp;
     lastValues[1] = tempMotorPidKi;
