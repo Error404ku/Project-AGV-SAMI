@@ -31,7 +31,7 @@ void setup() {
     // Handle incoming serial data while waiting
     handleMotorControllerSerial();
     delay(50); // Small delay to prevent watchdog issues
-    esp_task_wdt_reset(); // Reset watchdog
+    // esp_task_wdt_reset(); // Reset watchdog
   }
   
   // System is now ready
@@ -87,7 +87,7 @@ void loop() {
   if (isAgvMode) {
     
     // Reset watchdog sebelum operasi sensor
-    esp_task_wdt_reset();
+    // esp_task_wdt_reset();
     
     // Original sensor reading
     if (shouldReadUltrasonic()) {
@@ -99,7 +99,7 @@ void loop() {
     lamp_flip_flop();
     
     // Reset watchdog sebelum operasi motor
-    esp_task_wdt_reset();
+    // esp_task_wdt_reset();
     
     if (currentStateAgv != AGV_STATE_NULL){
       // --- Pembacaan sensor sesuai mode ---
@@ -113,7 +113,7 @@ void loop() {
       agvMode(currentStateAgv);
     }
     else if (currentStateAgv == AGV_STATE_NULL){
-      esp_task_wdt_reset();
+      // esp_task_wdt_reset();
       if (hookPosition != DOWN_POS){
         hookPosition = hook(DOWN_HOOK);
       }else{
@@ -178,7 +178,7 @@ void loop() {
       }
     }
   } else {
-    esp_task_wdt_reset();
+    // esp_task_wdt_reset();
     agvMode(AGV_STATE_STOP);
     handleMenu();
     softStartTime = millis();
@@ -187,6 +187,6 @@ void loop() {
   }
   
   // Reset watchdog timer to prevent reboot
-  esp_task_wdt_reset();
+  // esp_task_wdt_reset();
   
 }

@@ -9,9 +9,9 @@ int pwmKanan = 0;
 int pwmKiri = 0;
 
 // RPM variables
-float rpm_depan_kanan = 0;
-float rpm_depan_kiri = 0;
-int perRotasi = 892;  // pulses per rotation
+int rpm_depan_kanan = 0;
+int rpm_depan_kiri = 0;
+int perRotasi = 1656;  // pulses per rotation
 unsigned long milisrpm = 0;
 const unsigned long intervalrpm = 100;
 
@@ -51,6 +51,7 @@ void setup() {
   esp_task_wdt_add(NULL);           // Add current thread to WDT watch
 
   loadPIDParameters();
+  sendPIDToMaster();
   
   // Setup motor pins
   setupMotorPins();
@@ -71,9 +72,9 @@ void loop() {
   esp_task_wdt_reset();
   
   // Check for incoming serial data from Master ESP32
-  // if (Serial1.available()) {  // Ubah kembali ke Serial untuk komunikasi dengan Master
-  //   serialEvent();
-  // }
+  if (Serial1.available()) {  // Ubah kembali ke Serial untuk komunikasi dengan Master
+    serialEvent();
+  }
   
   // Process complete command
   if (stringComplete) {
@@ -81,8 +82,8 @@ void loop() {
     inputString = "";
     stringComplete = false;
   }
-  
+  // rpmMotor(-20,-20);
   // Read RPM from encoders
+  // setMotorSpeed(2, -1000);   // Motor 2 = Kiri
   pembacaan_RPM();
-  rpmMotor(-90, 90); // Gunakan fungsi rpmMotor untuk kontrol motor berdasarkan RPM
 }

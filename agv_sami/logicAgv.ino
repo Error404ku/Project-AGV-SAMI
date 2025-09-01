@@ -187,7 +187,7 @@ void agvTerminalPickup() {
 
 // Fungsi ini menghentikan pergerakan AGV.
 void agvStop() {
-  rpmMotor(0, 0);  // Use RPM stop command
+  pwmMotor(0, 0);  // Use PWM stop command
   return;
 }
 
@@ -203,7 +203,7 @@ void agvMoveForward() {
     if (isRfidMatch(currentRfid, ujungRfidId)) {
       newRfidScanned = false; // Reset flag
       // Stop motor sebelum mengubah mode
-      rpmMotor(0, 0);  // Use RPM stop command
+      pwmMotor(0, 0);  // Use PWM stop command
       delay(2000);
       softStartTime = millis();
       softStartActive = true;
@@ -264,7 +264,7 @@ void agvMoveForward() {
       pidLinefollower(0, PID_MODE_MAJU);
     } else {
       if (targetStationsList.size() != 0 || currentRFID == AGV_STATE_TERMINAL_PICKUP) {
-        pidLinefollower(errorValue, PID_MODE_MAJU_MASSA);  // Error dari sensor magnet
+        pidLinefollower(errorValue, PID_MODE_MAJU);  // Error dari sensor magnet
       } else {
         pidLinefollower(errorValue, PID_MODE_MAJU);  // Error dari sensor magnet
       }
@@ -319,7 +319,7 @@ void agvMoveBackward() {
       pidLinefollower(0, PID_MODE_MUNDUR);  // Error = 0
     } else {
       if (targetStationsList.size() != 0){
-        pidLinefollower(errorValue, PID_MODE_MUNDUR_MASSA);  // Error normal
+        pidLinefollower(errorValue, PID_MODE_MUNDUR);  // Error normal
       } else {
         pidLinefollower(errorValue, PID_MODE_MUNDUR);
       }

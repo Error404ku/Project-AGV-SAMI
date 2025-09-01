@@ -21,10 +21,12 @@ void setupMotorPins() {
 
 void setupEncoders() {
   // Setup encoder pins
-  pinMode(EncoderKananPin, INPUT_PULLUP);
-  pinMode(EncoderKiriPin, INPUT_PULLUP);
+  pinMode(EncoderKananPinA, INPUT);
+  pinMode(EncoderKananPinB, INPUT);
+  pinMode(EncoderKiriPinA, INPUT);
+  pinMode(EncoderKiriPinB, INPUT);
   
   // Attach interrupts untuk encoder
-  attachInterrupt(digitalPinToInterrupt(EncoderKananPin), EncoderKanan, RISING);
-  attachInterrupt(digitalPinToInterrupt(EncoderKiriPin), EncoderKiri, RISING);
+  attachInterrupt(digitalPinToInterrupt(EncoderKananPinA), EncoderKanan, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(EncoderKiriPinA), EncoderKiri, CHANGE);
 }

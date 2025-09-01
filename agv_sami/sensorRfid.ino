@@ -5,7 +5,7 @@ void loopRfid() {
   }
 
   // Feed watchdog to prevent reset
-  esp_task_wdt_reset();
+  // esp_task_wdt_reset();
   
   noInterrupts();
   wiegand.flush();

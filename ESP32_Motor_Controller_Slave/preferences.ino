@@ -1,8 +1,8 @@
 void loadPIDParameters() {
-  // Nilai default yang konsisten untuk digunakan di seluruh kode
-  const double DEFAULT_KP = 0.5;  // Nilai lebih konservatif
-  const double DEFAULT_KI = 0.01; // Nilai lebih konservatif
-  const double DEFAULT_KD = 0.0;
+  // Nilai default yang lebih realistis untuk RPM control
+  const double DEFAULT_KP = 20.0;  // Proportional gain yang lebih tinggi untuk responsivitas
+  const double DEFAULT_KI = 0.5;   // Integral gain yang wajar untuk eliminasi error steady-state
+  const double DEFAULT_KD = 0.1;   // Derivative gain kecil untuk stabilitas
   
   // Open preferences in read-only mode
   preferences.begin("pid_config", true);
@@ -15,9 +15,9 @@ void loadPIDParameters() {
   preferences.end();
   
   // Batasi nilai-nilai PID untuk keamanan
-  pidConfig.kp = constrain(pidConfig.kp, 0.0, 10.0);
-  pidConfig.ki = constrain(pidConfig.ki, 0.0, 1.0);
-  pidConfig.kd = constrain(pidConfig.kd, 0.0, 1.0);
+  pidConfig.kp = constrain(pidConfig.kp, 0.0, 100.0);
+  pidConfig.ki = constrain(pidConfig.ki, 0.0, 50.0);
+  pidConfig.kd = constrain(pidConfig.kd, 0.0, 50.0);
   
   // Debug output lebih detail
   Serial.println("PID Parameters loaded from flash:" + String(pidConfig.kp, 4) + "," + String(pidConfig.ki, 4) + "," + String(pidConfig.kd, 4));
@@ -25,9 +25,9 @@ void loadPIDParameters() {
 
 void savePIDParameters() {
   // Batasi nilai PID untuk keamanan sebelum menyimpan
-  pidConfig.kp = constrain(pidConfig.kp, 0.0, 10.0);
-  pidConfig.ki = constrain(pidConfig.ki, 0.0, 1.0);
-  pidConfig.kd = constrain(pidConfig.kd, 0.0, 1.0);
+  pidConfig.kp = constrain(pidConfig.kp, 0.0, 100.0);
+  pidConfig.ki = constrain(pidConfig.ki, 0.0, 50.0);
+  pidConfig.kd = constrain(pidConfig.kd, 0.0, 50.0);
 
   // Open preferences in write mode
   preferences.begin("pid_config", false);
@@ -75,9 +75,9 @@ void resetPID(int index) {
 
 // Fungsi untuk kirim PID parameters ke master ESP32
 void sendPIDToMaster() {
-  // Format string: CMD:PID:KP:KI:KD
-  String pidString = "CMD:PID:" + String(pidConfig.kp, 4) + ":" + 
-                    String(pidConfig.ki, 4) + ":" + String(pidConfig.kd, 4);
+  // Format string: PIDVALUES:KP,KI,KD (sesuai dengan format penerimaan di master)
+  String pidString = "PIDVALUES:" + String(pidConfig.kp, 3) + "," + 
+                    String(pidConfig.ki, 3) + "," + String(pidConfig.kd, 3);
   
   // Kirim ke master
   Serial1.println(pidString);

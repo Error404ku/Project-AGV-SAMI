@@ -294,7 +294,7 @@ void handleMenu() {
   switch (currentMenu) {
     case MENU_MAIN:
       displayMainMenu();
-      motorStop();  // Use RPM stop command
+      pwmMotor(0, 0);  // Use PWM stop command
       stopMusic();
       digitalWrite(lampPin, HIGH);
       if (currentMillis - lastButtonPress >= buttonDelay) {
@@ -951,7 +951,7 @@ void handleMotorTestPWM() {
     motorTestState = 4;  // Set to right
   } else if (STOP()) {
     motorTestState = 0;  // Stop motor
-    sendMotorCommand(0, 0);  // Use PWM stop command
+    pwmMotor(0, 0);  // Use PWM stop command
     lcd.clear();
     currentMenu = MENU_MOTOR_TEST;
     selectedItem = 0;  // Return to PWM selection
@@ -966,16 +966,16 @@ void handleMotorTestPWM() {
       pwmMotor(0, 0);  // Use PWM command
       break;
     case 1:  // FORWARD
-      pwmMotor(-testMotorSpeed, testMotorSpeed);  // Both motors forward
+      pwmMotor(testMotorSpeed, testMotorSpeed);  // Both motors forward
       break;
     case 2:  // BACKWARD  
-      pwmMotor(testMotorSpeed, -testMotorSpeed);  // Both motors backward
+      pwmMotor(-testMotorSpeed, -testMotorSpeed);  // Both motors backward
       break;
     case 3:  // LEFT
-      pwmMotor(testMotorSpeed, testMotorSpeed);  // Left motor backward, right forward
+      pwmMotor(testMotorSpeed, -testMotorSpeed);  // Left motor backward, right forward
       break;
     case 4:  // RIGHT
-      pwmMotor(-testMotorSpeed, -testMotorSpeed);  // Left motor forward, right backward
+      pwmMotor(-testMotorSpeed, testMotorSpeed);  // Left motor forward, right backward
       break;
   }
 }
@@ -992,8 +992,6 @@ void displayMotorTestRPM() {
   lcd.print(currentRpmKanan);
   lcd.print(", L: ");
   lcd.print(currentRpmKiri);
-  // Show current motor state with RPM info
-  displayMenuFooter("B:Back");
 }
 
 void handleMotorTestRPM() {
@@ -1007,7 +1005,7 @@ void handleMotorTestRPM() {
     motorTestState = 4;  // Set to right
   } else if (STOP()) {
     motorTestState = 0;  // Stop motor
-    sendRPM(0, 0);  // Use RPM stop command
+    pwmMotor(0, 0);  // Use PWM stop command
     lcd.clear();
     currentMenu = MENU_MOTOR_TEST;
     selectedItem = 1;  // Return to RPM selection
@@ -1022,16 +1020,16 @@ void handleMotorTestRPM() {
       rpmMotor(0, 0);  // Use RPM command
       break;
     case 1:  // FORWARD
-      rpmMotor(-maxMotorRpm, maxMotorRpm);  // Both motors forward
+      rpmMotor(maxMotorRpm, maxMotorRpm);  // Both motors forward
       break;
     case 2:  // BACKWARD
-      rpmMotor(maxMotorRpm, maxMotorRpm);  // Both motors backward
+      rpmMotor(-maxMotorRpm, -maxMotorRpm);  // Both motors backward
       break;
     case 3:  // LEFT
-      rpmMotor(maxMotorRpm, maxMotorRpm);  // Left motor backward, right forward
+      rpmMotor(maxMotorRpm, -maxMotorRpm);  // Left motor backward, right forward
       break;
     case 4:  // RIGHT
-      rpmMotor(-maxMotorRpm, -maxMotorRpm);  // Left motor forward, right backward
+      rpmMotor(-maxMotorRpm, maxMotorRpm);  // Left motor forward, right backward
       break;
   }
 }
@@ -3990,10 +3988,10 @@ void handlePidRpmSetting() {
         tempMotorPidKp = min(100.0, tempMotorPidKp + 0.1);
         break;
       case 1:  // Ki
-        tempMotorPidKi = min(10.0, tempMotorPidKi + 0.01);
+        tempMotorPidKi = min(50.0, tempMotorPidKi + 0.01);
         break;
       case 2:  // Kd
-        tempMotorPidKd = min(10.0, tempMotorPidKd + 0.01);
+        tempMotorPidKd = min(50.0, tempMotorPidKd + 0.01);
         break;
     }
     menuNeedsRefresh = true;

@@ -2,11 +2,11 @@ void setMotorSpeed(int motor, int speed) {
   int d1Pin, d2Pin, pwmPin;
   
   // Select motor pins
-  if (motor == 1) {
+  if (motor == 1) { //kiri
     d1Pin = MOTOR1_D1;
     d2Pin = MOTOR1_D2;
     pwmPin = MOTOR1_PWM;
-  } else if (motor == 2) {
+  } else if (motor == 2) { //kanan
     d1Pin = MOTOR2_D1;
     d2Pin = MOTOR2_D2;
     pwmPin = MOTOR2_PWM;
@@ -22,17 +22,17 @@ void setMotorSpeed(int motor, int speed) {
     // Forward direction
     digitalWrite(d1Pin, HIGH);
     digitalWrite(d2Pin, LOW);
-    analogWrite(pwmPin, pwmValue);
+    ledcWrite(pwmPin, pwmValue);
   } else if (speed < 0) {
     // Reverse direction
     digitalWrite(d1Pin, LOW);
     digitalWrite(d2Pin, HIGH);
-    analogWrite(pwmPin, pwmValue);
+    ledcWrite(pwmPin, pwmValue);
   } else {
     // Stop motor
     digitalWrite(d1Pin, LOW);
     digitalWrite(d2Pin, LOW);
-    analogWrite(pwmPin, 0);
+    ledcWrite(pwmPin, 0);
   }
 }
 

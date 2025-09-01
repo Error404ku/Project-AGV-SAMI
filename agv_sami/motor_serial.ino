@@ -39,6 +39,8 @@ void motorStop() {
 
 void handleMotorControllerSerial() {
   // Check for incoming data from motor controller
+  esp_task_wdt_reset();
+
   while (Serial.available()) {
     char inChar = (char)Serial.read();
     
@@ -64,10 +66,10 @@ void sendPidValues(double kp, double ki, double kd) {
     Serial.read();
   }
   
-  // Pastikan dalam range yang valid di sisi slave (kp <= 100, ki <= 10, kd <= 10)
+  // Pastikan dalam range yang valid di sisi slave (kp <= 100, ki <= 50, kd <= 50)
   kp = constrain(kp, 0, 100);
-  ki = constrain(ki, 0, 10);
-  kd = constrain(kd, 0, 10);
+  ki = constrain(ki, 0, 50);
+  kd = constrain(kd, 0, 50);
   
   // Format pesan PID dengan presisi yang tepat
   String pidCommand = "PID" + String(kp, 3) + "," + String(ki, 3) + "," + String(kd, 3);
@@ -129,8 +131,8 @@ void processMotorControllerMessage(String message) {
     
     int commaPos = rpmData.indexOf(',');
     if (commaPos > 0) {
-      float rpmKanan = rpmData.substring(0, commaPos).toFloat();
-      float rpmKiri = rpmData.substring(commaPos + 1).toFloat();
+      int rpmKanan = rpmData.substring(0, commaPos).toInt();
+      int rpmKiri = rpmData.substring(commaPos + 1).toInt();
       
       // Update current RPM values
       currentRpmKanan = rpmKanan;
@@ -204,6 +206,6 @@ void requestRpmDataFromSlave() {
   while (Serial.available()) {
     Serial.read();
   }
-  Serial.println("RPMSHOW");
+  Serial.println("RS");
 }
 

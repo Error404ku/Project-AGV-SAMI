@@ -6,7 +6,7 @@
 
 void rpmMotor(int rpmKiri, int rpmKanan) {
   // Reset watchdog timer untuk mencegah timeout saat operasi motor intensif
-  esp_task_wdt_reset();
+  // esp_task_wdt_reset();
   
   // Safety checks for motor RPM values (10-90 range)
   if (abs(rpmKiri) > 90 || abs(rpmKanan) > 90) {
@@ -37,7 +37,7 @@ void rpmMotor(int rpmKiri, int rpmKanan) {
 
 void pwmMotor(int motor1, int motor2) {
   // Reset watchdog timer untuk mencegah timeout saat operasi motor intensif
-  esp_task_wdt_reset();
+  // esp_task_wdt_reset();
   
   // Safety checks for motor PWM values
   if (abs(motor1) > maxPwm || abs(motor2) > maxPwm) {

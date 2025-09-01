@@ -12,7 +12,7 @@ double computePID(int index, double setpoint, double input, double Kp, double Ki
   }
 
   // Ensure input values are within reasonable limits
-  setpoint = constrain(setpoint, 0.0, (double)maxrpm);
+  // setpoint = constrain(setpoint, 0.0, (double)maxrpm);
   input = constrain(input, -1.0 * (double)maxrpm, (double)maxrpm);
 
   // Debug output untuk diagnosa
@@ -22,7 +22,7 @@ double computePID(int index, double setpoint, double input, double Kp, double Ki
   double error = setpoint - input;
   
   // Validasi error - batasi nilai maksimum lebih ketat
-  error = constrain(error, -50.0, 50.0);
+  // error = constrain(error, -50.0, 50.0);
   
   // Store error secara aman ke dalam pidData
   pidData[index].error = error;
@@ -47,12 +47,12 @@ double computePID(int index, double setpoint, double input, double Kp, double Ki
   double dTerm = Kd * pidData[index].derivative;
   
   // Batasi masing-masing term untuk mencegah nilai ekstrim
-  pTerm = constrain(pTerm, -1000.0, 1000.0);
-  iTerm = constrain(iTerm, -500.0, 500.0);
-  dTerm = constrain(dTerm, -500.0, 500.0);
+  // pTerm = constrain(pTerm, -1000.0, 1000.0);
+  // iTerm = constrain(iTerm, -500.0, 500.0);
+  // dTerm = constrain(dTerm, -500.0, 500.0);
   
   double output = pTerm + iTerm + dTerm;
-                                                                                              
+
   // Check for invalid output
   if (isnan(output) || isinf(output)) {
     logError(ERROR_PID_CALCULATION, "PID output NaN/Inf");
@@ -61,7 +61,7 @@ double computePID(int index, double setpoint, double input, double Kp, double Ki
   }
 
   // Batasi output PID
-  output = constrain(output, -2000.0, 2000.0);
+  output = constrain(output, -4000.0, 4000.0);
 
   // Simpan nilai error untuk penggunaan selanjutnya
   pidData[index].previousError = error;

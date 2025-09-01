@@ -273,8 +273,7 @@ float currentRpmKanan = 0.0;    // Current actual RPM of right motor
 float currentRpmKiri = 0.0;     // Current actual RPM of left motor
 
 // Motor Test Settings
-int testMotorRpm = 30;          // Default RPM for motor testing (safe speed)
-int testMotorSpeed = 500;       // Default PWM speed for motor testing (safe speed)
+int testMotorSpeed = 1000;       // Default PWM speed for motor testing (safe speed)
 
 // Target settings
 bool useAutoTarget = false;         // New variable to track target source
@@ -783,7 +782,7 @@ bool agvStopCalled = false;
 
 // Except error position flag - untuk mengabaikan error setelah warehouse terdeteksi
 extern bool exceptErrorPosition;
-void resetExceptErrorFlag();
+void ExceptErrorFlag();
 void saveExceptErrorFlag();
 void loadExceptErrorFlag();
 

@@ -6,46 +6,8 @@
 #include <esp_task_wdt.h>
 
 // Pin Motor 1
-#define MOTOR1_D1   4
-#define MOTOR1_D2   5
-#define MOTOR1_PWM  6
-
-// Pin Motor 2
-#define MOTOR2_D1   7
-#define MOTOR2_D2   15
-#define MOTOR2_PWM  16
-
-// Serial communication pins - Update to match Master
-#define RX_PIN 41  // Tetap sama seperti sebelumnya
-#define TX_PIN 42  // Tetap sama seperti sebelumnya
-
-// PWM settings - 12-bit resolution
-#define PWM_FREQ 1000
-#define PWM_RESOLUTION 12  // 12-bit PWM (0-4095)
-#define PWM_CHANNEL_1 0
-#define PWM_CHANNEL_2 1
-
-#define EncoderKananPin 37 //45
-#define EncoderKiriPin 39
-
-// Variables declarations (defined in main .ino file)
-extern String inputString;
-extern bool stringComplete;
-
-// Encoder Variables
-extern volatile long enc_kanan;
-extern volatile long enc_kiri;
-
-// RPM Variables
-extern float rpm_depan_kanan;
-extern float rpm_depan_kiri; 
-extern int perRotasi;  // pulses per rotation
-
-// Timing Variables for RPM calculation
-extern unsigned long milisrpm;
-extern const unsigned long intervalrpm;
-
-// PID Configuration Structure
+#define MOTOR1_D1   5
+#define MOTOR1_D2   4
 #define MOTOR1_PWM  6
 
 // Pin Motor 2
@@ -63,8 +25,32 @@ extern const unsigned long intervalrpm;
 #define PWM_CHANNEL_1 0
 #define PWM_CHANNEL_2 1
 
-#define EncoderKananPin 37//45
-#define EncoderKiriPin 39
+#define EncoderKananPinA 40
+#define EncoderKananPinB 39
+#define EncoderKiriPinA 37
+#define EncoderKiriPinB 38
+
+int encKananA;
+int encKananB;
+int encKiriA;
+int encKiriB;
+    
+// Variables declarations (defined in main .ino file)
+extern String inputString;
+extern bool stringComplete;
+
+// Encoder Variables
+extern volatile long enc_kanan;
+extern volatile long enc_kiri;
+
+// RPM Variables
+extern int rpm_depan_kanan;
+extern int rpm_depan_kiri; 
+extern int perRotasi;  // pulses per rotation
+
+// Timing Variables for RPM calculation
+extern unsigned long milisrpm;
+extern const unsigned long intervalrpm;
 
 // Variables declarations (defined in main .ino file)
 extern String inputString;
@@ -75,8 +61,8 @@ extern volatile long enc_kanan;
 extern volatile long enc_kiri;
 
 // RPM Variables
-extern float rpm_depan_kanan;
-extern float rpm_depan_kiri; 
+extern int rpm_depan_kanan;
+extern int rpm_depan_kiri;
 extern int perRotasi;  // pulses per rotation
 
 // Timing Variables for RPM calculation
@@ -108,13 +94,14 @@ struct PIDData {
 #define ERROR_INVALID_OUTPUT 1004
 
 // RPM Configuration
-#define minrpm 0
+#define minrpm -90
+#define zerorpm 0
 #define maxrpm 90    // RPM maksimal adalah 90
 
 // PWM Configuration for PID - 12-bit PWM (0-4095)
 #define pwm_zero 0
-#define pwm_min -4095  // PWM minimum (reverse direction)
-#define pwm_max 4095   // PWM maximum (forward direction)
+#define pwm_min -4000  // PWM minimum (reverse direction)
+#define pwm_max 4000   // PWM maximum (forward direction)
 
 // External declarations only
 extern int leftSpeed;
@@ -130,8 +117,6 @@ extern int pwmKanan;
 extern int pwmKiri;
 
 // RPM variables - extern declarations
-extern float rpm_depan_kanan;
-extern float rpm_depan_kiri;
 extern int perRotasi;  // pulses per rotation
 extern unsigned long milisrpm;
 extern const unsigned long intervalrpm;
@@ -161,5 +146,6 @@ void pembacaan_RPM();              // Read RPM from encoders
 void serialEvent();                // Handle serial input
 void processCommand(String command); // Process complete commands
 bool parseCommand(String command, int &leftSpeed, int &rightSpeed); // Parse legacy L<val>R<val> commands
+void sendPIDToMaster();
 
 #endif // CONFIG_H

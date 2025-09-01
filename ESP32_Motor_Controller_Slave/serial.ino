@@ -14,11 +14,6 @@ void serialEvent() {
       inputString += inChar;
     }
   }
-
-  // Reset watchdog timer jika ada aktivitas serial untuk mencegah timeout.
-  if (charsRead > 0) {
-    esp_task_wdt_reset();
-  }
 }
 
 void processCommand(String command) {
@@ -43,9 +38,9 @@ void processCommand(String command) {
       
       // Debug info tambahan
       Serial.println("Parsed values - Kp: " + String(kp, 4) + " Ki: " + String(ki, 4) + " Kd: " + String(kd, 4));
-      Serial.println("Validation check: " + String(kp >= 0 && kp <= 100 && ki >= 0 && ki <= 10 && kd >= 0 && kd <= 10));
+      Serial.println("Validation check: " + String(kp >= 0 && kp <= 100 && ki >= 0 && ki <= 50 && kd >= 0 && kd <= 50));
       
-      if (kp >= 0 && kp <= 100 && ki >= 0 && ki <= 10 && kd >= 0 && kd <= 10) {
+      if (kp >= 0 && kp <= 100 && ki >= 0 && ki <= 50 && kd >= 0 && kd <= 50) {
         pidConfig.kp = kp; pidConfig.ki = ki; pidConfig.kd = kd;
         savePIDParameters();
         
@@ -58,7 +53,10 @@ void processCommand(String command) {
     }
   } else if(command.startsWith("RPMSHOW") || command.startsWith("RS")) {
     // Show current motor speeds in sendMotorStatusToMaster format (RS = shortcut)
-    Serial1.println("RPMSHOW:" + String(rpm_depan_kanan, 1) + "," + String(rpm_depan_kiri, 1));
+    // Serial1.println("RPMSHOW:" + String(rpm_depan_kanan, 3) + "," + String(rpm_depan_kiri, 3));
+    // Serial1.printfln("RPMSHOW:" + rpm_depan_kanan + "," + rpm_depan_kiri;  
+    Serial1.printf("RPMSHOW:%d,%d\n", rpm_depan_kanan,rpm_depan_kiri);  
+    Serial.printf("RPMSHOW:%d,%d\n", rpm_depan_kanan,rpm_depan_kiri);  
     Serial.println("RPM values sent to master via Serial1");  // Debug message
   } else if (command.startsWith("RPM")) {
     // RPM Motor command: RPM30,25 (kanan, kiri)
@@ -82,7 +80,6 @@ void processCommand(String command) {
     // Show current PID parameters in sendPIDToMaster format (PS = shortcut)
     Serial1.println("PIDVALUES:" + String(pidConfig.kp, 3) + "," + String(pidConfig.ki, 3) + "," + String(pidConfig.kd, 3));
     Serial.println("PID values sent to master via Serial1");  // Debug message
-    
   } else if (command.startsWith("STOP") || command.startsWith("S")) {
     // Emergency stop (S = shortcut)
     stopAllMotors();

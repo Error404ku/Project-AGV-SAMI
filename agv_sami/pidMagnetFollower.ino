@@ -5,13 +5,13 @@
 // ===================================================================
 void pidLinefollower(int errorPosisi, PidMode mode) {
   // Reset watchdog timer untuk operasi PID yang intensif
-  esp_task_wdt_reset();
+  // esp_task_wdt_reset();
   
   // Soft start variables
   // Check for magnet loss error (errorValue = 99)
   if (errorPosisi == 99 && mode != PID_MODE_BERHENTI) {
     // Emergency stop - no magnet detected for 5 seconds
-    rpmMotor(0, 0);  // Use RPM stop command
+    pwmMotor(0, 0);  // Use PWM stop command
     softStartActive = false;
     pidSpeed = 0;
     #ifdef DEBUG_PID
@@ -31,7 +31,7 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
     if (mode == PID_MODE_MAJU || mode == PID_MODE_MAJU_MASSA || mode == PID_MODE_MUNDUR || mode == PID_MODE_MUNDUR_MASSA) {
       softStartTime = millis();
       softStartActive = true;
-      pidSpeed = baseSpeed / 4; // Start with 25% of baseSpeed
+      pidSpeed = maxMotorRpm / 4; // Start with 25% of maxMotorRpm
     }
     // Reset PID data when mode changes to prevent carry-over
     if (mode != lastMode) {
@@ -48,9 +48,9 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
     unsigned long elapsedTime = currentTime - softStartTime;
     
     // Determine target speed based on mode
-    int targetBaseSpeed = baseSpeed;
+    int targetBaseSpeed = maxMotorRpm;
     if (mode == PID_MODE_MAJU_MASSA || mode == PID_MODE_MUNDUR_MASSA) {
-      targetBaseSpeed = baseSpeed * 3 / 2;
+      targetBaseSpeed = maxMotorRpm * 3 / 2;
     }
     
     if (elapsedTime < 5000) { // 5 seconds soft start duration
@@ -64,7 +64,7 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
     }
   } else if (mode == PID_MODE_FORCEMAJU || mode == PID_MODE_FORCEMUNDUR) {
     // For force modes, use baseSpeed directly
-    pidSpeed = baseSpeed;
+    pidSpeed = maxMotorRpm;
   } else if (mode == PID_MODE_STOPPELANPELAN) {
     // For gradual stop, use current pidSpeed
     // pidSpeed will be handled in the switch case
@@ -127,50 +127,46 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
   int motorKiri = pidSpeed - (int)koreksi;   // Fixed: subtract correction for left motor
   int motorKanan = pidSpeed + (int)koreksi;  // Fixed: add correction for right motor
 
-  // Convert PWM values to RPM values for motor control
-  // PWM range: ~0-4000, RPM range: 0-90
-  // Use proportional scaling based on maxMotorRpm setting
+  // Apply PID corrections directly to RPM values
+  // maxMotorRpm is the desired speed setting for AGV
+  // Maximum constraint is 90 RPM (hardware limit)
   
-  // Convert motor corrections to RPM scale
-  int rpmKiri = map(constrain(motorKiri, -maxPwm, maxPwm), -maxPwm, maxPwm, -maxMotorRpm, maxMotorRpm);
-  int rpmKanan = map(constrain(motorKanan, -maxPwm, maxPwm), -maxPwm, maxPwm, -maxMotorRpm, maxMotorRpm);
-  
-  // Convert base speed to RPM for direct commands
-  int baseSpeedRPM = map(constrain(pidSpeed, 0, maxPwm), 0, maxPwm, 0, maxMotorRpm);
+  int rpmKiri = constrain(motorKiri, -90, 90);
+  int rpmKanan = constrain(motorKanan, -90, 90);
   
   switch (mode) {
     case PID_MODE_MAJU:
-      rpmMotor(-rpmKiri, rpmKanan);  // RPM: left motor, right motor
+      rpmMotor(rpmKiri, rpmKanan);  // RPM: left motor, right motor
       break;
     case PID_MODE_MAJU_MASSA:
-      rpmMotor(-rpmKiri, rpmKanan);  // RPM: left motor, right motor
+      rpmMotor(rpmKiri, rpmKanan);  // RPM: left motor, right motor
       break;
     case PID_MODE_MUNDUR:
-      rpmMotor(rpmKiri, -rpmKanan);  // RPM: reverse direction
+      rpmMotor(-rpmKiri, -rpmKanan);  // RPM: reverse direction
       break;
     case PID_MODE_MUNDUR_MASSA:
-      rpmMotor(rpmKiri, -rpmKanan);  // RPM: reverse direction
+      rpmMotor(-rpmKiri, -rpmKanan);  // RPM: reverse direction
       break;
     case PID_MODE_FORCEMUNDUR:
-      rpmMotor(baseSpeedRPM, -baseSpeedRPM);  // Force backward with RPM
+      rpmMotor(-maxMotorRpm, -maxMotorRpm);  // Force backward with setting speed
       break;
     case PID_MODE_FORCEMAJU:
-      rpmMotor(-baseSpeedRPM, baseSpeedRPM);  // Force forward with RPM
+      rpmMotor(maxMotorRpm, maxMotorRpm);  // Force forward with setting speed
       break;
     case PID_MODE_STOPPELANPELAN:
       if (!sudahStopPelanPelan) {
-        rpmMotor(baseSpeedRPM / 2, -baseSpeedRPM / 2);  // Gradual stop with RPM
+        rpmMotor(maxMotorRpm / 2, maxMotorRpm / 2);  // Gradual stop with half setting speed
         startTimer(&stopPelanPelanTimer, 500);
         sudahStopPelanPelan = true;
       } else if (checkTimer(&stopPelanPelanTimer)) {
-        rpmMotor(0, 0);
+        pwmMotor(0, 0);
       } else if (!isTimerActive(&stopPelanPelanTimer)) {
-        rpmMotor(0, 0);
+        pwmMotor(0, 0);
       }
       break;
     case PID_MODE_BERHENTI:
     case PID_MODE_DEFAULT:
-      rpmMotor(0, 0);
+      pwmMotor(0, 0);
       break;
   }
   
