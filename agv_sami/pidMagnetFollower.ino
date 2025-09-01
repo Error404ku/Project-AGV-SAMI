@@ -124,8 +124,8 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
   // Fix: Use correct error sign - pidError is already the deviation from center
   double koreksi = computePID(0, 0, -pidError, currentKp, currentKi, currentKd, minintegral, maxintegral);
   
-  int motorKiri = pidSpeed - (int)koreksi;   // Fixed: subtract correction for left motor
-  int motorKanan = pidSpeed + (int)koreksi;  // Fixed: add correction for right motor
+  int motorKiri = pidSpeed + (int)koreksi;   // Fixed: subtract correction for left motor
+  int motorKanan = pidSpeed - (int)koreksi;  // Fixed: add correction for right motor
 
   // Apply PID corrections directly to RPM values
   // maxMotorRpm is the desired speed setting for AGV
