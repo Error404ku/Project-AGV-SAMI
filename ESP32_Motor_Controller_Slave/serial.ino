@@ -77,8 +77,12 @@ void processCommand(String command) {
     }
 
   }else if (command.startsWith("PIDSHOW") || command.startsWith("PS")) {
-    // Show current PID parameters in sendPIDToMaster format (PS = shortcut)
-    Serial1.println("PIDVALUES:" + String(pidConfig.kp, 3) + "," + String(pidConfig.ki, 3) + "," + String(pidConfig.kd, 3));
+    String pidString = "PIDVALUES:" + String(pidConfig.kp, 3) + "," + 
+                    String(pidConfig.ki, 3) + "," + String(pidConfig.kd, 3);
+  
+    // Kirim ke master
+    Serial1.println(pidString);
+
     Serial.println("PID values sent to master via Serial1");  // Debug message
   } else if (command.startsWith("STOP") || command.startsWith("S")) {
     // Emergency stop (S = shortcut)

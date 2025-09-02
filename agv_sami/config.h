@@ -870,7 +870,7 @@ bool motorControllerStringComplete = false;
 bool pidDataReceived = false;           // Flag untuk menandakan PID data telah diterima dari slave
 bool systemReadyToRun = false;         // Flag untuk menandakan sistem siap masuk loop
 unsigned long pidRequestStartTime = 0; // Timestamp untuk timeout PID request
-const unsigned long PID_REQUEST_TIMEOUT = 5000; // Timeout 5 detik untuk PID request
+const unsigned long PID_REQUEST_TIMEOUT = 15000; // Timeout 5 detik untuk PID request
 
 // FreeRTOS function declarations removed - using original implementation
 

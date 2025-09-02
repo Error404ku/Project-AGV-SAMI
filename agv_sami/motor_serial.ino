@@ -189,7 +189,7 @@ bool checkSystemReadyStatus() {
   // Retry request setiap 1 detik
   static unsigned long lastRetry = 0;
   if (millis() - lastRetry > 1000) {
-    Serial.println("PIDSHOW"); // Retry request
+    Serial.println("PS"); // Retry request
     lastRetry = millis();
     
     // Update display
