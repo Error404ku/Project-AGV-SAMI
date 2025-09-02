@@ -46,6 +46,15 @@ void setup() {
 void loop() {
   esp_task_wdt_reset();
   
+  // Static variables for double click STOP functionality - moved to loop scope
+  static bool firstStopClick = false;
+  static unsigned long firstStopTime = 0;
+  static bool showingStopMessage = false;
+  static unsigned long stopMessageStartTime = 0;
+  static bool lastStopState = false;
+  const unsigned long doubleClickInterval = 2000; // 2 seconds
+  const unsigned long messageDisplayTime = 2000; // 2 seconds to show message
+  
   // Only proceed with normal operations if system is ready
   if (!systemReadyToRun) {
     // Keep trying to get PID data if not received yet
@@ -110,22 +119,38 @@ void loop() {
         setMagnetSlaveId(SLAVEID_MAGNET_BELAKANG);
         setUltrasonicSlaveId(SLAVEID_ULTRASONIK_BELAKANG);
       }
-      agvMode(currentStateAgv);
+      // Don't call agvMode() when showing stop message to prevent display override
+      if (!showingStopMessage) {
+        agvMode(currentStateAgv);
+      }
     }
     else if (currentStateAgv == AGV_STATE_NULL){
       // esp_task_wdt_reset();
       if (hookPosition != DOWN_POS){
         hookPosition = hook(DOWN_HOOK);
       }else{
-        agvMode(AGV_STATE_TERMINAL_PICKUP);
+        // Don't call agvMode() when showing stop message to prevent display override
+        if (!showingStopMessage) {
+          agvMode(AGV_STATE_TERMINAL_PICKUP);
+        }
       }
     }
     // Check for double click STOP button to exit AGV mode
-    static bool firstStopClick = false;
-    static unsigned long firstStopTime = 0;
-    const unsigned long doubleClickInterval = 2000; // 2 seconds
+    // Read current button state (without debounce for faster response)
+    bool currentStopState = (digitalRead(stopPin) == HIGH);
     
-    if (STOP()) {
+    // Handle stop message display timing - show for full 2 seconds
+    if (showingStopMessage) {
+      if (millis() - stopMessageStartTime >= messageDisplayTime) {
+        showingStopMessage = false;
+        lcd.clear();
+        resetDisplayRequested = true;
+      }
+      // Continue normal loop execution while showing message
+    }
+    
+    // Detect button press (rising edge)
+    if (currentStopState && !lastStopState) {
       unsigned long currentTime = millis();
       
       if (!firstStopClick) {
@@ -139,20 +164,36 @@ void loop() {
         lcd.print("STOP 1x detected");
         lcd.setCursor(0, 1);
         lcd.print("Click again to exit");
+        
+        // Start message display timer
+        showingStopMessage = true;
+        stopMessageStartTime = currentTime;
+        
       } else {
         // Check if second click is within interval
         if (currentTime - firstStopTime <= doubleClickInterval) {
           // Valid double click - exit AGV mode
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("Exiting AGV Mode");
+          lcd.setCursor(0, 1);
+          lcd.print("Please wait...");
+          delay(1500); // Show exit message
+          
           agvMode(AGV_STATE_STOP);
           isAgvMode = false;
-          resetDisplayFlags(); // Reset semua flag display
-          newRfidScanned = false; // Reset flag RFID saat keluar dari AGV mode
-          agvStopCalled = false; // Reset agvStopCalled when exiting AGV mode
-          buttonStep = 0;  // Reset button step
+          resetDisplayFlags();
+          newRfidScanned = false;
+          agvStopCalled = false;
+          buttonStep = 0;
           
-          // Reset double click variables
+          // Reset all double click variables
           firstStopClick = false;
           firstStopTime = 0;
+          showingStopMessage = false;
+          lastStopState = false;
+          
+          return; // Exit AGV mode immediately
         } else {
           // Second click too late, treat as new first click
           firstStopClick = true;
@@ -164,19 +205,27 @@ void loop() {
           lcd.print("STOP 1x detected");
           lcd.setCursor(0, 1);
           lcd.print("Click again to exit");
+          
+          // Start message display timer
+          showingStopMessage = true;
+          stopMessageStartTime = currentTime;
         }
       }
-    } else {
-      // Check if first click has timed out
-      if (firstStopClick && (millis() - firstStopTime > doubleClickInterval)) {
-        firstStopClick = false;
-        firstStopTime = 0;
-        
-        // Reset display to normal AGV mode
-        lcd.clear();
-        displayPrint();
-      }
     }
+    
+    // Update button state for next iteration
+    lastStopState = currentStopState;
+    
+    // Check if first click has timed out
+    if (firstStopClick && (millis() - firstStopTime > doubleClickInterval) && !showingStopMessage) {
+      firstStopClick = false;
+      firstStopTime = 0;
+      lcd.clear();
+      resetDisplayRequested = true;
+    }
+    
+    // Don't call displayPrint() here - let each mode handle its own display
+    // displayPrint() was overriding mode-specific displays like modeDisplayWarehouse()
   } else {
     // esp_task_wdt_reset();
     agvMode(AGV_STATE_STOP);

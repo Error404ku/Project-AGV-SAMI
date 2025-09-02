@@ -36,7 +36,22 @@ void agvMode(AgvState state) {
 // Fungsi ini menangani logika AGV saat berada di gudang.
 void agvWarehouse() {
   static bool trigger = false;
+  static bool showingErrorMessage = false;
+  static unsigned long errorMessageStartTime = 0;
+  static bool needsDisplayRefresh = false;
+  
   saveCurrentStateAGVToPreferences(AGV_STATE_WAREHOUSE);
+
+  // Handle error message display timing
+  if (showingErrorMessage) {
+    if (millis() - errorMessageStartTime >= 2000) {
+      showingErrorMessage = false;
+      needsDisplayRefresh = true; // Force display refresh after error
+    } else {
+      // Keep showing error message and block other actions
+      return;
+    }
+  }
 
   if (START()) {
     if (targetStationsList.size() == 0){
@@ -45,8 +60,9 @@ void agvWarehouse() {
       lcd.setCursor(0, 0);
       lcd.print("Tidak ada station");
       lcd.setCursor(0, 1);
-      lcd.print("dalam daftar target");
-      delay(2000); // Tampilkan pesan selama 2 detik
+      lcd.print("di daftar target"); // Shortened to fit 16 chars
+      showingErrorMessage = true;
+      errorMessageStartTime = millis();
       return; // Kembali tanpa memulai pergerakan
     } else {
       trigger = true;
@@ -54,6 +70,12 @@ void agvWarehouse() {
   }
   if (!trigger) {
     agvStop();
+    // Force refresh display if needed
+    if (needsDisplayRefresh) {
+      lcd.clear(); // Clear screen first
+      resetDisplayRequested = true; // Force reset display flags
+      needsDisplayRefresh = false;
+    }
     modeDisplayWarehouse();
   }else{
     softStartTime = millis();

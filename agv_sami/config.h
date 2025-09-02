@@ -583,6 +583,9 @@ int currentScanStation = 0;
 extern char lastScannedRfidOptimized[32];  // Optimized RFID storage
 extern bool newRfidScanned;  // Flag untuk RFID baru yang terbaca
 
+// Display control variables
+extern bool resetDisplayRequested;
+
 // Obstacle detection variables
 extern bool obstacleDetected;
 extern uint16_t ultrasonicDistances[5];

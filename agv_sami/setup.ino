@@ -416,7 +416,8 @@ void setupAll() {
   setupSensorUltrasonic(SLAVEID_ULTRASONIK_DEPAN);
   setupHook();  // setupBuzzer();
   setupWifi();  // Setup WiFi configuration
-  // Web server setup now handled by HTTPManager in main agv_sami.ino
+  startWifiConnection();  // Auto-start WiFi connection
+  setupWebServer();  // Setup Web Server - CRITICAL for HTTP access
   setupTombol();
   setupRfid();
   // Initialize performance optimization
