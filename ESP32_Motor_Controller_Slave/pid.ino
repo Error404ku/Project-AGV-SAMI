@@ -47,7 +47,7 @@ double computePID(int index, double setpoint, double input, double Kp, double Ki
   double dTerm = Kd * pidData[index].derivative;
   
   // Batasi masing-masing term untuk mencegah nilai ekstrim
-  // pTerm = constrain(pTerm, -1000.0, 1000.0);
+  pTerm = constrain(pTerm, -2000.0, 2000.0);
   // iTerm = constrain(iTerm, -500.0, 500.0);
   // dTerm = constrain(dTerm, -500.0, 500.0);
   
