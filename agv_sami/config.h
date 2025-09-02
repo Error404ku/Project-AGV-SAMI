@@ -193,6 +193,8 @@ Timer performanceTimer = {0, 5000, false, false};
 uint16_t ultrasonicDistances[5] = { 0 };  // Store distances from 5 probes
 uint16_t minSafeDistanceFront = 30;       // cm - minimum safe distance for front sensor
 uint16_t minSafeDistanceBack = 20;        // cm - minimum safe distance for back sensor
+uint16_t minSafeDistanceFrontSerong = 25;  // cm - minimum safe distance for front serong sensor
+uint16_t minSafeDistanceBackSerong = 15;   // cm - minimum safe distance for back serong sensor
 
 // --- RFID TERMINAL VARIABLES ---
 String terminalDropRfidId = "";
@@ -317,6 +319,8 @@ int tempMusicWarningPin = 4;   // Will be initialized from musicWarningPin
 // Ultrasonic settings (temporary)
 uint16_t tempMinSafeDistanceFront = 30;  // Will be initialized from minSafeDistanceFront
 uint16_t tempMinSafeDistanceBack = 20;   // Will be initialized from minSafeDistanceBack
+uint16_t tempMinSafeDistanceFrontSerong = 25;  // Will be initialized from minSafeDistanceFrontSerong
+uint16_t tempMinSafeDistanceBackSerong = 15;   // Will be initialized from minSafeDistanceBackSerong
 
 // Motor invert menu variables
 int selectedInvertItem = 0;  // 0=Y-axis, 1=X-axis, 2=Motor Kanan, 3=Motor Kiri, 4=Hook

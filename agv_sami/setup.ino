@@ -301,6 +301,8 @@ void setupMenu() {
   // Load Ultrasonic settings
   tempMinSafeDistanceFront = preferences.getUShort("SafeDistFront", 30);
   tempMinSafeDistanceBack = preferences.getUShort("SafeDistBack", 20);
+  tempMinSafeDistanceFrontSerong = preferences.getUShort("SafeDistFrontS", 25);
+  tempMinSafeDistanceBackSerong = preferences.getUShort("SafeDistBackS", 15);
 
   // Load Motor Control settings
   tempMaxMotorRpm = preferences.getInt("maxMotorRpm", 90);
@@ -356,6 +358,8 @@ void setupMenu() {
   // Apply Ultrasonic settings
   minSafeDistanceFront = tempMinSafeDistanceFront;
   minSafeDistanceBack = tempMinSafeDistanceBack;
+  minSafeDistanceFrontSerong = tempMinSafeDistanceFrontSerong;
+  minSafeDistanceBackSerong = tempMinSafeDistanceBackSerong;
 
   // Apply Motor Control settings
   maxMotorRpm = tempMaxMotorRpm;

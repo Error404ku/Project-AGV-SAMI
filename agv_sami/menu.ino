@@ -761,6 +761,7 @@ void handleMenu() {
       break;
  
     case MENU_ULTRASONIC_CHECK:
+    checkObstacles();
       displayUltrasonicCheck();
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handleUltrasonicCheck();
@@ -794,6 +795,46 @@ void handleMenu() {
       displayUltrasonicBackSettings();
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handleUltrasonicBackSettings();
+        if (LEFT() || RIGHT() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_ULTRASONIC_FRONT_TENGAH:
+      displayUltrasonicFrontTengahSettings();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleUltrasonicFrontTengahSettings();
+        if (LEFT() || RIGHT() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_ULTRASONIC_FRONT_SERONG:
+      displayUltrasonicFrontSerongSettings();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleUltrasonicFrontSerongSettings();
+        if (LEFT() || RIGHT() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_ULTRASONIC_BACK_TENGAH:
+      displayUltrasonicBackTengahSettings();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleUltrasonicBackTengahSettings();
+        if (LEFT() || RIGHT() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_ULTRASONIC_BACK_SERONG:
+      displayUltrasonicBackSerongSettings();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleUltrasonicBackSerongSettings();
         if (LEFT() || RIGHT() || START() || STOP()) {
           lastButtonPress = currentMillis;
         }
@@ -2655,15 +2696,10 @@ void displayUltrasonicCheck() {
 
   lcd.setCursor(0, 3);
   // Manual obstacle detection based on distance values only
-  bool manualObstacleDetected = false;
   uint16_t currentMinSafeDistance = (getCurrentUltrasonicSlaveId() == SLAVEID_ULTRASONIK_DEPAN) ? 
                                    minSafeDistanceFront : minSafeDistanceBack;
-  
-  if (ultrasonicDistances[2] > 0 && ultrasonicDistances[2] < currentMinSafeDistance) {
-    manualObstacleDetected = true;
-  }
-  
-  if (manualObstacleDetected) {
+
+  if (obstacleDetected) {
     lcd.print("OBSTACLE! ");
   } else {
     lcd.print("Clear     ");
@@ -3557,55 +3593,61 @@ void displayUltrasonicFrontSettings() {
   // Clear display if menu needs refresh
   if (menuNeedsRefresh) {
     lcd.clear();
+    selectedItem = 0;  // Reset selection
+    maxItems = 2;      // 2 items: Tengah, Serong
     menuNeedsRefresh = false;
   }
   
   displayMenuHeader("Front Sensor");
   
-  lcd.setCursor(0, 1);
-  lcd.print("Min Safe Distance:");
+  const char* menuItems[] = {
+    "Tengah",
+    "Serong"
+  };
   
-  lcd.setCursor(0, 2);
-  lcd.print(String(tempMinSafeDistanceFront) + " cm");
+  // Display menu items
+  for (int i = 0; i < maxItems; i++) {
+    lcd.setCursor(0, i + 1);
+    if (i == selectedItem) {
+      lcd.print("> " + String(menuItems[i]));
+    } else {
+      lcd.print("  " + String(menuItems[i]));
+    }
+  }
   
   lcd.setCursor(0, 3);
-  lcd.print("L/R:Adj A:Save B:Back");
+  lcd.print("U/D:Nav A:Select B:Back");
 }
 
 void handleUltrasonicFrontSettings() {
-  if (LEFT()) {
-    // Decrease by 1 cm
-    if (tempMinSafeDistanceFront > 5) {  // Minimum 5 cm
-      tempMinSafeDistanceFront--;
+  if (UP()) {
+    // Navigate up
+    if (selectedItem > 0) {
+      selectedItem--;
+    } else {
+      selectedItem = maxItems - 1; // Wrap to bottom
     }
-  } else if (RIGHT()) {
-    // Increase by 1 cm
-    if (tempMinSafeDistanceFront < 100) {  // Maximum 100 cm
-      tempMinSafeDistanceFront++;
+  } else if (DOWN()) {
+    // Navigate down
+    if (selectedItem < maxItems - 1) {
+      selectedItem++;
+    } else {
+      selectedItem = 0; // Wrap to top
     }
   } else if (START()) {
-    // Save settings
-    minSafeDistanceFront = tempMinSafeDistanceFront;
-    
-    // Save to preferences
-    preferences.begin("agv-settings", false);
-    preferences.putUShort("SafeDistFront", tempMinSafeDistanceFront);
-    preferences.end();
-    
-    // Show confirmation
-    lcd.clear();
-    lcd.setCursor(0, 1);
-    lcd.print("Front settings saved!");
-    lcd.setCursor(0, 2);
-    lcd.print("Min distance: " + String(tempMinSafeDistanceFront) + "cm");
-    delay(2000);
-    
-    currentMenu = MENU_ULTRASONIC_SETTINGS;
+    // Select submenu
+    switch (selectedItem) {
+      case 0: // Tengah
+        currentMenu = MENU_ULTRASONIC_FRONT_TENGAH;
+        break;
+      case 1: // Serong
+        currentMenu = MENU_ULTRASONIC_FRONT_SERONG;
+        break;
+    }
     selectedItem = 0;
     menuNeedsRefresh = true;
   } else if (STOP()) {
-    // Cancel changes
-    tempMinSafeDistanceFront = minSafeDistanceFront;
+    // Back to ultrasonic settings
     currentMenu = MENU_ULTRASONIC_SETTINGS;
     selectedItem = 0;
     menuNeedsRefresh = true;
@@ -3617,55 +3659,61 @@ void displayUltrasonicBackSettings() {
   // Clear display if menu needs refresh
   if (menuNeedsRefresh) {
     lcd.clear();
+    selectedItem = 0;  // Reset selection
+    maxItems = 2;      // 2 items: Tengah, Serong
     menuNeedsRefresh = false;
   }
   
   displayMenuHeader("Back Sensor");
   
-  lcd.setCursor(0, 1);
-  lcd.print("Min Safe Distance:");
+  const char* menuItems[] = {
+    "Tengah",
+    "Serong"
+  };
   
-  lcd.setCursor(0, 2);
-  lcd.print(String(tempMinSafeDistanceBack) + " cm");
+  // Display menu items
+  for (int i = 0; i < maxItems; i++) {
+    lcd.setCursor(0, i + 1);
+    if (i == selectedItem) {
+      lcd.print("> " + String(menuItems[i]));
+    } else {
+      lcd.print("  " + String(menuItems[i]));
+    }
+  }
   
   lcd.setCursor(0, 3);
-  lcd.print("L/R:Adj A:Save B:Back");
+  lcd.print("U/D:Nav A:Select B:Back");
 }
 
 void handleUltrasonicBackSettings() {
-  if (LEFT()) {
-    // Decrease by 1 cm
-    if (tempMinSafeDistanceBack > 5) {  // Minimum 5 cm
-      tempMinSafeDistanceBack--;
+  if (UP()) {
+    // Navigate up
+    if (selectedItem > 0) {
+      selectedItem--;
+    } else {
+      selectedItem = maxItems - 1; // Wrap to bottom
     }
-  } else if (RIGHT()) {
-    // Increase by 1 cm
-    if (tempMinSafeDistanceBack < 100) {  // Maximum 100 cm
-      tempMinSafeDistanceBack++;
+  } else if (DOWN()) {
+    // Navigate down
+    if (selectedItem < maxItems - 1) {
+      selectedItem++;
+    } else {
+      selectedItem = 0; // Wrap to top
     }
   } else if (START()) {
-    // Save settings
-    minSafeDistanceBack = tempMinSafeDistanceBack;
-    
-    // Save to preferences
-    preferences.begin("agv-settings", false);
-    preferences.putUShort("SafeDistBack", tempMinSafeDistanceBack);
-    preferences.end();
-    
-    // Show confirmation
-    lcd.clear();
-    lcd.setCursor(0, 1);
-    lcd.print("Back settings saved!");
-    lcd.setCursor(0, 2);
-    lcd.print("Min distance: " + String(tempMinSafeDistanceBack) + "cm");
-    delay(2000);
-    
-    currentMenu = MENU_ULTRASONIC_SETTINGS;
-    selectedItem = 1;
+    // Select submenu
+    switch (selectedItem) {
+      case 0: // Tengah
+        currentMenu = MENU_ULTRASONIC_BACK_TENGAH;
+        break;
+      case 1: // Serong
+        currentMenu = MENU_ULTRASONIC_BACK_SERONG;
+        break;
+    }
+    selectedItem = 0;
     menuNeedsRefresh = true;
   } else if (STOP()) {
-    // Cancel changes
-    tempMinSafeDistanceBack = minSafeDistanceBack;
+    // Back to ultrasonic settings
     currentMenu = MENU_ULTRASONIC_SETTINGS;
     selectedItem = 1;
     menuNeedsRefresh = true;
@@ -4022,6 +4070,254 @@ void handlePidRpmSetting() {
     currentMenu = MENU_MOTOR_SETTINGS;
     selectedItem = 1;
     menuStartIndex = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+// ===============================================
+// ULTRASONIC FRONT TENGAH SETTINGS
+// ===============================================
+void displayUltrasonicFrontTengahSettings() {
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
+  displayMenuHeader("Front Tengah");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Min Safe Distance:");
+  
+  lcd.setCursor(0, 2);
+  lcd.print(String(tempMinSafeDistanceFront) + " cm");
+  
+  lcd.setCursor(0, 3);
+  lcd.print("L/R:Adj A:Save B:Back");
+}
+
+void handleUltrasonicFrontTengahSettings() {
+  if (LEFT()) {
+    // Decrease by 1 cm
+    if (tempMinSafeDistanceFront > 5) {  // Minimum 5 cm
+      tempMinSafeDistanceFront--;
+    }
+  } else if (RIGHT()) {
+    // Increase by 1 cm
+    if (tempMinSafeDistanceFront < 100) {  // Maximum 100 cm
+      tempMinSafeDistanceFront++;
+    }
+  } else if (START()) {
+    // Save settings
+    minSafeDistanceFront = tempMinSafeDistanceFront;
+    
+    // Save to preferences
+    preferences.begin("agv-settings", false);
+    preferences.putUShort("SafeDistFront", tempMinSafeDistanceFront);
+    preferences.end();
+    
+    // Show confirmation
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print("Front Tengah saved!");
+    lcd.setCursor(0, 2);
+    lcd.print("Min distance: " + String(tempMinSafeDistanceFront) + "cm");
+    delay(2000);
+    
+    currentMenu = MENU_ULTRASONIC_FRONT;
+    selectedItem = 0;
+    menuNeedsRefresh = true;
+  } else if (STOP()) {
+    // Cancel changes
+    tempMinSafeDistanceFront = minSafeDistanceFront;
+    currentMenu = MENU_ULTRASONIC_FRONT;
+    selectedItem = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+// ===============================================
+// ULTRASONIC FRONT SERONG SETTINGS
+// ===============================================
+void displayUltrasonicFrontSerongSettings() {
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
+  displayMenuHeader("Front Serong");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Min Safe Distance:");
+  
+  lcd.setCursor(0, 2);
+  lcd.print(String(tempMinSafeDistanceFrontSerong) + " cm");
+  
+  lcd.setCursor(0, 3);
+  lcd.print("L/R:Adj A:Save B:Back");
+}
+
+void handleUltrasonicFrontSerongSettings() {
+  if (LEFT()) {
+    // Decrease by 1 cm
+    if (tempMinSafeDistanceFrontSerong > 5) {  // Minimum 5 cm
+      tempMinSafeDistanceFrontSerong--;
+    }
+  } else if (RIGHT()) {
+    // Increase by 1 cm
+    if (tempMinSafeDistanceFrontSerong < 100) {  // Maximum 100 cm
+      tempMinSafeDistanceFrontSerong++;
+    }
+  } else if (START()) {
+    // Save settings
+    minSafeDistanceFrontSerong = tempMinSafeDistanceFrontSerong;
+    
+    // Save to preferences
+    preferences.begin("agv-settings", false);
+    preferences.putUShort("SafeDistFrontS", tempMinSafeDistanceFrontSerong);
+    preferences.end();
+    
+    // Show confirmation
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print("Front Serong saved!");
+    lcd.setCursor(0, 2);
+    lcd.print("Min distance: " + String(tempMinSafeDistanceFrontSerong) + "cm");
+    delay(2000);
+    
+    currentMenu = MENU_ULTRASONIC_FRONT;
+    selectedItem = 1;
+    menuNeedsRefresh = true;
+  } else if (STOP()) {
+    // Cancel changes
+    tempMinSafeDistanceFrontSerong = minSafeDistanceFrontSerong;
+    currentMenu = MENU_ULTRASONIC_FRONT;
+    selectedItem = 1;
+    menuNeedsRefresh = true;
+  }
+}
+
+// ===============================================
+// ULTRASONIC BACK TENGAH SETTINGS
+// ===============================================
+void displayUltrasonicBackTengahSettings() {
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
+  displayMenuHeader("Back Tengah");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Min Safe Distance:");
+  
+  lcd.setCursor(0, 2);
+  lcd.print(String(tempMinSafeDistanceBack) + " cm");
+  
+  lcd.setCursor(0, 3);
+  lcd.print("L/R:Adj A:Save B:Back");
+}
+
+void handleUltrasonicBackTengahSettings() {
+  if (LEFT()) {
+    // Decrease by 1 cm
+    if (tempMinSafeDistanceBack > 5) {  // Minimum 5 cm
+      tempMinSafeDistanceBack--;
+    }
+  } else if (RIGHT()) {
+    // Increase by 1 cm
+    if (tempMinSafeDistanceBack < 100) {  // Maximum 100 cm
+      tempMinSafeDistanceBack++;
+    }
+  } else if (START()) {
+    // Save settings
+    minSafeDistanceBack = tempMinSafeDistanceBack;
+    
+    // Save to preferences
+    preferences.begin("agv-settings", false);
+    preferences.putUShort("SafeDistBack", tempMinSafeDistanceBack);
+    preferences.end();
+    
+    // Show confirmation
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print("Back Tengah saved!");
+    lcd.setCursor(0, 2);
+    lcd.print("Min distance: " + String(tempMinSafeDistanceBack) + "cm");
+    delay(2000);
+    
+    currentMenu = MENU_ULTRASONIC_BACK;
+    selectedItem = 0;
+    menuNeedsRefresh = true;
+  } else if (STOP()) {
+    // Cancel changes
+    tempMinSafeDistanceBack = minSafeDistanceBack;
+    currentMenu = MENU_ULTRASONIC_BACK;
+    selectedItem = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+// ===============================================
+// ULTRASONIC BACK SERONG SETTINGS
+// ===============================================
+void displayUltrasonicBackSerongSettings() {
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
+  displayMenuHeader("Back Serong");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Min Safe Distance:");
+  
+  lcd.setCursor(0, 2);
+  lcd.print(String(tempMinSafeDistanceBackSerong) + " cm");
+  
+  lcd.setCursor(0, 3);
+  lcd.print("L/R:Adj A:Save B:Back");
+}
+
+void handleUltrasonicBackSerongSettings() {
+  if (LEFT()) {
+    // Decrease by 1 cm
+    if (tempMinSafeDistanceBackSerong > 5) {  // Minimum 5 cm
+      tempMinSafeDistanceBackSerong--;
+    }
+  } else if (RIGHT()) {
+    // Increase by 1 cm
+    if (tempMinSafeDistanceBackSerong < 100) {  // Maximum 100 cm
+      tempMinSafeDistanceBackSerong++;
+    }
+  } else if (START()) {
+    // Save settings
+    minSafeDistanceBackSerong = tempMinSafeDistanceBackSerong;
+    
+    // Save to preferences
+    preferences.begin("agv-settings", false);
+    preferences.putUShort("SafeDistBackS", tempMinSafeDistanceBackSerong);
+    preferences.end();
+    
+    // Show confirmation
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print("Back Serong saved!");
+    lcd.setCursor(0, 2);
+    lcd.print("Min distance: " + String(tempMinSafeDistanceBackSerong) + "cm");
+    delay(2000);
+    
+    currentMenu = MENU_ULTRASONIC_BACK;
+    selectedItem = 1;
+    menuNeedsRefresh = true;
+  } else if (STOP()) {
+    // Cancel changes
+    tempMinSafeDistanceBackSerong = minSafeDistanceBackSerong;
+    currentMenu = MENU_ULTRASONIC_BACK;
+    selectedItem = 1;
     menuNeedsRefresh = true;
   }
 }

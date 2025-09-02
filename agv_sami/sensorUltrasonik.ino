@@ -105,19 +105,24 @@ void checkObstacles() {
   bool previousObstacleState = obstacleDetected;
   obstacleDetected = false;
     // Determine which safe distance to use based on current sensor
-  uint16_t currentMinSafeDistance;
+    uint16_t currentMinSafeDistanceSerong;
+    uint16_t currentMinSafeDistance;
   if (currentUltrasonicSlaveId == SLAVEID_ULTRASONIK_DEPAN) {
     currentMinSafeDistance = minSafeDistanceFront;
+    currentMinSafeDistanceSerong = minSafeDistanceFrontSerong;
   } else if (currentUltrasonicSlaveId == SLAVEID_ULTRASONIK_BELAKANG) {
     currentMinSafeDistance = minSafeDistanceBack;
+    currentMinSafeDistanceSerong = minSafeDistanceBackSerong;
   } else {
     currentMinSafeDistance = minSafeDistanceFront; // Default to front
+    currentMinSafeDistanceSerong = minSafeDistanceFrontSerong;
   }
 
-  if (ultrasonicDistances[2] > 0 && ultrasonicDistances[2] < currentMinSafeDistance) {
-    obstacleDetected = true;
+  if ((ultrasonicDistances[1] > 0 && ultrasonicDistances[1] < currentMinSafeDistanceSerong) ||
+      (ultrasonicDistances[3] > 0 && ultrasonicDistances[3] < currentMinSafeDistanceSerong) ||
+      (ultrasonicDistances[2] > 0 && ultrasonicDistances[2] < currentMinSafeDistance)) {
+      obstacleDetected = true;
   }
-
   // Check each probe for obstacles
   // for (int i = 1; i < 4; i++) {
   //   if (ultrasonicDistances[i] > 0 && ultrasonicDistances[i] < currentMinSafeDistance) {

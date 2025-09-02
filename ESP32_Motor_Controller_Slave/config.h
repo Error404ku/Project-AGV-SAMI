@@ -85,7 +85,7 @@ struct PIDData {
 };
 
 // PID Configuration
-#define numOutputs 2  // Number of PID controllers (for 2 motors: kanan dan kiri)
+#define numOutputs 4  // Number of PID controllers (for 2 motors: kanan dan kiri)
 
 // Error Codes
 #define ERROR_PID_CALCULATION 1001

@@ -30,6 +30,10 @@
 #define MENU_ULTRASONIC_SETTINGS 30
 #define MENU_ULTRASONIC_FRONT 31
 #define MENU_ULTRASONIC_BACK 32
+#define MENU_ULTRASONIC_FRONT_TENGAH 51
+#define MENU_ULTRASONIC_FRONT_SERONG 52
+#define MENU_ULTRASONIC_BACK_TENGAH 53
+#define MENU_ULTRASONIC_BACK_SERONG 54
 #define MENU_PID_FORWARD 28
 #define MENU_PID_BACKWARD 29
 #define MENU_PID_FORWARD_WITHMASSA 34
@@ -95,6 +99,14 @@ void displayUltrasonicFrontSettings();
 void displayUltrasonicBackSettings();
 void handleUltrasonicFrontSettings();
 void handleUltrasonicBackSettings();
+void displayUltrasonicFrontTengahSettings();
+void displayUltrasonicFrontSerongSettings();
+void displayUltrasonicBackTengahSettings();
+void displayUltrasonicBackSerongSettings();
+void handleUltrasonicFrontTengahSettings();
+void handleUltrasonicFrontSerongSettings();
+void handleUltrasonicBackTengahSettings();
+void handleUltrasonicBackSerongSettings();
 void displayMusicSettings();
 void handleMusicSettings();
 void displayMusicSubmenu(const char* title, int* currentPin);
