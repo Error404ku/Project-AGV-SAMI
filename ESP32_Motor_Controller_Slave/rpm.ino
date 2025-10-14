@@ -2,18 +2,32 @@
 // PID RPM Control Function untuk 2 motor
 void rpmMotor(float rpm1, float rpm2) {
   // Gunakan PID parameters dari preferences
-  double kp = pidConfig.kp;
-  double ki = pidConfig.ki;
-  double kd = pidConfig.kd;
+  double kpRight = pidConfigRight.kp;
+  double kiRight = pidConfigRight.ki;
+  double kdRight = pidConfigRight.kd;
 
-  // Hitung integral limits berdasarkan Ki - dengan safety check
-  double minintegral, maxintegral;
-  if (ki > 0.001) {  // Prevent division by very small numbers
-    minintegral = -4000.0/ki;
-    maxintegral = 4000.0/ki;
+  double kpLeft = pidConfigLeft.kp;
+  double kiLeft = pidConfigLeft.ki;
+  double kdLeft = pidConfigLeft.kd;
+  
+  // Hitung integral limits untuk motor kanan berdasarkan kiRight
+  double minintegralRight, maxintegralRight;
+  if (kiRight > 0.001) {  // Prevent division by very small numbers
+    minintegralRight = -4000.0/kiRight;
+    maxintegralRight = 4000.0/kiRight;
   } else {
-    minintegral = -1000.0;  // Safe fallback values
-    maxintegral = 1000.0;
+    minintegralRight = -1000.0;  // Safe fallback values
+    maxintegralRight = 1000.0;
+  }
+  
+  // Hitung integral limits untuk motor kiri berdasarkan kiLeft
+  double minintegralLeft, maxintegralLeft;
+  if (kiLeft > 0.001) {  // Prevent division by very small numbers
+    minintegralLeft = -4000.0/kiLeft;
+    maxintegralLeft = 4000.0/kiLeft;
+  } else {
+    minintegralLeft = -1000.0;  // Safe fallback values
+    maxintegralLeft = 1000.0;
   }
 
   // Constrain RPM to valid range
@@ -25,12 +39,12 @@ void rpmMotor(float rpm1, float rpm2) {
   // ===== MOTOR KANAN (Motor 1) PID Control =====
   if (rpm1 > 0) {
     // Forward direction for motor kanan
-    pwmKanan = computePID(0, rpm1, rpm_depan_kanan, kp, ki, kd, minintegral, maxintegral);
+    pwmKanan = computePID(0, rpm1, rpm_depan_kanan, kpRight, kiRight, kdRight, minintegralRight, maxintegralRight);
     pwmKanan = constrain(pwmKanan, pwm_zero, pwm_max);
     
   } else if (rpm1 < 0) {
     // Reverse direction for motor kanan
-    pwmKanan = computePID(1, rpm1, rpm_depan_kanan, kp, ki, kd, minintegral, maxintegral);
+    pwmKanan = computePID(1, rpm1, rpm_depan_kanan, kpRight, kiRight, kdRight, minintegralRight, maxintegralRight);
     // pwmKanan = -pwmKanan;  // Make negative for reverse
     pwmKanan = constrain(pwmKanan, pwm_min, pwm_zero);
     
@@ -44,12 +58,12 @@ void rpmMotor(float rpm1, float rpm2) {
   // ===== MOTOR KIRI (Motor 2) PID Control =====
   if (rpm2 > 0) {
     // Forward direction for motor kiri
-    pwmKiri = computePID(2, rpm2, rpm_depan_kiri, kp, ki, kd, minintegral, maxintegral);
+    pwmKiri = computePID(2, rpm2, rpm_depan_kiri, kpLeft, kiLeft, kdLeft, minintegralLeft, maxintegralLeft);
     pwmKiri = constrain(pwmKiri, pwm_zero, pwm_max);
     
   } else if (rpm2 < 0) {
     // Reverse direction for motor kiri
-    pwmKiri = computePID(3, rpm2, rpm_depan_kiri, kp, ki, kd, minintegral, maxintegral);
+    pwmKiri = computePID(3, rpm2, rpm_depan_kiri, kpLeft, kiLeft, kdLeft, minintegralLeft, maxintegralLeft);
     // pwmKiri = -pwmKiri;  // Make negative for reverse
     pwmKiri = constrain(pwmKiri, pwm_min,pwm_zero);
     
@@ -66,8 +80,8 @@ void rpmMotor(float rpm1, float rpm2) {
   pwmKanan = constrain(pwmKanan, pwm_min, pwm_max);
   pwmKiri = constrain(pwmKiri, pwm_min, pwm_max);
   
-  setMotorSpeed(1, pwmKiri);  // Motor 1 = Kanan
-  setMotorSpeed(2, pwmKanan);   // Motor 2 = Kiri
+  setMotorSpeed(1, pwmKiri);   // Motor 1 = Kiri (berdasarkan motor.ino)
+  setMotorSpeed(2, pwmKanan);  // Motor 2 = Kanan (berdasarkan motor.ino)
 
 }
 

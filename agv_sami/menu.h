@@ -44,10 +44,20 @@
 // Motor Settings Sub Menu
 #define MENU_SPEED_SETTING 46
 #define MENU_PID_RPM_SETTING 47
+#define MENU_PID_RPM_RIGHT 48
+#define MENU_PID_RPM_LEFT 59
 
 // Motor Test Sub Menu (MENU_MOTOR_TEST is now 2, defined above)
 #define MENU_MOTOR_TEST_PWM 49
 #define MENU_MOTOR_TEST_RPM 50
+
+// RPM Tuning Menu
+#define MENU_RPM_TUNING 55
+#define MENU_RPM_TUNE_START 56
+#define MENU_RPM_TUNE_CANCEL 57
+#define MENU_RPM_TUNE_STATUS 58
+#define MENU_RPM_TUNE_RIGHT 62
+#define MENU_RPM_TUNE_LEFT 63
 
 // External variables from other files
 extern int targetStation[2];
@@ -119,12 +129,28 @@ void displaySpeedSetting();
 void handleSpeedSetting();
 void displayPidRpmSetting();
 void handlePidRpmSetting();
+void displayPidRpmRight();
+void handlePidRpmRight();
+void displayPidRpmLeft();
+void handlePidRpmLeft();
 
 // Motor Test Sub Menu functions (displayMotorTest and handleMotorTest declared above)
 void displayMotorTestPWM();
 void handleMotorTestPWM();
 void displayMotorTestRPM();
 void handleMotorTestRPM();
+
+// RPM Tuning Menu functions
+void displayRpmTuningMenu();
+void handleRpmTuningMenu();
+void displayTuningStatus();
+void displayTuningStartMenu(String motorName);
+void handleTuningStartMenu(String command);
+void safeDelay(unsigned long ms);  // Safe delay with watchdog reset
+void handleRpmTuningMenu();
+void displayTuningStatus();
+void sendTuningCommand(String command);
+void parseTuningResponse(String response);
 
 // RFID functions that were missing declarations
 String getRfidForStation(int stationId);

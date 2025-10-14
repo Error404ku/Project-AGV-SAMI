@@ -1,5 +1,14 @@
 #include "menu.h"
 
+// Safe delay function
+void safeDelay(unsigned long ms) {
+  unsigned long start = millis();
+  while (millis() - start < ms) {
+    delay(100);
+    if (millis() - start >= ms) break;
+  }
+}
+
 // Using menu.h definitions only - removed duplicates
 #define MENU_MUSIC_ON 40
 #define MENU_MUSIC_OBSTACLE 41
@@ -59,6 +68,14 @@ void initMenuTempVariables() {
   tempMotorPidKp = motorPidKp;
   tempMotorPidKi = motorPidKi;
   tempMotorPidKd = motorPidKd;
+  
+  // Initialize individual motor PID temp variables
+  tempMotorPidKpRight = motorPidKpRight;
+  tempMotorPidKiRight = motorPidKiRight;
+  tempMotorPidKdRight = motorPidKdRight;
+  tempMotorPidKpLeft = motorPidKpLeft;
+  tempMotorPidKiLeft = motorPidKiLeft;
+  tempMotorPidKdLeft = motorPidKdLeft;
 }
 
 // Global display functions
@@ -137,6 +154,14 @@ void saveSettings() {
   preferences.putDouble("motorPidKp", tempMotorPidKp);
   preferences.putDouble("motorPidKi", tempMotorPidKi);
   preferences.putDouble("motorPidKd", tempMotorPidKd);
+  
+  // Save individual motor PID settings
+  preferences.putDouble("motorPidKpRight", tempMotorPidKpRight);
+  preferences.putDouble("motorPidKiRight", tempMotorPidKiRight);
+  preferences.putDouble("motorPidKdRight", tempMotorPidKdRight);
+  preferences.putDouble("motorPidKpLeft", tempMotorPidKpLeft);
+  preferences.putDouble("motorPidKiLeft", tempMotorPidKiLeft);
+  preferences.putDouble("motorPidKdLeft", tempMotorPidKdLeft);
 
   // Apply PID values
   kpLinefollower = tempKp;
@@ -196,7 +221,7 @@ void saveSettings() {
 
 void displayMainMenu() {
   // Menu items array
-  String menuItems[16] = {
+  String menuItems[17] = {
     "AGV Mode",           // selectedItem 0 -> MENU_AGV_MODE (1)
     "Reset AGV State",    // selectedItem 1 -> MENU_RESET_AGV_STATE (25)
     "Motor Test",         // selectedItem 2 -> MENU_MOTOR_TEST (2)
@@ -212,7 +237,8 @@ void displayMainMenu() {
     "Magnet Check",       // selectedItem 12 -> MENU_MAGNET_CHECK (23)
     "Ultrasonic Check",   // selectedItem 13 -> MENU_ULTRASONIC_CHECK (24)
     "Ultrasonic Settings", // selectedItem 14 -> MENU_ULTRASONIC_SETTINGS (30)
-    "WiFi Settings"       // selectedItem 15 -> MENU_WIFI_SETTINGS (14)
+    "WiFi Settings",      // selectedItem 15 -> MENU_WIFI_SETTINGS (14)
+    "Tuning RPM"          // selectedItem 16 -> MENU_RPM_TUNING (55)
   };
   maxItems = sizeof(menuItems) / sizeof(menuItems[0]);
   // Update scroll position if needed
@@ -416,8 +442,15 @@ void handleMenu() {
               menuNeedsRefresh = true;
               break;
               
+            case 16:  // Tuning RPM
+              lcd.clear();
+              currentMenu = MENU_RPM_TUNING; // 55
+              selectedTuningItem = 0; // Reset to first item
+              menuNeedsRefresh = true;
+              break;
+              
             default:
-              // Fallback (should not happen with 15 items)
+              // Fallback (should not happen with 17 items)
               currentMenu = MENU_MAIN;
               menuNeedsRefresh = true;
               break;
@@ -541,6 +574,26 @@ void handleMenu() {
       displayPidRpmSetting();
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handlePidRpmSetting();
+        if (LEFT() || RIGHT() || UP() || DOWN() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_PID_RPM_RIGHT:
+      displayPidRpmRight();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handlePidRpmRight();
+        if (LEFT() || RIGHT() || UP() || DOWN() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_PID_RPM_LEFT:
+      displayPidRpmLeft();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handlePidRpmLeft();
         if (LEFT() || RIGHT() || UP() || DOWN() || START() || STOP()) {
           lastButtonPress = currentMillis;
         }
@@ -846,6 +899,58 @@ void handleMenu() {
       if (currentMillis - lastButtonPress >= buttonDelay) {
         handleWifiSettings();
         if (START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_RPM_TUNING:
+      displayRpmTuningMenu();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleRpmTuningMenu();
+        if (UP() || DOWN() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_RPM_TUNE_STATUS:
+      displayTuningStatus();
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        if (STOP()) {
+          currentMenu = MENU_RPM_TUNING;
+          selectedTuningItem = 0;
+          menuNeedsRefresh = true;
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_RPM_TUNE_START:
+      displayTuningStartMenu("Both Motors");
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleTuningStartMenu("TUNE");
+        if (UP() || DOWN() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_RPM_TUNE_RIGHT:
+      displayTuningStartMenu("Right Motor");
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleTuningStartMenu("RIGHT_TUNE");
+        if (UP() || DOWN() || START() || STOP()) {
+          lastButtonPress = currentMillis;
+        }
+      }
+      break;
+
+    case MENU_RPM_TUNE_LEFT:
+      displayTuningStartMenu("Left Motor");
+      if (currentMillis - lastButtonPress >= buttonDelay) {
+        handleTuningStartMenu("LEFT_TUNE");
+        if (UP() || DOWN() || START() || STOP()) {
           lastButtonPress = currentMillis;
         }
       }
@@ -2152,7 +2257,7 @@ void handleTargetSettings() {
         lcd.clear();
         lcd.setCursor(0, 1);
         lcd.print("Stations cleared!");
-        delay(1500);
+        safeDelay(1500);  // Use safe delay with watchdog reset
 
         // Reset state
         isClearingStations = false;
@@ -2199,12 +2304,12 @@ void handleRfidSettings() {
         rfidDisplay[8] = '\0';
         lcd.print(rfidDisplay);
         lcd.print("...");
-        delay(2000);
+        safeDelay(2000);  // Use safe delay with watchdog reset
       } else {
         lcd.clear();
         lcd.setCursor(0, 1);
         lcd.print("Error saving!");
-        delay(2000);
+        safeDelay(2000);  // Use safe delay with watchdog reset
       }
 
       // Reset scanning state
@@ -3976,99 +4081,55 @@ void handleSpeedSetting() {
 }
 
 void displayPidRpmSetting() {
-  static int lastSelectedParam = -1;
-  static double lastValues[3] = {-1, -1, -1};
+  static int lastSelectedItem = -1;
   
-  if (menuNeedsRefresh || selectedItem != lastSelectedParam ||
-      tempMotorPidKp != lastValues[0] || tempMotorPidKi != lastValues[1] || 
-      tempMotorPidKd != lastValues[2]) {
-    
+  if (menuNeedsRefresh || selectedItem != lastSelectedItem) {
     lcd.clear();
-    displayMenuHeader("PID Setting:");
+    displayMenuHeader("PID RPM Setting:");
     
-    String params[3] = {"Kp:", "Ki:", "Kd:"};
-    double values[3] = {tempMotorPidKp, tempMotorPidKi, tempMotorPidKd};
+    String menuItems[2] = {
+      "Right Motor",       // selectedItem 0 -> MENU_PID_RPM_RIGHT (48)
+      "Left Motor"         // selectedItem 1 -> MENU_PID_RPM_LEFT (59)
+    };
     
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       lcd.setCursor(0, i + 1);
-      if (i == selectedItem) {
-        lcd.print("> ");
-      } else {
-        lcd.print("  ");
-      }
-      lcd.print(params[i]);
-      lcd.print(values[i], 3);
+      displayIndicator(i, selectedItem);
+      lcd.print(menuItems[i]);
     }
     
+    displayMenuFooter("A:Select B:Back");
+    
     menuNeedsRefresh = false;
-    lastSelectedParam = selectedItem;
-    lastValues[0] = tempMotorPidKp;
-    lastValues[1] = tempMotorPidKi;
-    lastValues[2] = tempMotorPidKd;
+    lastSelectedItem = selectedItem;
   }
 }
 
 void handlePidRpmSetting() {
   if (UP()) {
-    selectedItem = (selectedItem - 1 + 3) % 3;
+    selectedItem = (selectedItem - 1 + 2) % 2;
     menuNeedsRefresh = true;
   } else if (DOWN()) {
-    selectedItem = (selectedItem + 1) % 3;
+    selectedItem = (selectedItem + 1) % 2;
     menuNeedsRefresh = true;
-  } else if (LEFT()) {
-    // Decrease selected parameter
-    switch (selectedItem) {
-      case 0:  // Kp
-        tempMotorPidKp = max(0.0, tempMotorPidKp - 0.1);
-        break;
-      case 1:  // Ki
-        tempMotorPidKi = max(0.0, tempMotorPidKi - 0.01);
-        break;
-      case 2:  // Kd
-        tempMotorPidKd = max(0.0, tempMotorPidKd - 0.01);
-        break;
-    }
-    menuNeedsRefresh = true;
-  } else if (RIGHT()) {
-    // Increase selected parameter
-    switch (selectedItem) {
-      case 0:  // Kp
-        tempMotorPidKp = min(100.0, tempMotorPidKp + 0.1);
-        break;
-      case 1:  // Ki
-        tempMotorPidKi = min(50.0, tempMotorPidKi + 0.01);
-        break;
-      case 2:  // Kd
-        tempMotorPidKd = min(50.0, tempMotorPidKd + 0.01);
-        break;
-    }
-    menuNeedsRefresh = true;
-  } else if (START() || STOP() ) {
-    // Save PID settings and send to motor controller
-    motorPidKp = tempMotorPidKp;
-    motorPidKi = tempMotorPidKi;
-    motorPidKd = tempMotorPidKd;
-
-    // Send PID values using the dedicated function
-    sendPidValues(motorPidKp, motorPidKi, motorPidKd);
-    
-    // Show confirmation
+  } else if (START()) {
     lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("PID Command Sent!");
-    lcd.setCursor(0, 1);
-    lcd.print("Kp:" + String(motorPidKp, 2));
-    lcd.setCursor(0, 2);
-    lcd.print("Ki:" + String(motorPidKi, 3));
-    lcd.setCursor(0, 3);
-    lcd.print("Kd:" + String(motorPidKd, 3));
-    delay(1000);
-    // menuNeedsRefresh = true;
-    
+    switch (selectedItem) {
+      case 0:  // Right Motor
+        currentMenu = MENU_PID_RPM_RIGHT;
+        selectedItem = 0;  // Reset for parameter selection
+        break;
+      case 1:  // Left Motor
+        currentMenu = MENU_PID_RPM_LEFT;
+        selectedItem = 0;  // Reset for parameter selection
+        break;
+    }
+    menuNeedsRefresh = true;
+  } else if (STOP()) {
     // Back to Motor Settings menu
     lcd.clear();
     currentMenu = MENU_MOTOR_SETTINGS;
-    selectedItem = 1;
+    selectedItem = 1;  // Return to PID RPM item
     menuStartIndex = 0;
     menuNeedsRefresh = true;
   }
@@ -4318,6 +4379,529 @@ void handleUltrasonicBackSerongSettings() {
     tempMinSafeDistanceBackSerong = minSafeDistanceBackSerong;
     currentMenu = MENU_ULTRASONIC_BACK;
     selectedItem = 1;
+    menuNeedsRefresh = true;
+  }
+}
+
+// ===============================================
+// RPM TUNING MENU FUNCTIONS
+// ===============================================
+
+void displayRpmTuningMenu() {
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
+  displayMenuHeader("RPM Tuning");
+
+  // Display Tune Both option
+  lcd.setCursor(0, 1);
+  if (selectedTuningItem == 0) {
+    lcd.print("> Tune Both");
+  } else {
+    lcd.print("  Tune Both");
+  }
+
+  // Display Tune Right option
+  lcd.setCursor(0, 2);
+  if (selectedTuningItem == 1) {
+    lcd.print("> Tune Right");
+  } else {
+    lcd.print("  Tune Right");
+  }
+
+  // Display Tune Left option
+  lcd.setCursor(0, 3);
+  if (selectedTuningItem == 2) {
+    lcd.print("> Tune Left");
+  } else {
+    lcd.print("  Tune Left");
+  }
+  
+  // Show controls hint at the right side of line 3
+  lcd.setCursor(12, 3);
+  lcd.print("A:OK B:<");
+}
+
+void handleRpmTuningMenu() {
+  if (UP()) {
+    if (selectedTuningItem > 0) {
+      selectedTuningItem--;
+      menuNeedsRefresh = true;
+    }
+  } else if (DOWN()) {
+    if (selectedTuningItem < 2) {
+      selectedTuningItem++;
+      menuNeedsRefresh = true;
+    }
+  } else if (START()) {
+    // Execute selected action
+    switch (selectedTuningItem) {
+      case 0: // Tune Both
+        currentMenu = MENU_RPM_TUNE_START;
+        selectedTuningSubItem = 0;
+        menuNeedsRefresh = true;
+        break;
+        
+      case 1: // Tune Right
+        currentMenu = MENU_RPM_TUNE_RIGHT;
+        selectedTuningSubItem = 0;
+        menuNeedsRefresh = true;
+        break;
+        
+      case 2: // Tune Left
+        currentMenu = MENU_RPM_TUNE_LEFT;
+        selectedTuningSubItem = 0;
+        menuNeedsRefresh = true;
+        break;
+    }
+  } else if (STOP()) {
+    // Back to main menu
+    currentMenu = MENU_MAIN;
+    selectedItem = 16; // Keep "Tuning RPM" selected
+    menuNeedsRefresh = true;
+  }
+}
+
+void displayTuningStatus() {
+  // Auto-refresh status every 2 seconds when in status view
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastTuningStatusRequest >= TUNING_STATUS_INTERVAL) {
+    sendTuningCommand("STATUS");
+    lastTuningStatusRequest = currentMillis;
+  }
+  
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
+  displayMenuHeader("Tuning Status");
+
+  lcd.setCursor(0, 1);
+  lcd.print("Status: " + tuningStatus);
+  
+  if (tuningStatus == "PROGRESS" || tuningStatus.startsWith("PROGRESS")) {
+    lcd.setCursor(0, 2);
+    lcd.print("Progress: " + String(tuningProgress) + "%");
+    
+    // Progress bar visualization
+    lcd.setCursor(0, 3);
+    int barLength = (tuningProgress * 20) / 100; // 20 chars max
+    for (int i = 0; i < 20; i++) {
+      if (i < barLength) {
+        lcd.print("=");
+      } else if (i == barLength && tuningProgress > 0) {
+        lcd.print(">");
+      } else {
+        lcd.print(" ");
+      }
+    }
+  } else if (tuningStatus == "IDLE") {
+    lcd.setCursor(0, 2);
+    lcd.print("Tuning tidak aktif");
+    lcd.setCursor(0, 3);
+    lcd.print("B:Back");
+  } else if (tuningStatus == "STARTED") {
+    lcd.setCursor(0, 2);
+    lcd.print("Tuning dimulai");
+    lcd.setCursor(0, 3);
+    lcd.print("Tunggu beberapa");
+  } else if (tuningStatus == "CANCELLED") {
+    lcd.setCursor(0, 2);
+    lcd.print("Tuning dibatalkan");
+    lcd.setCursor(0, 3);
+    lcd.print("B:Back");
+  } else {
+    lcd.setCursor(0, 2);
+    lcd.print("Status: " + tuningStatus);
+    lcd.setCursor(0, 3);
+    lcd.print("B:Back");
+  }
+  
+  // Handle back button
+  if (STOP()) {
+    currentMenu = MENU_RPM_TUNING;
+    selectedTuningItem = 2; // Keep "Tuning Status" selected
+    menuNeedsRefresh = true;
+  }
+}
+
+void sendTuningCommand(String command) {
+  // Send command to motor controller slave via Serial
+  Serial.println(command);
+  
+  // Debug output
+  Serial.println("Sending tuning command: " + command);
+}
+
+void parseTuningResponse(String response) {
+  // Parse responses from motor controller slave
+  response.trim();
+  
+  if (response.startsWith("AUTOTUNE:")) {
+    String statusPart = response.substring(9); // Remove "AUTOTUNE:" prefix
+    
+    if (statusPart == "STARTED") {
+      tuningStatus = "STARTED";
+      tuningProgress = 0;
+    } else if (statusPart == "ALREADY_RUNNING") {
+      tuningStatus = "RUNNING";
+    } else if (statusPart == "CANCELLED") {
+      tuningStatus = "CANCELLED";
+      tuningProgress = 0;
+    } else if (statusPart == "NOT_RUNNING") {
+      tuningStatus = "IDLE";
+      tuningProgress = 0;
+    } else if (statusPart == "IDLE") {
+      tuningStatus = "IDLE";
+      tuningProgress = 0;
+    } else if (statusPart.startsWith("PROGRESS:")) {
+      tuningStatus = "PROGRESS";
+      String progressStr = statusPart.substring(9); // Remove "PROGRESS:" prefix
+      tuningProgress = progressStr.toInt();
+      // Ensure progress is within valid range
+      tuningProgress = constrain(tuningProgress, 0, 100);
+    } else if (statusPart.startsWith("COMPLETED:")) {
+      tuningStatus = "COMPLETED";
+      tuningProgress = 100;
+      // Extract PID values if available
+      String pidData = statusPart.substring(10); // Remove "COMPLETED:" prefix
+      Serial.println("Auto-tuning completed with PID: " + pidData);
+    }
+    
+    // If we're currently viewing status, refresh the display
+    if (currentMenu == MENU_RPM_TUNE_STATUS) {
+      menuNeedsRefresh = true;
+    }
+    
+    // Debug output
+    Serial.println("Tuning status updated: " + tuningStatus + " (" + String(tuningProgress) + "%)");
+  } else if (response.startsWith("AUTOTUNE_RIGHT:")) {
+    String statusPart = response.substring(15); // Remove "AUTOTUNE_RIGHT:" prefix
+    
+    if (statusPart == "STARTED") {
+      tuningStatus = "RIGHT STARTED";
+      tuningProgress = 0;
+    } else if (statusPart.startsWith("COMPLETED:")) {
+      tuningStatus = "RIGHT COMPLETED";
+      tuningProgress = 100;
+      String pidData = statusPart.substring(10); // Remove "COMPLETED:" prefix
+    }
+    
+    if (currentMenu == MENU_RPM_TUNE_STATUS) {
+      menuNeedsRefresh = true;
+    }
+    
+    Serial.println("Right motor tuning status: " + tuningStatus);
+  } else if (response.startsWith("AUTOTUNE_LEFT:")) {
+    String statusPart = response.substring(14); // Remove "AUTOTUNE_LEFT:" prefix
+    
+    if (statusPart == "STARTED") {
+      tuningStatus = "LEFT STARTED";
+      tuningProgress = 0;
+    } else if (statusPart.startsWith("COMPLETED:")) {
+      tuningStatus = "LEFT COMPLETED";
+      tuningProgress = 100;
+      String pidData = statusPart.substring(10); // Remove "COMPLETED:" prefix
+    }
+    
+    if (currentMenu == MENU_RPM_TUNE_STATUS) {
+      menuNeedsRefresh = true;
+    }
+  }
+}
+
+// ====== PID RPM RIGHT MOTOR FUNCTIONS ======
+void displayPidRpmRight() {
+  static int lastSelectedParam = -1;
+  static double lastValues[3] = {-1, -1, -1};
+  
+  if (menuNeedsRefresh || selectedItem != lastSelectedParam ||
+      tempMotorPidKpRight != lastValues[0] || tempMotorPidKiRight != lastValues[1] || 
+      tempMotorPidKdRight != lastValues[2]) {
+    
+    lcd.clear();
+    displayMenuHeader("PID Right Motor:");
+    
+    String params[3] = {"Kp:", "Ki:", "Kd:"};
+    double values[3] = {tempMotorPidKpRight, tempMotorPidKiRight, tempMotorPidKdRight};
+    
+    for (int i = 0; i < 3; i++) {
+      lcd.setCursor(0, i + 1);
+      if (i == selectedItem) {
+        lcd.print("> ");
+      } else {
+        lcd.print("  ");
+      }
+      lcd.print(params[i]);
+      lcd.print(values[i], 3);
+    }
+    
+    menuNeedsRefresh = false;
+    lastSelectedParam = selectedItem;
+    lastValues[0] = tempMotorPidKpRight;
+    lastValues[1] = tempMotorPidKiRight;
+    lastValues[2] = tempMotorPidKdRight;
+  }
+}
+
+void handlePidRpmRight() {
+  if (UP()) {
+    selectedItem = (selectedItem - 1 + 3) % 3;
+    menuNeedsRefresh = true;
+  } else if (DOWN()) {
+    selectedItem = (selectedItem + 1) % 3;
+    menuNeedsRefresh = true;
+  } else if (LEFT()) {
+    // Decrease selected parameter
+    switch (selectedItem) {
+      case 0:  // Kp
+        tempMotorPidKpRight = max(0.0, tempMotorPidKpRight - 0.1);
+        break;
+      case 1:  // Ki
+        tempMotorPidKiRight = max(0.0, tempMotorPidKiRight - 0.01);
+        break;
+      case 2:  // Kd
+        tempMotorPidKdRight = max(0.0, tempMotorPidKdRight - 0.01);
+        break;
+    }
+    menuNeedsRefresh = true;
+  } else if (RIGHT()) {
+    // Increase selected parameter
+    switch (selectedItem) {
+      case 0:  // Kp
+        tempMotorPidKpRight = min(200.0, tempMotorPidKpRight + 0.1);
+        break;
+      case 1:  // Ki
+        tempMotorPidKiRight = min(200.0, tempMotorPidKiRight + 0.01);
+        break;
+      case 2:  // Kd
+        tempMotorPidKdRight = min(200.0, tempMotorPidKdRight + 0.01); 
+        break;
+    }
+    menuNeedsRefresh = true;
+  } else if (START() || STOP()) {
+    // Save PID settings and send to motor controller
+    motorPidKpRight = tempMotorPidKpRight;
+    motorPidKiRight = tempMotorPidKiRight;
+    motorPidKdRight = tempMotorPidKdRight;
+
+    // Send PID values for right motor
+    sendPidValuesRight(motorPidKpRight, motorPidKiRight, motorPidKdRight);
+    
+    // Show confirmation
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("PID Right Sent!");
+    lcd.setCursor(0, 1);
+    lcd.print("Kp:" + String(motorPidKpRight, 2));
+    lcd.setCursor(0, 2);
+    lcd.print("Ki:" + String(motorPidKiRight, 3));
+    lcd.setCursor(0, 3);
+    lcd.print("Kd:" + String(motorPidKdRight, 3));
+    delay(1000);
+    
+    // Back to PID RPM Setting menu
+    lcd.clear();
+    currentMenu = MENU_PID_RPM_SETTING;
+    selectedItem = 0;  // Return to Right Motor item
+    menuStartIndex = 0;
+    menuNeedsRefresh = true;
+  }
+}
+
+// ====== PID RPM LEFT MOTOR FUNCTIONS ======
+void displayPidRpmLeft() {
+  static int lastSelectedParam = -1;
+  static double lastValues[3] = {-1, -1, -1};
+  
+  if (menuNeedsRefresh || selectedItem != lastSelectedParam ||
+      tempMotorPidKpLeft != lastValues[0] || tempMotorPidKiLeft != lastValues[1] || 
+      tempMotorPidKdLeft != lastValues[2]) {
+    
+    lcd.clear();
+    displayMenuHeader("PID Left Motor:");
+    
+    String params[3] = {"Kp:", "Ki:", "Kd:"};
+    double values[3] = {tempMotorPidKpLeft, tempMotorPidKiLeft, tempMotorPidKdLeft};
+    
+    for (int i = 0; i < 3; i++) {
+      lcd.setCursor(0, i + 1);
+      if (i == selectedItem) {
+        lcd.print("> ");
+      } else {
+        lcd.print("  ");
+      }
+      lcd.print(params[i]);
+      lcd.print(values[i], 3);
+    }
+    
+    menuNeedsRefresh = false;
+    lastSelectedParam = selectedItem;
+    lastValues[0] = tempMotorPidKpLeft;
+    lastValues[1] = tempMotorPidKiLeft;
+    lastValues[2] = tempMotorPidKdLeft;
+  }
+}
+
+void handlePidRpmLeft() {
+  if (UP()) {
+    selectedItem = (selectedItem - 1 + 3) % 3;
+    menuNeedsRefresh = true;
+  } else if (DOWN()) {
+    selectedItem = (selectedItem + 1) % 3;
+    menuNeedsRefresh = true;
+  } else if (LEFT()) {
+    // Decrease selected parameter
+    switch (selectedItem) {
+      case 0:  // Kp
+        tempMotorPidKpLeft = max(0.0, tempMotorPidKpLeft - 0.1);
+        break;
+      case 1:  // Ki
+        tempMotorPidKiLeft = max(0.0, tempMotorPidKiLeft - 0.01);
+        break;
+      case 2:  // Kd
+        tempMotorPidKdLeft = max(0.0, tempMotorPidKdLeft - 0.01);
+        break;
+    }
+    menuNeedsRefresh = true;
+  } else if (RIGHT()) {
+    // Increase selected parameter
+    switch (selectedItem) {
+      case 0:  // Kp
+        tempMotorPidKpLeft = min(200.0, tempMotorPidKpLeft + 0.1);
+        break;
+      case 1:  // Ki
+        tempMotorPidKiLeft = min(200.0, tempMotorPidKiLeft + 0.01);
+        break;
+      case 2:  // Kd
+        tempMotorPidKdLeft = min(200.0, tempMotorPidKdLeft + 0.01); 
+        break;
+    }
+    menuNeedsRefresh = true;
+  } else if (START() || STOP()) {
+    // Save PID settings and send to motor controller
+    motorPidKpLeft = tempMotorPidKpLeft;
+    motorPidKiLeft = tempMotorPidKiLeft;
+    motorPidKdLeft = tempMotorPidKdLeft;
+
+    // Send PID values for left motor
+    sendPidValuesLeft(motorPidKpLeft, motorPidKiLeft, motorPidKdLeft);
+    
+    // Show confirmation
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print("Left PID saved:");
+    lcd.setCursor(0, 2);
+    lcd.print("Kp=" + String(motorPidKpLeft, 2) + " Ki=" + String(motorPidKiLeft, 3));
+    lcd.setCursor(0, 3);
+    lcd.print("Kd=" + String(motorPidKdLeft, 3));
+    delay(2000);
+    
+    // Return to parent menu
+    currentMenu = MENU_PID_RPM_SETTING;
+    selectedItem = 1; // Keep "Left Motor" selected
+    menuNeedsRefresh = true;
+  }
+}
+
+// Function to display tuning start menu for specific motor
+void displayTuningStartMenu(String motorName) {
+  // Clear display if menu needs refresh
+  if (menuNeedsRefresh) {
+    lcd.clear();
+    menuNeedsRefresh = false;
+  }
+  
+  // Create header string properly
+  String headerText = "Tune " + motorName;
+  displayMenuHeader(headerText.c_str());
+
+  // Display Start option
+  lcd.setCursor(0, 1);
+  if (selectedTuningSubItem == 0) {
+    lcd.print("> Start");
+  } else {
+    lcd.print("  Start");
+  }
+
+  // Display Cancel option
+  lcd.setCursor(0, 2);
+  if (selectedTuningSubItem == 1) {
+    lcd.print("> Cancel");
+  } else {
+    lcd.print("  Cancel");
+  }
+
+  // Display Status option
+  lcd.setCursor(0, 3);
+  if (selectedTuningSubItem == 2) {
+    lcd.print("> Status");
+  } else {
+    lcd.print("  Status");
+  }
+  
+  // Show controls hint
+  lcd.setCursor(12, 3);
+  lcd.print("A:OK B:<");
+}
+
+// Function to handle tuning start menu for specific motor
+void handleTuningStartMenu(String command) {
+  if (UP()) {
+    if (selectedTuningSubItem > 0) {
+      selectedTuningSubItem--;
+      menuNeedsRefresh = true;
+    }
+  } else if (DOWN()) {
+    if (selectedTuningSubItem < 2) {
+      selectedTuningSubItem++;
+      menuNeedsRefresh = true;
+    }
+  } else if (START()) {
+    // Execute selected action
+    switch (selectedTuningSubItem) {
+      case 0: // Start Tuning
+        sendTuningCommand(command);
+        lcd.clear();
+        lcd.setCursor(0, 1);
+        lcd.print("Memulai tuning...");
+        lcd.setCursor(0, 2);
+        lcd.print("Mohon tunggu...");
+        
+        safeDelay(2000);  // Use safe delay with watchdog reset
+        
+        menuNeedsRefresh = true;
+        break;
+        
+      case 1: // Cancel Tuning
+        sendTuningCommand("CANCEL");
+        lcd.clear();
+        lcd.setCursor(0, 1);
+        lcd.print("Membatalkan");
+        lcd.setCursor(0, 2);
+        lcd.print("tuning...");
+        
+        safeDelay(2000);  // Use safe delay with watchdog reset
+        
+        menuNeedsRefresh = true;
+        break;
+        
+      case 2: // Tuning Status
+        sendTuningCommand("TUNESTATUS");
+        currentMenu = MENU_RPM_TUNE_STATUS;
+        lastTuningStatusRequest = millis();
+        menuNeedsRefresh = true;
+        break;
+    }
+  } else if (STOP()) {
+    // Back to tuning menu
+    currentMenu = MENU_RPM_TUNING;
+    selectedTuningItem = 0;
     menuNeedsRefresh = true;
   }
 }

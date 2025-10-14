@@ -35,7 +35,6 @@
 #include <algorithm>
 #include "menu.h"
 #include <Wiegand.h>
-#include <esp_task_wdt.h>
 
 // ===================================================================
 //                        FREERTOS INCLUDES
@@ -263,12 +262,30 @@ int tempBaseSpeed = 2000;      // Will be initialized from baseSpeed
 // Motor RPM Control Variables
 int maxMotorRpm = 90;           // Maximum RPM for motor control (0-90)
 int tempMaxMotorRpm = 90;       // Temporary variable for menu editing
+
+// PID Variables for combined motor control (backward compatibility)
 double motorPidKp = 1.0;        // PID Kp for motor RPM control
 double motorPidKi = 0.15;       // PID Ki for motor RPM control  
 double motorPidKd = 0.0;        // PID Kd for motor RPM control
 double tempMotorPidKp = 1.0;    // Temporary Kp for menu editing
 double tempMotorPidKi = 0.15;   // Temporary Ki for menu editing
 double tempMotorPidKd = 0.0;    // Temporary Kd for menu editing
+
+// PID Variables for individual motor control - Right Motor
+double motorPidKpRight = 1.0;        // PID Kp for right motor RPM control
+double motorPidKiRight = 0.15;       // PID Ki for right motor RPM control  
+double motorPidKdRight = 0.0;        // PID Kd for right motor RPM control
+double tempMotorPidKpRight = 1.0;    // Temporary Kp for right motor menu editing
+double tempMotorPidKiRight = 0.15;   // Temporary Ki for right motor menu editing
+double tempMotorPidKdRight = 0.0;    // Temporary Kd for right motor menu editing
+
+// PID Variables for individual motor control - Left Motor
+double motorPidKpLeft = 1.0;         // PID Kp for left motor RPM control
+double motorPidKiLeft = 0.15;        // PID Ki for left motor RPM control  
+double motorPidKdLeft = 0.0;         // PID Kd for left motor RPM control
+double tempMotorPidKpLeft = 1.0;     // Temporary Kp for left motor menu editing
+double tempMotorPidKiLeft = 0.15;    // Temporary Ki for left motor menu editing
+double tempMotorPidKdLeft = 0.0;     // Temporary Kd for left motor menu editing
 
 // Current RPM values received from motor controller
 float currentRpmKanan = 0.0;    // Current actual RPM of right motor
@@ -297,6 +314,14 @@ int selectedRfidItem = 0;
 int selectedStationId = 1;
 bool isWaitingForRfid = false;
 unsigned long rfidScanTimeout = 0;
+
+// RPM Tuning Variables
+int selectedTuningItem = 0;         // Selected item in tuning menu (0=Start, 1=Cancel, 2=Status)
+int selectedTuningSubItem = 0;      // Selected item in tuning submenu (0=Start, 1=Cancel, 2=Status)
+String tuningStatus = "IDLE";       // Current tuning status from slave
+int tuningProgress = 0;             // Progress percentage (0-100)
+unsigned long lastTuningStatusRequest = 0;  // For periodic status updates
+const unsigned long TUNING_STATUS_INTERVAL = 2000; // Update status every 2 seconds
 
 // Target settings variables
 unsigned long xButtonHoldStart = 0;
@@ -771,6 +796,8 @@ void pidLinefollower(int error, PidMode mode);
 void pwmMotor(int leftSpeed, int rightSpeed);
 void handleMotorControllerSerial();
 void sendPidValues(double kp, double ki, double kd);
+void sendPidValuesRight(double kp, double ki, double kd);
+void sendPidValuesLeft(double kp, double ki, double kd);
 void requestPidDataFromSlave();
 bool checkSystemReadyStatus();
 void requestRpmDataFromSlave();
@@ -870,10 +897,23 @@ String motorControllerBuffer = "";
 bool motorControllerStringComplete = false;
 
 // Startup PID synchronization flags
-bool pidDataReceived = false;           // Flag untuk menandakan PID data telah diterima dari slave
+bool pidDataReceived = false;           // Flag untuk menandakan PID data telah diterima dari slave (legacy)
+bool pidDataReceivedRight = false;      // Flag untuk PID data motor kanan
+bool pidDataReceivedLeft = false;       // Flag untuk PID data motor kiri
 bool systemReadyToRun = false;         // Flag untuk menandakan sistem siap masuk loop
 unsigned long pidRequestStartTime = 0; // Timestamp untuk timeout PID request
-const unsigned long PID_REQUEST_TIMEOUT = 15000; // Timeout 5 detik untuk PID request
+const unsigned long PID_REQUEST_TIMEOUT = 15000; // Timeout 15 detik untuk PID request
+
+// Motor serial communication function declarations
+void setupMotorSerial();
+void sendRPM(int rpmKiri, int rpmKanan);
+void sendMotorCommand(int speedKiri, int speedKanan);
+void motorStop();
+void handleMotorControllerSerial();
+void sendPidValues(double kp, double ki, double kd);
+void processMotorControllerMessage(String message);
+void requestPidDataFromSlave();
+void requestRpmDataFromSlave();
 
 // FreeRTOS function declarations removed - using original implementation
 

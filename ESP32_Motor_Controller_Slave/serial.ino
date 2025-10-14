@@ -20,13 +20,12 @@ void processCommand(String command) {
   command.trim();  // Remove whitespace
   Serial.println("Received command: " + command);  // Debug message
   
-  if (command.startsWith("PID")) {  // TERAKHIR untuk set nilai PID
-    String params = command.substring(3); // harus "PID<kp>,<ki>,<kd>" tanpa ':'
+  if (command.startsWith("PIDRIGHT")) {  // Handler untuk PID motor kanan
+    String params = command.substring(8); // harus "PIDRIGHT<kp>,<ki>,<kd>" tanpa ':'
     int firstComma = params.indexOf(',');
     int secondComma = params.indexOf(',', firstComma + 1);
     
-    // Debug info tambahan
-    Serial.println("PID Command Parsing:");
+    Serial.println("PIDRIGHT Command Parsing:");
     Serial.println("Params: " + params);
     Serial.println("First comma at: " + String(firstComma));
     Serial.println("Second comma at: " + String(secondComma));
@@ -36,20 +35,50 @@ void processCommand(String command) {
       double ki = params.substring(firstComma + 1, secondComma).toDouble();
       double kd = params.substring(secondComma + 1).toDouble();
       
-      // Debug info tambahan
-      Serial.println("Parsed values - Kp: " + String(kp, 4) + " Ki: " + String(ki, 4) + " Kd: " + String(kd, 4));
-      Serial.println("Validation check: " + String(kp >= 0 && kp <= 100 && ki >= 0 && ki <= 50 && kd >= 0 && kd <= 50));
+      Serial.println("Parsed Right Motor values - Kp: " + String(kp, 4) + " Ki: " + String(ki, 4) + " Kd: " + String(kd, 4));
+      Serial.println("Validation check: " + String(kp >= 0 && kp <= 200 && ki >= 0 && ki <= 200 && kd >= 0 && kd <= 200));
       
-      if (kp >= 0 && kp <= 100 && ki >= 0 && ki <= 50 && kd >= 0 && kd <= 50) {
-        pidConfig.kp = kp; pidConfig.ki = ki; pidConfig.kd = kd;
-        savePIDParameters();
+      if (kp >= 0 && kp <= 200 && ki >= 0 && ki <= 200 && kd >= 0 && kd <= 200) {
+        pidConfigRight.kp = kp; 
+        pidConfigRight.ki = ki; 
+        pidConfigRight.kd = kd;
+        savePIDParametersRight();
         
-        // Tambahkan echo balik ke master untuk konfirmasi
-        Serial1.println("PID_SAVED:" + String(kp, 3) + "," + String(ki, 3) + "," + String(kd, 3));
+        Serial1.println("PIDRIGHT_SAVED:" + String(kp, 3) + "," + String(ki, 3) + "," + String(kd, 3));
+        Serial.println("Right Motor PID saved successfully");
       } else {
-        Serial.println("ERROR: PID values out of allowed range!");
+        Serial.println("ERROR: Right Motor PID values out of allowed range!");
       }
-
+    }
+  } else if (command.startsWith("PIDLEFT")) {  // Handler untuk PID motor kiri
+    String params = command.substring(7); // harus "PIDLEFT<kp>,<ki>,<kd>" tanpa ':'
+    int firstComma = params.indexOf(',');
+    int secondComma = params.indexOf(',', firstComma + 1);
+    
+    Serial.println("PIDLEFT Command Parsing:");
+    Serial.println("Params: " + params);
+    Serial.println("First comma at: " + String(firstComma));
+    Serial.println("Second comma at: " + String(secondComma));
+    
+    if (firstComma > 0 && secondComma > firstComma) {
+      double kp = params.substring(0, firstComma).toDouble();
+      double ki = params.substring(firstComma + 1, secondComma).toDouble();
+      double kd = params.substring(secondComma + 1).toDouble();
+      
+      Serial.println("Parsed Left Motor values - Kp: " + String(kp, 4) + " Ki: " + String(ki, 4) + " Kd: " + String(kd, 4));
+      Serial.println("Validation check: " + String(kp >= 0 && kp <= 200 && ki >= 0 && ki <= 200 && kd >= 0 && kd <= 200));
+      
+      if (kp >= 0 && kp <= 200 && ki >= 0 && ki <= 200 && kd >= 0 && kd <= 200) {
+        pidConfigLeft.kp = kp; 
+        pidConfigLeft.ki = ki; 
+        pidConfigLeft.kd = kd;
+        savePIDParametersLeft();
+        
+        Serial1.println("PIDLEFT_SAVED:" + String(kp, 3) + "," + String(ki, 3) + "," + String(kd, 3));
+        Serial.println("Left Motor PID saved successfully");
+      } else {
+        Serial.println("ERROR: Left Motor PID values out of allowed range!");
+      }
     }
   } else if(command.startsWith("RPMSHOW") || command.startsWith("RS")) {
     // Show current motor speeds in sendMotorStatusToMaster format (RS = shortcut)
@@ -58,31 +87,79 @@ void processCommand(String command) {
     Serial1.printf("RPMSHOW:%d,%d\n", rpm_depan_kanan,rpm_depan_kiri);  
     Serial.printf("RPMSHOW:%d,%d\n", rpm_depan_kanan,rpm_depan_kiri);  
     Serial.println("RPM values sent to master via Serial1");  // Debug message
+  } else if (command.startsWith("AUTOTUNE") || command.startsWith("TUNE")) {
+    // Auto-tuning command dari master
+    if (!isTuningActive()) {
+      startAutoTuning();
+      Serial1.println("AUTOTUNE:STARTED");
+      Serial.println("Auto-tuning dimulai atas permintaan master");
+    } else {
+      Serial1.println("AUTOTUNE:ALREADY_RUNNING");
+      Serial.println("Auto-tuning sudah berjalan");
+    }
+  } else if (command.startsWith("RIGHT_TUNE")) {
+    // Auto-tuning khusus motor kanan
+    if (!isTuningActive()) {
+      startAutoTuningRight();
+      Serial1.println("AUTOTUNE_RIGHT:STARTED");
+      Serial.println("Auto-tuning motor kanan dimulai atas permintaan master");
+    } else {
+      Serial1.println("AUTOTUNE:ALREADY_RUNNING");
+      Serial.println("Auto-tuning sudah berjalan");
+    }
+  } else if (command.startsWith("LEFT_TUNE")) {
+    // Auto-tuning khusus motor kiri
+    if (!isTuningActive()) {
+      startAutoTuningLeft();
+      Serial1.println("AUTOTUNE_LEFT:STARTED");
+      Serial.println("Auto-tuning motor kiri dimulai atas permintaan master");
+    } else {
+      Serial1.println("AUTOTUNE:ALREADY_RUNNING");
+      Serial.println("Auto-tuning sudah berjalan");
+    }
+  } else if (command.startsWith("TUNECANCEL") || command.startsWith("CANCEL")) {
+    // Cancel auto-tuning command dari master
+    if (isTuningActive()) {
+      cancelAutoTuning();
+      Serial1.println("AUTOTUNE:CANCELLED");
+      Serial.println("Auto-tuning dibatalkan atas permintaan master");
+    } else {
+      Serial1.println("AUTOTUNE:NOT_RUNNING");
+      Serial.println("Tidak ada auto-tuning yang sedang berjalan");
+    }
+  } else if (command.startsWith("TUNESTATUS")) {
+    // Status auto-tuning untuk master
+    if (isTuningActive()) {
+      int progress = getTuningProgress();
+      Serial1.printf("AUTOTUNE:PROGRESS:%d\n", progress);
+      Serial.printf("Auto-tuning progress: %d%%\n", progress);
+    } else {
+      Serial1.println("AUTOTUNE:IDLE");
+      Serial.println("Auto-tuning tidak aktif");
+    }
   } else if (command.startsWith("RPM")) {
     // RPM Motor command: RPM30,25 (kanan, kiri)
     String params = command.substring(3);
     int commaPos = params.indexOf(',');
     
     if (commaPos > 0) {
-      int rpmKanan = params.substring(0, commaPos).toInt();
-      int rpmKiri = params.substring(commaPos + 1).toInt();
+      float rpmKanan = params.substring(0, commaPos).toFloat();
+      float rpmKiri = params.substring(commaPos + 1).toFloat();
       
-      Serial.printf("RPM Command Received - Kanan: %d RPM, Kiri: %d RPM\n", rpmKanan, rpmKiri);
+      Serial.printf("[SLAVE] RPM Command - Kanan: %.1f RPM, Kiri: %.1f RPM\n", rpmKanan, rpmKiri);
       
-      // Gunakan fungsi setMotorSpeedRPM untuk kontrol yang konsisten
+      // Gunakan fungsi rpmMotor untuk kontrol RPM yang konsisten
       rpmMotor(rpmKanan, rpmKiri);  
+      
+      // Send acknowledgment back to master via Serial1
+      Serial1.printf("RPM_ACK:%.1f,%.1f\n", rpmKanan, rpmKiri);
     } else {
-      Serial.println("ERROR: Invalid RPM command format! Use RPM<kanan>,<kiri>");
+      Serial.printf("[SLAVE] ERROR: Invalid RPM format: %s\n", command.c_str());
       Serial1.println("ERROR:INVALID_RPM_CMD");
     }
 
   }else if (command.startsWith("PIDSHOW") || command.startsWith("PS")) {
-    String pidString = "PIDVALUES:" + String(pidConfig.kp, 3) + "," + 
-                    String(pidConfig.ki, 3) + "," + String(pidConfig.kd, 3);
-  
-    // Kirim ke master
-    Serial1.println(pidString);
-
+    sendPIDToMaster();
     Serial.println("PID values sent to master via Serial1");  // Debug message
   } else if (command.startsWith("STOP") || command.startsWith("S")) {
     // Emergency stop (S = shortcut)

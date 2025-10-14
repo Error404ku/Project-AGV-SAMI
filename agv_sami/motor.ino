@@ -46,11 +46,6 @@ void pwmMotor(int motor1, int motor2) {
     motor2 = constrain(motor2, minPwm, maxPwm);
   }
 
-  // Additional safety for high PWM values to prevent system instability
-  if (abs(motor1) > 3500 || abs(motor2) > 3500) {
-    esp_task_wdt_reset();  // Extra watchdog reset for high current operations
-  }
-
   // Apply Y-axis inversion (maju-mundur) if enabled
   if (invertMotorY) {
     motor1 = -motor1;

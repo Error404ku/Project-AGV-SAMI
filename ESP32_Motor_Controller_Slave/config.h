@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 #include <Preferences.h>
-#include <esp_task_wdt.h>
 
 // Pin Motor 1
 #define MOTOR1_D1   5
@@ -84,6 +83,13 @@ struct PIDData {
   double derivative = 0.0;
 };
 
+// Tuning Target Enum
+enum TuningTarget {
+  TUNE_BOTH,     // Tuning kedua motor (mode lama)
+  TUNE_RIGHT,    // Hanya motor kanan
+  TUNE_LEFT      // Hanya motor kiri
+};
+
 // PID Configuration
 #define numOutputs 4  // Number of PID controllers (for 2 motors: kanan dan kiri)
 
@@ -109,7 +115,12 @@ extern int rightSpeed;
 
 // PID Data array definition - extern declaration only
 extern PIDData pidData[numOutputs];
-extern PIDConfig pidConfig;  // Global PID configuration
+extern PIDConfig pidConfig;  // Global PID configuration (backward compatibility)
+
+// Individual Motor PID Configuration
+extern PIDConfig pidConfigRight;  // PID configuration for right motor
+extern PIDConfig pidConfigLeft;   // PID configuration for left motor
+
 Preferences preferences;    // Preferences object for storing PID parameters
 
 // Motor PWM variables - extern declarations
@@ -136,7 +147,8 @@ extern int rightSpeed;
 // Function declarations
 void logError(int errorCode, const char* message); // PID RPM function
 void loadPIDParameters();           // Load PID from preferences
-void savePIDParameters();           // Save PID to preferences
+void savePIDParametersRight();      // Save Right Motor PID to preferences
+void savePIDParametersLeft();       // Save Left Motor PID to preferences
 void handleSerialCommand(String command);  // Handle serial commands
 void printHelp();                   // Print help information
 void stopAllMotors();              // Stop all motors
@@ -147,5 +159,15 @@ void serialEvent();                // Handle serial input
 void processCommand(String command); // Process complete commands
 bool parseCommand(String command, int &leftSpeed, int &rightSpeed); // Parse legacy L<val>R<val> commands
 void sendPIDToMaster();
+
+// Auto-tuner function declarations
+void handleAutoTuning();              // Handle auto-tuning state machine
+void startAutoTuning();               // Start auto-tuning process
+void startAutoTuningRight();          // Start auto-tuning for right motor only
+void startAutoTuningLeft();           // Start auto-tuning for left motor only
+void startAutoTuningGeneric(TuningTarget target);  // Generic tuning function
+void cancelAutoTuning();              // Cancel auto-tuning process
+bool isTuningActive();                // Check if tuning is active
+int getTuningProgress();              // Get tuning progress percentage
 
 #endif // CONFIG_H

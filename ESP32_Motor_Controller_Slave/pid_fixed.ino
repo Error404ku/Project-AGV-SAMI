@@ -106,8 +106,8 @@ void rpmMotor_fixed(float rpm1, float rpm2) {
   
   // Apply PWM values to motors
   Serial.printf("Error RPM (double) - Kanan: %.2f, Kiri: %.2f\n", pidData[0].error, pidData[1].error);
-  setMotorSpeed(1, pwmKanan);  // Motor 1 = Kanan
-  setMotorSpeed(2, pwmKiri);   // Motor 2 = Kiri
+  setMotorSpeed(1, pwmKiri);   // Motor 1 = Kiri (berdasarkan motor.ino)
+  setMotorSpeed(2, pwmKanan);  // Motor 2 = Kanan (berdasarkan motor.ino)
 }
 
 // Helper function untuk set target RPM dengan validasi

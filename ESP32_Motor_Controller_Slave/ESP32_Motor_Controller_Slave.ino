@@ -2,7 +2,11 @@
 
 // Variable definitions (not extern - these are the actual variables)
 PIDData pidData[numOutputs];
-PIDConfig pidConfig;  // Global PID configuration   // Preferences object for storing PID parameters
+PIDConfig pidConfig;  // Global PID configuration (backward compatibility)
+
+// Individual Motor PID Configuration
+PIDConfig pidConfigRight;  // PID configuration for right motor
+PIDConfig pidConfigLeft;   // PID configuration for left motor
 
 // Motor PWM variables
 int pwmKanan = 0;
@@ -13,7 +17,8 @@ int rpm_depan_kanan = 0;
 int rpm_depan_kiri = 0;
 int perRotasi = 1656;  // pulses per rotation
 unsigned long milisrpm = 0;
-const unsigned long intervalrpm = 100;
+// Interval RPM untuk pembacaan yang lebih stabil (was 100ms, now 500ms)
+const unsigned long intervalrpm = 500;
 
 // Serial variables  
 String inputString = "";
@@ -41,15 +46,6 @@ void setup() {
   // Initialize Serial1 for communication with ESP32 Master (AGV_SAMI)  
   Serial1.begin(115200, SERIAL_8N1, RX_PIN, TX_PIN);
 
-  // Initialize watchdog timer with newer API
-  esp_task_wdt_config_t wdt_config = {
-    .timeout_ms = 5000,             // 5 second timeout
-    .idle_core_mask = (1 << 0),     // Bitmask of cores to watch (core 0)
-    .trigger_panic = true           // Trigger panic on timeout
-  };
-  esp_task_wdt_init(&wdt_config);
-  esp_task_wdt_add(NULL);           // Add current thread to WDT watch
-
   loadPIDParameters();
   sendPIDToMaster();
   
@@ -64,12 +60,19 @@ void setup() {
   
   Serial.println("ESP32 Motor Controller Ready");
   Serial.println("Listening for commands from Master ESP32 via Serial...");
-  Serial.println("Available commands: KP<val>, KI<val>, KD<val>, RPM<r1>,<r2>, STATUS, STOP, L<val>R<val>");
+  Serial.println("Available commands: PIDRIGHT<kp>,<ki>,<kd>, PIDLEFT<kp>,<ki>,<kd>, RPM<r1>,<r2>, STATUS, STOP, L<val>R<val>");
+  Serial.println();
+  Serial.println("=== AUTO-TUNER PID TERSEDIA ===");
+  Serial.println("Ketik 'tune' untuk memulai auto-tuning PID");
+  Serial.println("Ketik 'help' untuk melihat semua command auto-tuner");
+  Serial.printf("PID Right Motor: Kp=%.4f, Ki=%.4f, Kd=%.4f\n", pidConfigRight.kp, pidConfigRight.ki, pidConfigRight.kd);
+  Serial.printf("PID Left Motor: Kp=%.4f, Ki=%.4f, Kd=%.4f\n", pidConfigLeft.kp, pidConfigLeft.ki, pidConfigLeft.kd);
+  Serial.printf("PID General (Auto-tuner): Kp=%.4f, Ki=%.4f, Kd=%.4f\n", pidConfig.kp, pidConfig.ki, pidConfig.kd);
 }
 
 void loop() {
-  // Reset watchdog timer dalam loop utama
-  esp_task_wdt_reset();
+  // Handle auto-tuning state machine (jika sedang aktif)
+  handleAutoTuning();
   
   // Check for incoming serial data from Master ESP32
   if (Serial1.available()) {  // Ubah kembali ke Serial untuk komunikasi dengan Master
@@ -85,5 +88,6 @@ void loop() {
   // rpmMotor(-20,-20);
   // Read RPM from encoders
   // setMotorSpeed(2, -1000);   // Motor 2 = Kiri
+  // rpmMotor(20, 0); 
   pembacaan_RPM();
 }

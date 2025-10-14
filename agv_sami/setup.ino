@@ -1,3 +1,14 @@
+// Forward declaration for safeDelay function from menu.ino
+extern void safeDelay(int ms);
+
+// Simple safe delay implementation for setup.ino
+void safeDelayLocal(int ms) {
+  unsigned long startTime = millis();
+  while (millis() - startTime < ms) {
+    delay(10); // Small delay to prevent tight loop
+  }
+}
+
 void setupMotor() {
   // Setup komunikasi serial dengan ESP32 motor controller
   setupMotorSerial(); // Panggil fungsi setup motor serial yang benar
@@ -367,6 +378,14 @@ void setupMenu() {
   motorPidKp = tempMotorPidKp;     // Default values only
   motorPidKi = tempMotorPidKi;     // Default values only
   motorPidKd = tempMotorPidKd;     // Default values only
+  
+  // Initialize individual motor PID values to same defaults
+  motorPidKpRight = tempMotorPidKp;
+  motorPidKiRight = tempMotorPidKi; 
+  motorPidKdRight = tempMotorPidKd;
+  motorPidKpLeft = tempMotorPidKp;
+  motorPidKiLeft = tempMotorPidKi;
+  motorPidKdLeft = tempMotorPidKd;
 
   preferences.end();
 
@@ -403,6 +422,7 @@ void setupTombol() {
 }
 
 void setupAll() {
+  
   setupMotor();
   setuplamp();
   setupMusic();
@@ -411,11 +431,14 @@ void setupAll() {
   // Setup RS485 communication for both Serial1 and Serial2
   setupRS485(BAUDRATE);        // Serial1 untuk sensor magnet
   setupRS485_Serial2(BAUDRATE); // Serial2 untuk sensor ultrasonik
-  delay(200);
+  safeDelayLocal(200);
+  
   setupSensorMagnet(SLAVEID_MAGNET_DEPAN);  
   setupSensorUltrasonic(SLAVEID_ULTRASONIK_DEPAN);
+  
   setupHook();  // setupBuzzer();
   setupWifi();  // Setup WiFi configuration
+  
   startWifiConnection();  // Auto-start WiFi connection
   setupWebServer();  // Setup Web Server - CRITICAL for HTTP access
   setupTombol();
@@ -426,5 +449,5 @@ void setupAll() {
   lcd.clear();
   lcd.setCursor(0, 1);
   lcd.println("SETUP ALL SELESAI");
-  delay(1000);
+  safeDelayLocal(1000);
 }
