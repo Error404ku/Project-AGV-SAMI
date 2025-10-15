@@ -3,11 +3,13 @@
 ## Latar Belakang Masalah
 
 ### Gejala yang Diamati
+
 - Motor **tiba-tiba bergerak kencang sekali** di awal (initial burst)
 - Setelah burst awal, motor baru menggunakan kecepatan normal
 - Perilaku ini tidak ideal dan mengganggu performa AGV
 
 ### Analisis Root Cause
+
 Parameter **Ki (Integral)** memiliki pengaruh sangat besar terhadap perilaku motor karena:
 
 1. **Akumulasi Error**: Ki mengakumulasi error dari waktu ke waktu
@@ -61,11 +63,13 @@ struct PerformanceMetrics {
 ```
 
 **Cara Deteksi**:
+
 - Monitor RPM dalam **500ms pertama** setelah motor start
 - Jika RPM melebihi target **>30%** → burst terdeteksi
 - Catat magnitude burst dan timing untuk analisis
 
 **Output Debug**:
+
 ```
 [BURST DETECTED] RPM=65.3 at 250ms (63.2% over target)
 ```
@@ -115,6 +119,7 @@ else {
 ## Perbandingan: Sebelum vs Sesudah
 
 ### Strategi Lama (Generic)
+
 ```
 - Fokus seimbang Kp, Ki, Kd
 - Ki adjustment step kecil (0.05, 0.01, 0.002)
@@ -123,6 +128,7 @@ else {
 ```
 
 ### Strategi Baru (Ki-Priority)
+
 ```
 ✓ Fokus utama pada Ki
 ✓ Ki adjustment step 2-4x lebih besar
@@ -134,9 +140,10 @@ else {
 ## Scoring System dengan Burst Penalty
 
 ### Formula Lengkap:
+
 ```cpp
-score = (overshoot * 6.0) + 
-        (riseTime * 0.015) + 
+score = (overshoot * 6.0) +
+        (riseTime * 0.015) +
         (avgError * 3.5) +
         (stability * 2.0);
 
@@ -149,6 +156,7 @@ if (burstDetected) {
 ### Contoh Perhitungan:
 
 **Case 1: Motor dengan Burst**
+
 - Overshoot: 8% → 48.0 points
 - Rise time: 1200ms → 18.0 points
 - Avg error: 4.5 RPM → 15.75 points
@@ -156,6 +164,7 @@ if (burstDetected) {
 - **Total: 261.75** (score buruk karena burst)
 
 **Case 2: Motor Tanpa Burst**
+
 - Overshoot: 3% → 18.0 points
 - Rise time: 1500ms → 22.5 points
 - Avg error: 3.2 RPM → 11.2 points
@@ -165,6 +174,7 @@ if (burstDetected) {
 ## Debug Output
 
 ### Format Log Baru:
+
 ```
 [TUNING CYCLE 5] Menganalisis hasil:
   Overshoot=8.50%, RiseTime=1250ms, AvgError=4.20 RPM
@@ -179,12 +189,14 @@ Precision: COARSE, Cycles without improvement: 2
 ## Ekspektasi Hasil
 
 ### Target Performance:
+
 1. **Eliminasi Burst**: Motor start smooth tanpa lonjakan tiba-tiba
 2. **Response Balance**: Rise time tetap cepat tapi controlled
 3. **Steady-State Optimal**: Error minimum di kecepatan konstan
 4. **Ki Range Optimal**: Biasanya 0.01 - 0.15 untuk motor DC dengan encoder
 
 ### Testing Procedure:
+
 1. Start auto-tuning: `AUTOTUNERIGHT` atau `AUTOTUNELEFT`
 2. Observe logs untuk burst detection
 3. Monitor Ki adjustment trajectory
@@ -210,6 +222,7 @@ Algorithm tetap menggunakan multi-stage precision:
 3. **ULTRA-FINE**: Final optimization Ki dengan step kecil
 
 Transisi stage terjadi jika:
+
 - 8 cycles tanpa improvement
 - Score sudah excellent (<15.0)
 - Sudah 15 cycles di stage yang sama
@@ -217,6 +230,7 @@ Transisi stage terjadi jika:
 ## Kesimpulan
 
 Strategi Ki-Priority ini dirancang khusus untuk mengatasi masalah **initial burst** yang disebabkan oleh Ki terlalu tinggi. Dengan:
+
 - Detection otomatis
 - Adjustment agresif pada Ki
 - Penalty scoring untuk burst behavior
@@ -225,6 +239,7 @@ Strategi Ki-Priority ini dirancang khusus untuk mengatasi masalah **initial burs
 Auto-tuning akan menemukan nilai Ki optimal yang memberikan **smooth acceleration** tanpa burst, sambil tetap menjaga **steady-state performance** yang baik.
 
 ---
+
 **Update**: 14 Oktober 2025
 **Author**: GitHub Copilot
 **Status**: Implemented & Ready for Testing

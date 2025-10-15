@@ -3,12 +3,14 @@
 ## Masalah yang Diatasi
 
 ### Gejala:
+
 - **Nilai Kp terlalu besar** menyebabkan overshoot tinggi
 - Motor RPM melebihi target secara berlebihan
 - Response terlalu agresif dan tidak stabil
 - Oscillation di sekitar setpoint
 
 ### Root Cause:
+
 1. **Starting Kp terlalu tinggi** (20.0) → immediate overshoot
 2. **Kp step size terlalu besar** → adjustment tidak halus
 3. **Overshoot threshold terlalu tinggi** → tidak sensitif terhadap overshoot kecil
@@ -102,6 +104,7 @@ if (overshoot > HIGH_OVERSHOOT_THRESHOLD) {          // >5%
 ### Contoh Case: Overshoot 3%
 
 **Scoring Lama (Ki Priority)**:
+
 ```
 Overshoot: 3% × 6.0 = 18.0 points
 Rise time: 1200ms × 0.015 = 18.0 points
@@ -111,6 +114,7 @@ Action: Tidak ada (threshold HIGH = 10%)
 ```
 
 **Scoring Baru (Anti-Overshoot)**:
+
 ```
 Overshoot: 3% × 8.0 = 24.0 points (+33%)
 Rise time: 1200ms × 0.01 = 12.0 points (-33%)
@@ -124,16 +128,19 @@ Action: MEDIUM overshoot reduction (threshold = 2.5%)
 ## Progression Strategy
 
 ### Stage 1: Coarse Tuning (Anti-Overshoot)
+
 - Kp step: 0.8 (dari 1.0)
 - Priority: Cari Kp yang tidak overshoot
 - Target: Overshoot <5%
 
 ### Stage 2: Fine Tuning
+
 - Kp step: 0.15 (dari 0.2)
 - Priority: Optimize response time dengan overshoot <2.5%
 - Target: Balance speed vs stability
 
 ### Stage 3: Ultra-Fine Tuning
+
 - Kp step: 0.015 (dari 0.02)
 - Priority: Precision tuning dengan overshoot <1%
 - Target: Optimal performance
@@ -141,16 +148,19 @@ Action: MEDIUM overshoot reduction (threshold = 2.5%)
 ## Expected Results
 
 ### Target Performance:
+
 1. **Overshoot**: ≤1% (dari sebelumnya bisa >10%)
 2. **Rise Time**: Slightly slower tapi controlled (acceptable trade-off)
 3. **Steady-State Error**: Tetap minimal dengan Ki optimization
 4. **Stability**: Significant improvement, no oscillation
 
 ### Typical Final Kp Range:
+
 - **Sebelum**: 15-30 (sering overshoot)
 - **Sekarang**: 8-15 (controlled, stable)
 
 ### Debug Output Changes:
+
 ```
 [TUNING CYCLE 8] Menganalisis hasil:
   Overshoot=3.20%, RiseTime=1450ms, AvgError=2.10 RPM
@@ -162,6 +172,7 @@ New parameters: Kp=10.350, Ki=0.067, Kd=0.128
 ## Testing Procedure
 
 ### Pre-Test:
+
 ```
 Motor Test → RPM Test
 Set target: 40 RPM
@@ -169,6 +180,7 @@ Observe: Apakah ada overshoot >1%?
 ```
 
 ### Auto-Tuning Test:
+
 ```
 1. Run: AUTOTUNERIGHT atau AUTOTUNELEFT
 2. Monitor logs untuk overshoot detection
@@ -177,6 +189,7 @@ Observe: Apakah ada overshoot >1%?
 ```
 
 ### Post-Test Validation:
+
 ```
 1. Manual RPM test: 0→40 RPM
 2. Expected: Smooth acceleration, no overshoot
@@ -187,6 +200,7 @@ Observe: Apakah ada overshoot >1%?
 ## Safety Mechanisms
 
 ### Kp Minimum Protection:
+
 ```cpp
 // Tidak biarkan Kp terlalu kecil
 if (currentKp < 0.1) currentKp = 0.1;
@@ -194,6 +208,7 @@ constrainPIDValues(currentKp, currentKi, currentKd, 0.1, 150.0);
 ```
 
 ### Overshoot Emergency Reduction:
+
 ```cpp
 // Jika overshoot >10% (emergency), kurangi Kp drastis
 if (overshoot > 10.0) {
@@ -215,6 +230,7 @@ Strategi **Anti-Overshoot** ini dirancang untuk mengatasi masalah Kp terlalu bes
 Expected outcome: **Smooth, controlled motor response tanpa overshoot** sambil tetap mempertahankan reasonable rise time.
 
 ---
+
 **Update**: 14 Oktober 2025  
 **Author**: GitHub Copilot  
 **Status**: Implemented - Ready for Hardware Testing

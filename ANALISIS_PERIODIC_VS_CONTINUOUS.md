@@ -5,23 +5,23 @@
 ```cpp
 void handleMotorTestRPM() {
   requestRpmDataFromSlave();  // No timing control!
-  
+
   // Motor control code...
 }
 ```
 
 ### Performance Impact:
 
-| Metric | Value | Impact |
-|--------|-------|--------|
-| Loop frequency | ~2000 Hz | Very fast |
-| RPMSHOW commands/sec | ~2000 | **OVERFLOW!** |
-| Serial buffer usage | 100% | **FULL** |
-| Useful data received | ~10% | Lost in buffer |
-| CPU usage (Slave) | 80% | Command parsing |
-| CPU usage (Master) | 60% | Serial processing |
-| Response delay | Variable | Unpredictable |
-| Buffer overflow errors | High | Communication fails |
+| Metric                 | Value    | Impact              |
+| ---------------------- | -------- | ------------------- |
+| Loop frequency         | ~2000 Hz | Very fast           |
+| RPMSHOW commands/sec   | ~2000    | **OVERFLOW!**       |
+| Serial buffer usage    | 100%     | **FULL**            |
+| Useful data received   | ~10%     | Lost in buffer      |
+| CPU usage (Slave)      | 80%      | Command parsing     |
+| CPU usage (Master)     | 60%      | Serial processing   |
+| Response delay         | Variable | Unpredictable       |
+| Buffer overflow errors | High     | Communication fails |
 
 ### Problems Illustrated:
 
@@ -39,6 +39,7 @@ Time    Master Action           Slave Action              Result
 ```
 
 ### Serial Buffer Analysis:
+
 ```
 ESP32 Serial Buffer: 128 bytes typical
 "RPMSHOW\n" = 8 bytes per command
@@ -56,28 +57,28 @@ Result: BUFFER OVERFLOW in less than 10ms!
 void handleMotorTestRPM() {
   static unsigned long lastRpmRequest = 0;
   unsigned long currentTime = millis();
-  
+
   if (currentTime - lastRpmRequest >= 200) {  // 200ms interval
     requestRpmDataFromSlave();
     lastRpmRequest = currentTime;
   }
-  
+
   // Motor control code...
 }
 ```
 
 ### Performance Impact:
 
-| Metric | Value | Impact |
-|--------|-------|--------|
-| Loop frequency | ~2000 Hz | Very fast (unchanged) |
-| RPMSHOW commands/sec | 5 | **OPTIMAL** |
-| Serial buffer usage | <5% | Healthy |
-| Useful data received | 100% | All processed |
-| CPU usage (Slave) | <10% | Efficient |
-| CPU usage (Master) | <10% | Efficient |
-| Response delay | 200ms | Predictable |
-| Buffer overflow errors | 0 | No issues |
+| Metric                 | Value    | Impact                |
+| ---------------------- | -------- | --------------------- |
+| Loop frequency         | ~2000 Hz | Very fast (unchanged) |
+| RPMSHOW commands/sec   | 5        | **OPTIMAL**           |
+| Serial buffer usage    | <5%      | Healthy               |
+| Useful data received   | 100%     | All processed         |
+| CPU usage (Slave)      | <10%     | Efficient             |
+| CPU usage (Master)     | <10%     | Efficient             |
+| Response delay         | 200ms    | Predictable           |
+| Buffer overflow errors | 0        | No issues             |
 
 ### Communication Flow:
 
@@ -95,6 +96,7 @@ Time    Master Action           Slave Action              Result
 ```
 
 ### Serial Buffer Analysis:
+
 ```
 Commands sent: 5 per second
 Data rate: 5 × 8 bytes = 40 bytes/second
@@ -112,12 +114,11 @@ Result: Buffer never overflows, smooth operation
    // In ESP32_Motor_Controller_Slave/ESP32_Motor_Controller_Slave.ino
    const unsigned long intervalrpm = 500;  // RPM calculation interval
    ```
-   
 2. **Human Eye Perception: ~100ms**
    - Humans perceive updates faster than 100ms as "real-time"
    - 200ms update is smooth for display
-   
 3. **LCD Refresh Rate: ~300ms**
+
    - Our display update: 300ms
    - Request: 200ms (faster than display)
    - Result: Fresh data always available
@@ -130,6 +131,7 @@ Result: Buffer never overflows, smooth operation
    - 200ms provides 12x safety margin
 
 ### Timing Diagram:
+
 ```
 ├─────200ms────┤─────200ms────┤─────200ms────┤
 │               │               │               │
@@ -148,6 +150,7 @@ Request RPM     Request RPM     Request RPM
 ## 🧪 **EXPERIMENTAL COMPARISON**
 
 ### Test Setup:
+
 - ESP32-S3 @ 240MHz
 - Serial: 115200 baud
 - Test duration: 60 seconds
@@ -155,6 +158,7 @@ Request RPM     Request RPM     Request RPM
 ### Results:
 
 #### Continuous Request:
+
 ```
 Commands sent: 120,000
 Responses received: 3,500 (2.9%)
@@ -165,6 +169,7 @@ Average response time: Unpredictable (10-500ms)
 ```
 
 #### Periodic Request (200ms):
+
 ```
 Commands sent: 300
 Responses received: 298 (99.3%)
@@ -177,6 +182,7 @@ Average response time: Consistent (12-15ms)
 ## ⚡ **BANDWIDTH CALCULATION**
 
 ### Serial Communication Capacity:
+
 ```
 Baud rate: 115200 bits/sec
 Effective throughput: ~11,520 bytes/sec (with overhead)
@@ -197,13 +203,13 @@ Periodic Request (200ms):
 
 ## 🎯 **OPTIMAL INTERVALS FOR DIFFERENT SCENARIOS**
 
-| Use Case | Request Interval | Reason |
-|----------|-----------------|---------|
-| **Real-time Display** | 200ms | Balance of responsiveness & efficiency |
-| **Data Logging** | 1000ms (1s) | Not critical, save bandwidth |
-| **Auto-tuning** | 100ms | Need frequent updates for PID |
-| **Debug Monitoring** | 500ms | Human readable, efficient |
-| **Critical Control** | 50ms | Very fast response needed |
+| Use Case              | Request Interval | Reason                                 |
+| --------------------- | ---------------- | -------------------------------------- |
+| **Real-time Display** | 200ms            | Balance of responsiveness & efficiency |
+| **Data Logging**      | 1000ms (1s)      | Not critical, save bandwidth           |
+| **Auto-tuning**       | 100ms            | Need frequent updates for PID          |
+| **Debug Monitoring**  | 500ms            | Human readable, efficient              |
+| **Critical Control**  | 50ms             | Very fast response needed              |
 
 ## 🔧 **ALTERNATIVE: ADAPTIVE TIMING**
 
@@ -213,10 +219,10 @@ Jika ingin lebih sophisticated:
 void handleMotorTestRPM() {
   static unsigned long lastRpmRequest = 0;
   unsigned long currentTime = millis();
-  
+
   // Adaptive interval based on motor state
   unsigned long requestInterval = 200;  // Default
-  
+
   if (motorTestState == 0) {
     // Motor stopped, slow update
     requestInterval = 500;
@@ -224,12 +230,12 @@ void handleMotorTestRPM() {
     // Motor running, fast update
     requestInterval = 150;
   }
-  
+
   if (currentTime - lastRpmRequest >= requestInterval) {
     requestRpmDataFromSlave();
     lastRpmRequest = currentTime;
   }
-  
+
   // ... rest of code
 }
 ```
@@ -237,6 +243,7 @@ void handleMotorTestRPM() {
 ## 💡 **KESIMPULAN**
 
 ### Request Terus Menerus (Continuous):
+
 - ❌ Buffer overflow dalam hitungan milidetik
 - ❌ Waste 97% of commands
 - ❌ High CPU usage
@@ -244,6 +251,7 @@ void handleMotorTestRPM() {
 - ❌ Communication failures
 
 ### Request Periodik 200ms:
+
 - ✅ No buffer overflow
 - ✅ 99% success rate
 - ✅ Low CPU usage
