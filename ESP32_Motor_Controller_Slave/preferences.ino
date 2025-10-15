@@ -142,7 +142,7 @@ void sendPIDToMaster() {
   
   // Kirim kedua command ke master
   Serial1.println(pidRightString);
-  delay(50); // Delay kecil antar pengiriman
+  delay(100); // Delay kecil antar pengiriman
   Serial1.println(pidLeftString);
   
   Serial.println("Sent Right Motor PID to master: " + pidRightString);

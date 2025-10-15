@@ -32,6 +32,11 @@ volatile long enc_kiri = 0;
 int leftSpeed = 0;
 int rightSpeed = 0;
 
+// Persistent RPM Control Variables
+float targetRpmKanan = 0.0;  // Target RPM untuk motor kanan
+float targetRpmKiri = 0.0;   // Target RPM untuk motor kiri
+bool rpmControlActive = false; // Flag untuk kontrol RPM berkelanjutan
+
 // Error logging function
 void logError(int errorCode, const char* message) {
   Serial.print("[ERROR ");
@@ -87,7 +92,5 @@ void loop() {
   }
   // rpmMotor(-20,-20);
   // Read RPM from encoders
-  // setMotorSpeed(2, -1000);   // Motor 2 = Kiri
-  // rpmMotor(20, 0); 
   pembacaan_RPM();
 }

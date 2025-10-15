@@ -404,6 +404,6 @@ void requestRpmDataFromSlave() {
   while (Serial.available()) {
     Serial.read();
   }
-  Serial.println("RS");
+  Serial.println("RPMSHOW");
 }
 

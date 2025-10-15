@@ -307,7 +307,7 @@ unsigned long lastButtonPress = 0;
 
 // PID adjustment variables
 unsigned long pidButtonHoldStart = 0;
-float pidIncrement = 0.1f;
+float pidIncrement = 0.01f;
 
 // RFID menu variables
 int selectedRfidItem = 0;

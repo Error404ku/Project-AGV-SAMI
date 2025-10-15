@@ -1180,44 +1180,6 @@ void handleMotorTestRPM() {
   }
 }
 
-void displayPidSettings() {
-  // Clear display if menu needs refresh
-  if (menuNeedsRefresh) {
-    lcd.clear();
-    menuNeedsRefresh = false;
-  }
-  
-  displayMenuHeader("PID Settings");
-
-  // Display Kp
-  lcd.setCursor(0, 1);
-  if (selectedParam == 0) lcd.print("> ");
-  else lcd.print("  ");
-  lcd.print("Kp: ");
-  lcd.print(tempKp);
-  lcd.print("       ");
-
-  // Display Ki
-  lcd.setCursor(0, 2);
-  if (selectedParam == 1) lcd.print("> ");
-  else lcd.print("  ");
-  lcd.print("Ki: ");
-  lcd.print(tempKi);
-  lcd.print("       ");
-
-  // Display Kd
-  lcd.setCursor(0, 3);
-  if (selectedParam == 2) lcd.print("> ");
-  else lcd.print("  ");
-  lcd.print("Kd: ");
-  lcd.print(tempKd);
-  lcd.print("       ");
-
-  // Show controls
-  lcd.setCursor(12, 3);
-  lcd.print("B:OK");
-}
-
 // PID Submenu Functions
 void displayPidSubmenu() {
   // Clear display if menu needs refresh
@@ -1595,9 +1557,8 @@ void handlePidForwardDefaultSettings() {
       // Button just pressed
       rightHoldStart = currentMillis;
       rightHolding = true;
-      
-      // Single click - increment by 0.1
-      pidIncrement = 0.1f;
+      // Single click - increment by 0.01
+      pidIncrement = 0.01f;
       switch (selectedParam) {
         case 0: tempKpForwardDefault += pidIncrement; break;
         case 1: tempKiForwardDefault += pidIncrement; break;
@@ -1610,8 +1571,8 @@ void handlePidForwardDefaultSettings() {
       lastRightPress = currentMillis;
     } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
       // Button is being held - increment by 1.0 every 100ms
-      if (currentMillis - lastRightPress >= 100) {
-        pidIncrement = 1.0f;
+      if (currentMillis - lastRightPress >= 500) {
+        pidIncrement = 0.1f;
         switch (selectedParam) {
           case 0: tempKpForwardDefault += pidIncrement; break;
           case 1: tempKiForwardDefault += pidIncrement; break;
@@ -1636,7 +1597,7 @@ void handlePidForwardDefaultSettings() {
       leftHolding = true;
       
       // Single click - decrement by 0.1
-      pidIncrement = 0.1f;
+      pidIncrement = 0.01f;
       switch (selectedParam) {
         case 0: tempKpForwardDefault = max(0.0, tempKpForwardDefault - pidIncrement); break;
         case 1: tempKiForwardDefault = max(0.0, tempKiForwardDefault - pidIncrement); break;
@@ -1648,9 +1609,9 @@ void handlePidForwardDefaultSettings() {
       kdLinefollowerForwardDefault = tempKdForwardDefault;
       lastLeftPress = currentMillis;
     } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
-      // Button is being held - decrement by 1.0 every 100ms
-      if (currentMillis - lastLeftPress >= 100) {
-        pidIncrement = 1.0f;
+      // Button is being held - decrement by 0.1 every 100ms
+      if (currentMillis - lastLeftPress >= 500) {
+        pidIncrement = 0.1f;
         switch (selectedParam) {
           case 0: tempKpForwardDefault = max(0.0, tempKpForwardDefault - pidIncrement); break;
           case 1: tempKiForwardDefault = max(0.0, tempKiForwardDefault - pidIncrement); break;

@@ -1,7 +1,7 @@
 Write-Host "Starting ESP32 RPM Test Monitor - 30 seconds" -ForegroundColor Green
 
 try {
-    $port = New-Object System.IO.Ports.SerialPort('COM11', 115200)
+    $port = New-Object System.IO.Ports.SerialPort('COM9', 115200)
     $port.Open()
     Write-Host "Serial port opened successfully" -ForegroundColor Yellow
     

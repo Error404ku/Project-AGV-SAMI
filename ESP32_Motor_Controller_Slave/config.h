@@ -132,6 +132,11 @@ extern int perRotasi;  // pulses per rotation
 extern unsigned long milisrpm;
 extern const unsigned long intervalrpm;
 
+// Persistent RPM Control Variables
+extern float targetRpmKanan;  // Target RPM untuk motor kanan
+extern float targetRpmKiri;   // Target RPM untuk motor kiri
+extern bool rpmControlActive; // Flag untuk kontrol RPM berkelanjutan
+
 // Serial variables - extern declarations
 extern String inputString;
 extern bool stringComplete;

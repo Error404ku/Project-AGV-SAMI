@@ -40,13 +40,14 @@ void rpmMotor(float rpm1, float rpm2) {
   if (rpm1 > 0) {
     // Forward direction for motor kanan
     pwmKanan = computePID(0, rpm1, rpm_depan_kanan, kpRight, kiRight, kdRight, minintegralRight, maxintegralRight);
-    pwmKanan = constrain(pwmKanan, pwm_zero, pwm_max);
+    // Untuk target positif, pastikan PWM tidak negatif (tidak mundur)
+    pwmKanan = constrain(pwmKanan, 0, pwm_max);
     
   } else if (rpm1 < 0) {
     // Reverse direction for motor kanan
-    pwmKanan = computePID(1, rpm1, rpm_depan_kanan, kpRight, kiRight, kdRight, minintegralRight, maxintegralRight);
-    // pwmKanan = -pwmKanan;  // Make negative for reverse
-    pwmKanan = constrain(pwmKanan, pwm_min, pwm_zero);
+    pwmKanan = computePID(0, rpm1, rpm_depan_kanan, kpRight, kiRight, kdRight, minintegralRight, maxintegralRight);
+    // Untuk target negatif, pastikan PWM tidak positif (tidak maju)
+    pwmKanan = constrain(pwmKanan, pwm_min, 0);
     
   } else if (rpm1 == 0) {
     // Stop motor kanan
@@ -58,14 +59,15 @@ void rpmMotor(float rpm1, float rpm2) {
   // ===== MOTOR KIRI (Motor 2) PID Control =====
   if (rpm2 > 0) {
     // Forward direction for motor kiri
-    pwmKiri = computePID(2, rpm2, rpm_depan_kiri, kpLeft, kiLeft, kdLeft, minintegralLeft, maxintegralLeft);
-    pwmKiri = constrain(pwmKiri, pwm_zero, pwm_max);
+    pwmKiri = computePID(1, rpm2, rpm_depan_kiri, kpLeft, kiLeft, kdLeft, minintegralLeft, maxintegralLeft);
+    // Untuk target positif, pastikan PWM tidak negatif (tidak mundur)
+    pwmKiri = constrain(pwmKiri, 0, pwm_max);
     
   } else if (rpm2 < 0) {
     // Reverse direction for motor kiri
-    pwmKiri = computePID(3, rpm2, rpm_depan_kiri, kpLeft, kiLeft, kdLeft, minintegralLeft, maxintegralLeft);
-    // pwmKiri = -pwmKiri;  // Make negative for reverse
-    pwmKiri = constrain(pwmKiri, pwm_min,pwm_zero);
+    pwmKiri = computePID(1, rpm2, rpm_depan_kiri, kpLeft, kiLeft, kdLeft, minintegralLeft, maxintegralLeft);
+    // Untuk target negatif, pastikan PWM tidak positif (tidak maju)
+    pwmKiri = constrain(pwmKiri, pwm_min, 0);
     
   } else if (rpm2 == 0) {
     // Stop motor kiri
