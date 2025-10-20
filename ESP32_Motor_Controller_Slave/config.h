@@ -75,12 +75,14 @@ struct PIDConfig {
   double kd;
 };
 
-// PID Data Structure
+// PID Data Structure - ENHANCED with Best Practices
 struct PIDData {
   double error = 0.0;
   double previousError = 0.0;
   double integral = 0.0;
   double derivative = 0.0;
+  double previousInput = 0.0;        // For derivative on measurement (prevents derivative kick)
+  double filteredDerivative = 0.0;   // For low-pass filtered derivative
 };
 
 // Tuning Target Enum
@@ -99,6 +101,53 @@ enum TuningTarget {
 #define ERROR_INVALID_INPUT 1003
 #define ERROR_INVALID_OUTPUT 1004
 
+// =============================================
+// BEST PRACTICE PID PARAMETERS - Industry Standards
+// =============================================
+
+// =============================================
+// SAFE MODE TOGGLE - Set to true for conservative PID behavior
+// =============================================
+const bool ENABLE_SAFE_MODE = true;  // 🔴 AKTIFKAN untuk motor test yang macet-macet
+
+// 1. DERIVATIVE FILTERING (Low-pass filter to reduce noise)
+// Reference: NI White Paper - "Derivative action is sensitive to noise"
+const float DERIVATIVE_FILTER_N = 10.0;        // Filter coefficient (typical: 5-20)
+const float DERIVATIVE_FILTER_ALPHA = 0.1;     // Will be calculated: alpha = 1/(1 + N)
+
+// 2. SETPOINT WEIGHTING (2-DOF PID - reduces overshoot)
+// Reference: Wikipedia PID - "Setpoint weighting adds adjustable factors"
+const float SETPOINT_WEIGHT_P_FAST = 0.5;     // 🚀 High weight untuk fast rise (0→target)
+const float SETPOINT_WEIGHT_P_SLOW = 0.3;     // 🎯 Low weight untuk near target (reduce overshoot)
+const float SETPOINT_WEIGHT_TRANSITION = 0.7; // Transition at 70% of error (30% dari target)
+const float SETPOINT_WEIGHT_D = 0.0;          // c = 0 eliminates derivative kick on setpoint change
+
+// 3. ANTI-WINDUP (Back-calculation method)
+// Reference: Åström & Hägglund - "Prevents integral buildup during saturation"
+const float ANTI_WINDUP_TRACKING_TIME_RATIO = 1.0;  // 🔧 INCREASED to 1.0 untuk less aggressive
+
+// 4. ADAPTIVE SAMPLING RATE
+// Reference: Control Theory - "Sampling rate should be 10-20x faster than system dynamics"
+struct AdaptiveSamplingConfig {
+  unsigned long minInterval = 50;    // 20 Hz for fast transient (high RPM difference)
+  unsigned long maxInterval = 200;   // 5 Hz for steady-state (near target)
+  unsigned long currentInterval = 100;  // Current adaptive interval
+  int lastRPMDifference = 0;         // Track last RPM error
+};
+
+// 5. PERFORMANCE METRICS (ISE, IAE, ITAE - Standard control theory)
+// Reference: "Optimal Control" - Standard performance indices
+struct PerformanceMetrics {
+  float ISE = 0.0;    // Integral Square Error - penalizes large errors heavily
+  float IAE = 0.0;    // Integral Absolute Error - balanced penalty
+  float ITAE = 0.0;   // Integral Time-weighted Absolute Error - penalizes persistent errors
+  float peakError = 0.0;     // Maximum error during test
+  float settlingTime = 0.0;  // Time to reach ±2% of target
+  float steadyStateError = 0.0;  // Final error after settling
+  int sampleCount = 0;       // Number of samples collected
+};
+
+
 // RPM Configuration
 #define minrpm -90
 #define zerorpm 0
@@ -112,6 +161,13 @@ enum TuningTarget {
 // External declarations only
 extern int leftSpeed;
 extern int rightSpeed;
+
+// Adaptive Sampling Rate - extern declaration
+extern AdaptiveSamplingConfig adaptiveSampling;
+
+// Performance Metrics - extern declaration
+extern PerformanceMetrics performanceMetricsRight;
+extern PerformanceMetrics performanceMetricsLeft;
 
 // PID Data array definition - extern declaration only
 extern PIDData pidData[numOutputs];

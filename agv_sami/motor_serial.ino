@@ -6,7 +6,7 @@ extern void safeDelay(unsigned long ms);
 
 void setupMotorSerial() {
   // Inisialisasi Serial0 untuk komunikasi dengan ESP32 kedua
-  Serial.begin(115200);
+  Serial.begin(921600);
   
   // Request PID data dari motor controller saat startup
   requestPidDataFromSlave();
@@ -400,10 +400,6 @@ bool checkSystemReadyStatus() {
 
 // Fungsi untuk meminta data RPM current dari motor controller slave
 void requestRpmDataFromSlave() {
-  // Kosongkan buffer serial dulu untuk menghindari buffer overflow
-  while (Serial.available()) {
-    Serial.read();
-  }
   Serial.println("RPMSHOW");
 }
 

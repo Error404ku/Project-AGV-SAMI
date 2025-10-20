@@ -20,6 +20,18 @@ unsigned long milisrpm = 0;
 // Interval RPM untuk pembacaan yang lebih stabil (was 100ms, now 500ms)
 const unsigned long intervalrpm = 500;
 
+// =============================================
+// BEST PRACTICE VARIABLES - Initialized
+// =============================================
+
+// Adaptive Sampling Configuration
+AdaptiveSamplingConfig adaptiveSampling;
+
+// Performance Metrics for both motors
+PerformanceMetrics performanceMetricsRight;
+PerformanceMetrics performanceMetricsLeft;
+
+
 // Serial variables  
 String inputString = "";
 bool stringComplete = false;
@@ -49,7 +61,7 @@ void setup() {
   // Initialize Serial for debugging
   Serial.begin(115200);
   // Initialize Serial1 for communication with ESP32 Master (AGV_SAMI)  
-  Serial1.begin(115200, SERIAL_8N1, RX_PIN, TX_PIN);
+  Serial1.begin(921600, SERIAL_8N1, RX_PIN, TX_PIN);
 
   loadPIDParameters();
   sendPIDToMaster();
@@ -90,7 +102,7 @@ void loop() {
     inputString = "";
     stringComplete = false;
   }
-  // rpmMotor(-20,-20);
+  // rpmMotor(-40,-40);
   // Read RPM from encoders
   pembacaan_RPM();
 }

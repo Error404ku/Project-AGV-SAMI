@@ -80,7 +80,7 @@ void agvWarehouse() {
   }else{
     softStartTime = millis();
     softStartActive = true;
-    pidSpeed = baseSpeed / 4;
+    pidSpeed = baseSpeed / 2;  // 🔧 FIX #2: 50% initial speed (was 25%)
     stopCalledPickup = false; // Reset flag untuk penggunaan berikutnya
     agvMode(AGV_STATE_MOVE_FORWARD);
     trigger = false;
@@ -115,7 +115,7 @@ void agvStation() {
       // Tidak ada station tersisa, ubah ke mode backward
       softStartTime = millis();
       softStartActive = true;
-      pidSpeed = baseSpeed / 4;
+      pidSpeed = baseSpeed / 2;  // 🔧 FIX #2: 50% initial speed (was 25%)
       moveStateAgv = AGV_STATE_MOVE_BACKWARD;
       agvMode(AGV_STATE_MOVE_BACKWARD);
     } else {
@@ -201,7 +201,7 @@ void agvTerminalPickup() {
       stopCalledPickup = false;
       softStartTime = millis();
       softStartActive = true;
-      pidSpeed = baseSpeed / 4;
+      pidSpeed = baseSpeed / 2;  // 🔧 FIX #2: 50% initial speed (was 25%)
       agvMode(AGV_STATE_MOVE_FORWARD);
     }
   }
@@ -229,7 +229,7 @@ void agvMoveForward() {
       delay(2000);
       softStartTime = millis();
       softStartActive = true;
-      pidSpeed = baseSpeed / 4;
+      pidSpeed = baseSpeed / 2;  // 🔧 FIX #2: 50% initial speed (was 25%)
       agvMode(AGV_STATE_MOVE_BACKWARD);
       return;
     } else if (isRfidMatch(currentRfid, terminalPickUpRfidId) && currentRFID != AGV_STATE_TERMINAL_PICKUP) {
@@ -241,7 +241,7 @@ void agvMoveForward() {
       currentRFID = AGV_STATE_TERMINAL_PICKUP;
       softStartTime = millis();
       softStartActive = true;
-      pidSpeed = baseSpeed / 4;
+      pidSpeed = baseSpeed / 2;  // 🔧 FIX #2: 50% initial speed (was 25%)
       agvMode(AGV_STATE_TERMINAL_PICKUP);
       return;
     } else if (isRfidMatch(currentRfid, warehouseRfidId) && currentRFID != AGV_STATE_WAREHOUSE) {
@@ -253,7 +253,7 @@ void agvMoveForward() {
       agvMode(AGV_STATE_WAREHOUSE);
       softStartTime = millis();
       softStartActive = true;
-      pidSpeed = baseSpeed / 4;
+      pidSpeed = baseSpeed / 2;  // 🔧 FIX #2: 50% initial speed (was 25%)
       return;
     } else if (isRfidMatch(currentRfid, getRfidForStation(1)) && exceptErrorPosition != false) {
       // newRfidScanned = false; // Reset flag

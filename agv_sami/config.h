@@ -291,6 +291,10 @@ double tempMotorPidKdLeft = 0.0;     // Temporary Kd for left motor menu editing
 float currentRpmKanan = 0.0;    // Current actual RPM of right motor
 float currentRpmKiri = 0.0;     // Current actual RPM of left motor
 
+// RPM Request Timer for Motor Test RPM
+unsigned long lastRpmRequestTime = 0;
+const unsigned long RPM_REQUEST_INTERVAL = 100;  // Request RPM every 100ms (10x per second)
+
 // Motor Test Settings
 int testMotorSpeed = 1000;       // Default PWM speed for motor testing (safe speed)
 

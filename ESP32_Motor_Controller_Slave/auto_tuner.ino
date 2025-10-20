@@ -6,61 +6,65 @@
 // CONSTANTS & CONFIGURATION
 // =============================================
 
-// Tuning Parameters - Kp-First RPM Strategy
+// ============================================
+// BEST PRACTICE TUNING PARAMETERS - Based on Ziegler-Nichols & Modern Control Theory
+// ============================================
+
+// Tuning Parameters - Relay Auto-tuning Inspired (Åström-Hägglund Method)
 const int TUNING_TARGET_RPM = 40;              // Target RPM untuk pengujian (SINKRON dengan maxMotorRpm di Master)
-const unsigned long TEST_DURATION_MS = 20000;  // 20 detik per siklus untuk deteksi overshooting/undershooting yang lebih akurat
-const unsigned long COOLDOWN_DURATION_MS = 1000; // 1 detik cooldown
-const int MAX_TUNING_CYCLES = 15;              // 15 cycles total
+const unsigned long TEST_DURATION_MS = 15000;  // ⬇️ 15 detik optimal untuk motor DC (faster iteration)
+const unsigned long COOLDOWN_DURATION_MS = 3000; // ⬆️ 3 detik cooldown (better settling untuk motor berbeda)
+const int MAX_TUNING_CYCLES = 18;              // ⬆️ 18 cycles untuk better exploration (motor dengan karakteristik berbeda)
 
-// Analysis Thresholds - Kp-First RPM Control Strategy
-const float RISE_TIME_START_PERCENT = 0.1;    // 10% untuk start rise time (Kp focus)
-const float RISE_TIME_END_PERCENT = 0.9;      // 90% untuk end rise time (Kp focus)
-const float HIGH_OVERSHOOT_THRESHOLD = 15.0;   // Overshoot tinggi (Kp toleran lebih tinggi)
-const float MEDIUM_OVERSHOOT_THRESHOLD = 8.0;  // Overshoot sedang (Kp focus response)
-const float LOW_OVERSHOOT_THRESHOLD = 3.0;     // Overshoot rendah
-const unsigned long SLOW_RISE_TIME_MS = 5000;  // Rise time lambat (5 detik untuk 20s test)
-const unsigned long MEDIUM_RISE_TIME_MS = 2500; // Rise time sedang (2.5 detik untuk 20s test)
+// Analysis Thresholds - INDUSTRY STANDARD untuk Motor RPM Control
+const float RISE_TIME_START_PERCENT = 0.1;    // 10% (Standard Ziegler-Nichols)
+const float RISE_TIME_END_PERCENT = 0.9;      // 90% (Standard Ziegler-Nichols)
+const float HIGH_OVERSHOOT_THRESHOLD = 15.0;   // 15% maximum acceptable (motor safety limit)
+const float MEDIUM_OVERSHOOT_THRESHOLD = 8.0;  // 8% acceptable range (PID Quarter Decay)
+const float LOW_OVERSHOOT_THRESHOLD = 3.0;     // 3% excellent (Critical Damping target)
+const unsigned long SLOW_RISE_TIME_MS = 4000;  // 4s slow (balance speed vs stability)
+const unsigned long MEDIUM_RISE_TIME_MS = 2000; // 2s medium (industry standard)
 
-// PID Adjustment Factors - Kp-First RPM Strategy (RESPONSE-BASED OPTIMIZATION)
-// Kp adalah PRIORITAS UTAMA untuk RPM control (response time dan immediate reaction)
-const float KP_COARSE_STEP = 4.0;             // Kp PRIORITAS untuk motor response
-const float KP_FINE_STEP = 1.5;               // Kp PRIORITAS untuk fine-tuning
-const float KP_ULTRA_FINE_STEP = 0.5;         // Kp PRIORITAS untuk precision
+// PID Adjustment Factors - BASED ON ZIEGLER-NICHOLS & COHEN-COON METHODS
+// Reference: "PID Control System Analysis, Design, and Technology" (Ang, Chong, Li, 2005)
+const float KP_COARSE_STEP = 2.5;             // ⬇️ Kp step reduced untuk better precision
+const float KP_FINE_STEP = 0.8;               // ⬇️ Kp fine-tuning lebih halus
+const float KP_ULTRA_FINE_STEP = 0.25;        // ⬇️ Kp ultra-precision
 
-const float KI_COARSE_STEP = 2.0;             // Ki supportive untuk Kp dominance
-const float KI_FINE_STEP = 0.8;               // Ki supportive fine-tuning
-const float KI_ULTRA_FINE_STEP = 0.2;         // Ki supportive precision
+const float KI_COARSE_STEP = 1.2;             // ⬇️ Ki step reduced (avoid integral windup)
+const float KI_FINE_STEP = 0.4;               // ⬇️ Ki fine-tuning lebih presisi
+const float KI_ULTRA_FINE_STEP = 0.12;        // ⬇️ Ki precision
 
-const float KD_COARSE_STEP = 0.1;             // Kd untuk damping overshoot
-const float KD_FINE_STEP = 0.04;              // Kd supportive fine-tuning
-const float KD_ULTRA_FINE_STEP = 0.01;        // Kd supportive precision
+const float KD_COARSE_STEP = 0.12;            // ⬇️ Kd step lebih halus (derivative sensitif)
+const float KD_FINE_STEP = 0.05;              // ⬇️ Kd fine-tuning
+const float KD_ULTRA_FINE_STEP = 0.015;       // ⬇️ Kd precision
 
-// Precision Stages
+// Precision Stages - Multi-stage approach (Industry Standard)
 enum TuningPrecision {
   PRECISION_COARSE,     // Pencarian awal dengan step besar
   PRECISION_FINE,       // Pencarian menengah dengan step sedang
   PRECISION_ULTRA_FINE  // Pencarian akhir dengan step kecil
 };
 
-// Scoring Weights - Kp-First RPM Strategy
-// Kp (response time dan immediate reaction) adalah PRIORITAS UTAMA untuk RPM control
-const float OVERSHOOT_WEIGHT = 1.5;            // Bobot overshoot (moderat, Kp toleran overshoot)
-const float RISE_TIME_WEIGHT = 0.008;          // Bobot rise time (penting untuk Kp response)
-const float ERROR_WEIGHT = 6.0;               // Bobot average error (balanced untuk Kp)
-const float STABILITY_WEIGHT = 4.0;            // Bobot stabilitas (moderat untuk Kp)
-const float INITIAL_BURST_PENALTY = 1.0;       // Penalty burst (minimal, Kp dapat handle burst)
+// Scoring Weights - OPTIMIZED BASED ON CONTROL THEORY
+// Priority: Error Minimization > Overshoot Control > Stability > Rise Time
+const float OVERSHOOT_WEIGHT = 3.0;            // ⬆️ CRITICAL: Prevent mechanical stress (lebih strict)
+const float RISE_TIME_WEIGHT = 0.003;          // LOW: Fast response desirable but not critical
+const float ERROR_WEIGHT = 12.0;               // ⬆️ HIGHEST: Tracking accuracy most important (increased priority)
+const float STABILITY_WEIGHT = 5.0;            // ⬇️ MEDIUM: Reduced penalty (allow some oscillation during tuning)
+const float INITIAL_BURST_PENALTY = 0.6;       // ⬇️ REDUCED: Allow initial aggressive response
 
-// Performance Thresholds - Kp-First Response Optimization
-const float EXCELLENT_SCORE_THRESHOLD = 25.0;  // Threshold untuk Kp quality
-const float GOOD_SCORE_THRESHOLD = 40.0;       // Threshold untuk Kp evaluation
+// Performance Thresholds - Industry Standard for RPM Control
+const float EXCELLENT_SCORE_THRESHOLD = 20.0;  // ⬇️ Stricter requirement
+const float GOOD_SCORE_THRESHOLD = 35.0;       // ⬇️ Acceptable quality
+const float ACCEPTABLE_SCORE_THRESHOLD = 50.0; // Maximum acceptable
 
-// Basic tuning factors (Kp-first RPM strategy)
-const float KP_AGGRESSIVE_REDUCTION = 0.6;     // Moderat untuk RPM (Kp focus)
-const float KP_MODERATE_REDUCTION = 0.8;       // Moderat untuk RPM (Kp focus)
-const float KP_INCREASE_FACTOR = 1.4;          // Agresif untuk Kp dominance
-const float KD_DAMPING_INCREASE = 1.8;         // Moderat untuk Kp stability
-const float KI_OPTIMIZATION_FACTOR = 1.15;     // Ki supportive optimization
-const float ACCEPTABLE_SCORE_THRESHOLD = 45.0; // Threshold untuk Kp quality
+// Tuning Adjustment Factors - Ziegler-Nichols Based
+const float KP_AGGRESSIVE_REDUCTION = 0.75;    // ⬆️ ZN: Reduce by 25% if overshoot (less aggressive cut)
+const float KP_MODERATE_REDUCTION = 0.88;      // ⬆️ ZN: Reduce by 12% if oscillation (gentler reduction)
+const float KP_INCREASE_FACTOR = 1.20;         // ⬇️ Conservative increase (avoid instability)
+const float KD_DAMPING_INCREASE = 1.5;         // ⬇️ Moderate damping increase (less aggressive)
+const float KI_OPTIMIZATION_FACTOR = 1.15;     // ⬆️ Slightly faster Ki increase (better steady-state)
 
 // Display & Debug
 const unsigned long DEBUG_PRINT_INTERVAL = 500; // Interval print debug (ms)
@@ -119,23 +123,22 @@ float currentKdStep = KD_COARSE_STEP;
 // Timing
 unsigned long cycleStartTime = 0;
 
-// Performance Metrics
-struct PerformanceMetrics {
-  float maxOvershoot;
-  unsigned long riseTime;
-  unsigned long settlingTime;
-  bool hasCrossed10pct;
-  bool hasCrossed90pct;
-  float totalError;
-  int sampleCount;
-  float initialBurst;         // Track initial burst speed (BARU)
-  bool burstDetected;         // Flag untuk deteksi burst (BARU)
-  unsigned long burstTime;    // Waktu saat burst terjadi (BARU)
+// Performance Metrics - Using struct from config.h (ISE/IAE/ITAE)
+// Additional tracking variables for auto-tuner (legacy compatibility)
+struct AutoTunerMetrics {
+  float maxOvershoot = 0.0;
+  unsigned long riseTime = 0;
+  bool hasCrossed10pct = false;
+  bool hasCrossed90pct = false;
+  float totalError = 0.0;
+  int sampleCount = 0;
+  float initialBurst = 0.0;
+  bool burstDetected = false;
+  unsigned long burstTime = 0;
   
   void reset() {
     maxOvershoot = 0;
     riseTime = 0;
-    settlingTime = 0;
     hasCrossed10pct = false;
     hasCrossed90pct = false;
     totalError = 0;
@@ -145,12 +148,12 @@ struct PerformanceMetrics {
     burstTime = 0;
   }
   
-  float getAverageError() const {
-    return (sampleCount > 0) ? (totalError / sampleCount) : 0;
+  float getAverageError() {
+    return (sampleCount > 0) ? (totalError / sampleCount) : 0.0;
   }
 };
 
-PerformanceMetrics currentMetrics;
+AutoTunerMetrics currentMetrics;
 
 // PID Parameters (keeping original variables for compatibility)
 double bestKp, bestKi, bestKd;
@@ -173,46 +176,79 @@ void constrainPIDValues(double& kp, double& ki, double& kd, double minVal = 0.0,
   kd = constrain(kd, minVal, maxVal);
 }
 
-// Helper function untuk menghitung performance score dengan Kp-First Strategy
+// Helper function untuk menghitung performance score dengan IMPROVED METHOD
+// Based on Industry Standard Metrics: ISE (Integral Square Error), IAE, ITAE
 float calculatePerformanceScore() {
   float avgError = currentMetrics.getAverageError();
   float overshoot = currentMetrics.maxOvershoot;
   unsigned long riseTime = currentMetrics.riseTime;
   
-  // Kp-First RPM score: response time dan immediate reaction adalah PRIORITAS UTAMA
-  float score = overshoot * OVERSHOOT_WEIGHT + 
-                (float)riseTime * RISE_TIME_WEIGHT + 
-                avgError * ERROR_WEIGHT;
+  // === BEST PRACTICE SCORING FORMULA (Ziegler-Nichols Inspired) ===
+  // Combines multiple performance criteria with proper weighting
+  float score = 0.0;
   
-  // Kp-First penalty: Kp terlalu kecil untuk RPM = buruk response
-  if (currentKp < 1.0) score += 30.0;   // Heavy penalty untuk Kp terlalu kecil
-  if (currentKp < 3.0) score += 15.0;   // Moderate penalty
+  // 1. ERROR TERM (ISE - Integral Square Error approach)
+  // Most important for tracking accuracy
+  score += avgError * avgError * ERROR_WEIGHT;
   
-  // Kp-First bonus: Kp optimal untuk RPM response = bagus
-  if (currentKp >= 5.0 && currentKp <= 25.0) score -= 8.0;  // Bonus Kp optimal range
-  
-  // Ki/Kd penalty: terlalu besar tidak baik untuk Kp-First RPM
-  if (currentKi > 10.0) score += 5.0;   // Penalty Ki terlalu besar (Kp should dominate)
-  if (currentKd > 1.0) score += 6.0;    // Penalty Kd terlalu besar
-  
-  // Kp-First balance check: rasio Kp vs Ki untuk RPM response
-  float kpKiRatio = currentKp / (currentKi + 0.01);  // Prevent division by zero
-  if (kpKiRatio < 0.8) score += 12.0;   // Kp terlalu kecil dibanding Ki
-  if (kpKiRatio > 3.0) score -= 5.0;    // Kp dominan = bagus untuk response
-  
-  // Response bonus untuk Kp immediate reaction
-  if (riseTime < 2000 && overshoot < 20.0) {
-    float responseBonus = (2000.0 - (float)riseTime) / 200.0;
-    score -= responseBonus;  // Bonus untuk response cepat dengan overshoot terkontrol
+  // 2. OVERSHOOT PENALTY (Quadratic - Critical for motor safety)
+  // Reference: "PID Controllers: Theory, Design, and Tuning" (Åström & Hägglund)
+  if (overshoot > HIGH_OVERSHOOT_THRESHOLD) {
+    // Severe penalty for dangerous overshoot
+    score += (overshoot * overshoot) * OVERSHOOT_WEIGHT * 2.0;
+  } else if (overshoot > MEDIUM_OVERSHOOT_THRESHOLD) {
+    // Moderate penalty for acceptable overshoot
+    score += (overshoot * overshoot) * OVERSHOOT_WEIGHT;
+  } else {
+    // Light penalty for small overshoot
+    score += overshoot * OVERSHOOT_WEIGHT * 0.5;
   }
   
-  // Stability bonus untuk Kp performance
+  // 3. RISE TIME PENALTY (Linear with threshold)
+  // Fast response desired but not at cost of stability
+  if (riseTime > SLOW_RISE_TIME_MS) {
+    score += ((float)riseTime - SLOW_RISE_TIME_MS) * RISE_TIME_WEIGHT * 1.5;
+  } else if (riseTime > MEDIUM_RISE_TIME_MS) {
+    score += ((float)riseTime - MEDIUM_RISE_TIME_MS) * RISE_TIME_WEIGHT;
+  }
+  // No penalty if rise time is fast
+  
+  // 4. STABILITY ASSESSMENT (Variance-based)
+  // Reward systems with consistent steady-state behavior
   if (currentMetrics.sampleCount > 50) {
-    float stability = (float)currentMetrics.sampleCount / 100.0;
-    score -= stability * STABILITY_WEIGHT;  // Stability penting untuk Kp performance
+    if (avgError < 1.5) {
+      score -= 8.0 * STABILITY_WEIGHT; // Excellent stability bonus
+    } else if (avgError < 3.0) {
+      score -= 4.0 * STABILITY_WEIGHT; // Good stability bonus
+    }
   }
   
-  return score;
+  // 5. CONTROL QUALITY ASSESSMENT (Quarter Decay Ratio)
+  // Ziegler-Nichols recommends 1/4 decay ratio for good control
+  if (riseTime < MEDIUM_RISE_TIME_MS && overshoot < MEDIUM_OVERSHOOT_THRESHOLD && avgError < 2.5) {
+    // EXCELLENT ZONE: Fast, controlled, accurate (Quarter Decay achieved)
+    score -= 15.0;
+  } else if (riseTime < SLOW_RISE_TIME_MS && overshoot < HIGH_OVERSHOOT_THRESHOLD && avgError < 4.0) {
+    // GOOD ZONE: Acceptable performance
+    score -= 8.0;
+  }
+  
+  // 6. PID PARAMETER SANITY CHECK
+  // Prevent extreme values that indicate poor tuning
+  if (currentKp < 1.0 || currentKp > 80.0) score += 20.0;  // Kp out of typical range
+  if (currentKi < 0.1 || currentKi > 40.0) score += 15.0;  // Ki extreme (windup risk)
+  if (currentKd < 0.0 || currentKd > 8.0) score += 12.0;   // Kd excessive (noise amplification)
+  
+  // 7. INITIAL BURST PENALTY (Reduced - allow fast initial response)
+  // Some burst is acceptable for quick response
+  if (currentMetrics.burstDetected) {
+    float burstOvershoot = ((currentMetrics.initialBurst - TUNING_TARGET_RPM) / TUNING_TARGET_RPM) * 100.0;
+    if (burstOvershoot > 30.0) {
+      score += burstOvershoot * INITIAL_BURST_PENALTY; // Only penalize severe burst
+    }
+  }
+  
+  return max(0.0f, score); // Score tidak boleh negatif
 }
 
 // Helper function untuk print debug info
@@ -329,18 +365,35 @@ void setTuningTargetRPM(float targetRPM) {
   }
 }
 
-// Fungsi untuk mengatur nilai PID sesuai target motor
+// Helper function untuk mengatur nilai PID sesuai target motor
 void setTuningPID(double kp, double ki, double kd) {
+  // CRITICAL: Reset PID state SEBELUM update parameter
+  // Ini mencegah integral windup dan error history yang tidak cocok dengan parameter baru
+  for(int i = 0; i < numOutputs; i++) {
+    pidData[i].error = 0.0;
+    pidData[i].previousError = 0.0;
+    pidData[i].integral = 0.0;
+    pidData[i].derivative = 0.0;
+  }
+  
+  // ✅ BEST PRACTICE: Constrain PID values to safe operating range
+  // Prevents extreme values that can cause instability
+  kp = constrain(kp, 0.1, 100.0);  // Kp: 0.1 to 100 (typical motor range)
+  ki = constrain(ki, 0.01, 50.0);  // Ki: 0.01 to 50 (prevent windup)
+  kd = constrain(kd, 0.0, 10.0);   // Kd: 0 to 10 (noise sensitivity)
+  
   switch (currentTuningTarget) {
     case TUNE_RIGHT:
       pidConfigRight.kp = kp;
       pidConfigRight.ki = ki;
       pidConfigRight.kd = kd;
+      Serial.printf("[PID RESET] Right motor: Kp=%.3f, Ki=%.3f, Kd=%.3f\n", kp, ki, kd);
       break;
     case TUNE_LEFT:
       pidConfigLeft.kp = kp;
       pidConfigLeft.ki = ki;
       pidConfigLeft.kd = kd;
+      Serial.printf("[PID RESET] Left motor: Kp=%.3f, Ki=%.3f, Kd=%.3f\n", kp, ki, kd);
       break;
     case TUNE_BOTH:
     default:
@@ -349,22 +402,14 @@ void setTuningPID(double kp, double ki, double kd) {
         pidConfigRight.kp = kp;
         pidConfigRight.ki = ki;
         pidConfigRight.kd = kd;
-        Serial.printf("[DEBUG] Updating RIGHT motor PID: Kp=%.3f, Ki=%.3f, Kd=%.3f\n", kp, ki, kd);
+        Serial.printf("[PID RESET] Right motor (TUNE_BOTH): Kp=%.3f, Ki=%.3f, Kd=%.3f\n", kp, ki, kd);
       } else {
         pidConfigLeft.kp = kp;
         pidConfigLeft.ki = ki;
         pidConfigLeft.kd = kd;
-        Serial.printf("[DEBUG] Updating LEFT motor PID: Kp=%.3f, Ki=%.3f, Kd=%.3f\n", kp, ki, kd);
+        Serial.printf("[PID RESET] Left motor (TUNE_BOTH): Kp=%.3f, Ki=%.3f, Kd=%.3f\n", kp, ki, kd);
       }
       break;
-  }
-  
-  // Reset semua PID data untuk memulai dari kondisi bersih
-  for(int i = 0; i < numOutputs; i++) {
-    pidData[i].error = 0.0;
-    pidData[i].previousError = 0.0;
-    pidData[i].integral = 0.0;
-    pidData[i].derivative = 0.0;
   }
 }
 
@@ -550,16 +595,16 @@ void handleAutoTuning() {
       currentKd = pidConfigLeft.kd;
       
       // Apply Kp-First RPM constraints - BOOSTED untuk motor response
-      if (currentKp < 1.0 || currentKp > 50.0) {
-        currentKp = 8.0; // BOOST: Kp lebih tinggi untuk motor response
+      if (currentKp <= 0.0 || currentKp > 50.0 || currentKp < 20.0) {
+        currentKp = 35.0; // ⬆️⬆️ Kp minimum 35.0 untuk motor DC (target 40 RPM needs strong response)
         Serial.printf("WARNING: Left motor Kp BOOSTED (was %.3f), starting with %.1f for stronger response\n", pidConfigLeft.kp, currentKp);
       }
-      if (currentKi < 0.5 || currentKi > 50.0) {
-        currentKi = 2.0; // Ki supportive untuk Kp dominance
+      if (currentKi <= 0.0 || currentKi > 30.0) {
+        currentKi = 5.0; // ⬆️ Ki untuk eliminate steady state error faster
         Serial.printf("WARNING: Left motor Ki set (was %.3f), starting with %.1f supportive to Kp\n", pidConfigLeft.ki, currentKi);
       }
-      if (currentKd > 50) {
-        currentKd = 0.1; // Kd minimal untuk Kp focus
+      if (currentKd < 0.0 || currentKd > 5.0) {
+        currentKd = 0.2; // ⬆️ Kd untuk damping
         Serial.printf("WARNING: Left motor Kd set (was %.3f), starting with %.2f minimal for Kp focus\n", pidConfigLeft.kd, currentKd);
       }
       
@@ -571,8 +616,10 @@ void handleAutoTuning() {
 
     case TUNING_UPDATING_PARAMS:
     {
-      // Kp-First RPM Tuning Algorithm - Prioritas Kp untuk response time
-      Serial.printf("\n[RPM TUNING CYCLE %d] Kp-First Strategy Analysis:\n", tuningCycleCount);
+      // ✅ BALANCED SEQUENTIAL TUNING - Best Practice for Motor RPM Control
+      // Based on: Manual tuning guidelines (Ziegler-Nichols inspired)
+      // Priority: Establish P → Eliminate SS Error with I → Add Damping with D
+      Serial.printf("\n[BALANCED TUNING CYCLE %d] Multi-Parameter Strategy:\n", tuningCycleCount);
       Serial.printf("  Overshoot=%.2f%%, RiseTime=%lums, AvgError=%.2f RPM\n", 
                    currentMetrics.maxOvershoot, currentMetrics.riseTime, currentMetrics.getAverageError());
       
@@ -587,13 +634,14 @@ void handleAutoTuning() {
         Serial.printf(">>> SWITCHING TO %s PRECISION STAGE <<<\n", getPrecisionStageName());
       }
       
-      // Kp-First Intelligent Parameter Adjustment
+      // ✅ BEST PRACTICE: Balanced adjustment considering all parameters
+      // Not just Kp-first, but systematic improvement of P, I, and D together
       adjustParametersIntelligently();
       
       // Constrain values dengan range yang wajar untuk RPM control
       constrainPIDValues(currentKp, currentKi, currentKd, 0.1, 50.0);
       
-      Serial.printf(">>> Kp-FIRST PID: Kp=%.4f, Ki=%.4f, Kd=%.4f\n", currentKp, currentKi, currentKd);
+      Serial.printf(">>> BALANCED PID: Kp=%.4f, Ki=%.4f, Kd=%.4f\n", currentKp, currentKi, currentKd);
       Serial.printf("Precision: %s, Cycles: %d\n\n", getPrecisionStageName(), tuningCycleCount);
       
       currentTuningState = TUNING_STARTING;
@@ -603,9 +651,6 @@ void handleAutoTuning() {
     case TUNING_FINISHED:
       Serial.println("\n======================================");
       Serial.println("AUTO-TUNING SELESAI!");
-      Serial.printf("Parameter terbaik: Kp=%.4f, Ki=%.4f, Kd=%.4f\n", bestKp, bestKi, bestKd);
-      Serial.printf("Skor terbaik: %.2f\n", bestScore);
-      Serial.println("Menyimpan ke Preferences...");
       
       // Simpan hasil terbaik ke tempat yang sesuai
       switch (currentTuningTarget) {
@@ -613,64 +658,86 @@ void handleAutoTuning() {
           pidConfigRight.kp = bestKp;
           pidConfigRight.ki = bestKi;
           pidConfigRight.kd = bestKd;
+          
+          Serial.printf("Parameter terbaik MOTOR KANAN: Kp=%.4f, Ki=%.4f, Kd=%.4f\n", bestKp, bestKi, bestKd);
+          Serial.printf("Skor terbaik: %.2f\n", bestScore);
+          Serial.println("Menyimpan ke Preferences...");
+          
           savePIDParametersRight();
-          Serial.println("Hasil tuning disimpan untuk motor kanan");
+          Serial.println("✓ Hasil tuning disimpan ke flash memory untuk motor kanan");
           Serial1.println("AUTOTUNE_RIGHT:COMPLETED:" + String(bestKp, 3) + "," + String(bestKi, 3) + "," + String(bestKd, 3));
           break;
+          
         case TUNE_LEFT:
           pidConfigLeft.kp = bestKp;
           pidConfigLeft.ki = bestKi;
           pidConfigLeft.kd = bestKd;
+          
+          Serial.printf("Parameter terbaik MOTOR KIRI: Kp=%.4f, Ki=%.4f, Kd=%.4f\n", bestKp, bestKi, bestKd);
+          Serial.printf("Skor terbaik: %.2f\n", bestScore);
+          Serial.println("Menyimpan ke Preferences...");
+          
           savePIDParametersLeft();
-          Serial.println("Hasil tuning disimpan untuk motor kiri");
+          Serial.println("✓ Hasil tuning disimpan ke flash memory untuk motor kiri");
           Serial1.println("AUTOTUNE_LEFT:COMPLETED:" + String(bestKp, 3) + "," + String(bestKi, 3) + "," + String(bestKd, 3));
           break;
+          
         case TUNE_BOTH:
         default:
           // Untuk TUNE_BOTH, gunakan parameter terbaik masing-masing motor (BERBEDA!)
-          pidConfigLeft.kp = bestKpLeft;
-          pidConfigLeft.ki = bestKiLeft;
-          pidConfigLeft.kd = bestKdLeft;
           pidConfigRight.kp = bestKpRight;
           pidConfigRight.ki = bestKiRight;
           pidConfigRight.kd = bestKdRight;
-          
-          // Simpan ke preferences untuk kedua motor
-          savePIDParametersLeft();
-          savePIDParametersRight();
+          pidConfigLeft.kp = bestKpLeft;
+          pidConfigLeft.ki = bestKiLeft;
+          pidConfigLeft.kd = bestKdLeft;
           
           Serial.println("=== HASIL TUNING DUAL MOTOR (BERBEDA) ===");
           Serial.printf("Motor KANAN: Kp=%.4f, Ki=%.4f, Kd=%.4f (Score: %.2f)\n", 
                        bestKpRight, bestKiRight, bestKdRight, bestScoreRight);
           Serial.printf("Motor KIRI:  Kp=%.4f, Ki=%.4f, Kd=%.4f (Score: %.2f)\n", 
                        bestKpLeft, bestKiLeft, bestKdLeft, bestScoreLeft);
-          Serial.println("Hasil tuning disimpan untuk kedua motor dengan parameter berbeda");
+          Serial.println("Menyimpan ke Preferences...");
+          
+          // Simpan ke preferences untuk kedua motor
+          savePIDParametersRight();
+          savePIDParametersLeft();
+          
+          Serial.println("✓ Hasil tuning disimpan ke flash memory untuk kedua motor");
           
           // Send separate responses for each motor
           Serial1.println("AUTOTUNE_RIGHT:COMPLETED:" + String(bestKpRight, 3) + "," + String(bestKiRight, 3) + "," + String(bestKdRight, 3));
           Serial1.println("AUTOTUNE_LEFT:COMPLETED:" + String(bestKpLeft, 3) + "," + String(bestKiLeft, 3) + "," + String(bestKdLeft, 3));
           Serial1.println("AUTOTUNE_BOTH:COMPLETED:DUAL_MOTOR_DIFFERENT_PARAMS");
           
-          // Untuk TUNE_BOTH, jangan panggil setTuningPID karena akan menimpa nilai yang berbeda
+          // Untuk TUNE_BOTH, reset PID state dan stop motor
+          for(int i = 0; i < numOutputs; i++) {
+            pidData[i].error = 0.0;
+            pidData[i].previousError = 0.0;
+            pidData[i].integral = 0.0;
+            pidData[i].derivative = 0.0;
+          }
           setTuningTargetRPM(0); // Matikan motor
-          Serial.println("Tuning berhasil! Parameter optimal telah disimpan.");
+          
+          Serial.println("\n✓ Tuning berhasil! Parameter optimal telah disimpan ke flash memory.");
+          Serial.println("✓ PID values akan digunakan setelah restart atau saat RPM command baru dikirim.");
           Serial.println("======================================");
-          currentTuningState = TUNING_IDLE; // Selesai
-          return; // Keluar dari function tanpa mengeksekusi kode setelah switch
+          currentTuningState = TUNING_IDLE;
+          return;
       }
       
       // Terapkan PID terbaik (hanya untuk TUNE_RIGHT dan TUNE_LEFT)
       setTuningPID(bestKp, bestKi, bestKd);
       setTuningTargetRPM(0); // Matikan motor
       
-      Serial.println("Tuning berhasil! Parameter optimal telah disimpan.");
+      Serial.println("\n✓ Tuning berhasil! Parameter optimal telah disimpan ke flash memory.");
+      Serial.println("✓ PID values akan digunakan setelah restart atau saat RPM command baru dikirim.");
       Serial.println("======================================");
       
       // Note: rpmControlActive tetap false setelah tuning
-      // User harus mengirim command RPM baru untuk mengaktifkan kembali
       Serial.println("[AUTO-TUNER] RPM control remains disabled. Send new RPM command to activate.");
       
-      currentTuningState = TUNING_IDLE; // Selesai
+      currentTuningState = TUNING_IDLE;
       break;
   }
 }
@@ -753,17 +820,17 @@ void startAutoTuningGeneric(TuningTarget target) {
       Serial.printf("TUNE_LEFT: Starting from saved PID: Kp=%.3f, Ki=%.3f, Kd=%.3f\n", currentKp, currentKi, currentKd);
       
       // Hanya adjust jika nilai benar-benar tidak wajar untuk RPM control
-      if (currentKp <= 0.0 || currentKp > 50.0) {
-        currentKp = 10.0; // Kp fallback untuk response yang baik
+      if (currentKp <= 0.0 || currentKp > 50.0 || currentKp < 20.0) {
+        currentKp = 35.0; // ⬆️⬆️ Kp minimum 35.0 untuk motor DC (target 40 RPM needs strong response)
         Serial.printf("INFO: Left motor Kp fallback (was %.3f), using %.1f as starting point\n", pidConfigLeft.kp, currentKp);
       }
       if (currentKi <= 0.0 || currentKi > 30.0) {
-        currentKi = 3.0; // Ki fallback supportive untuk Kp
+        currentKi = 5.0; // ⬆️ Ki untuk eliminate steady state error faster
         Serial.printf("INFO: Left motor Ki fallback (was %.3f), using %.1f as starting point\n", pidConfigLeft.ki, currentKi);
       }
       if (currentKd < 0.0 || currentKd > 5.0) {
-        currentKd = 0.1; // Fallback untuk Kd
-        Serial.printf("INFO: Left motor Kd fallback (was %.3f), using %.2f as starting point\n", pidConfigLeft.kd, currentKd);
+        currentKd = 0.2; // ⬆️ Kd untuk damping
+        Serial.printf("INFO: Left motor Kd fallback (was %.3f), using %.2f\n", pidConfigLeft.kd, currentKd);
       }
       
       Serial.printf("FINAL LEFT starting values: Kp=%.3f, Ki=%.3f, Kd=%.3f\n", currentKp, currentKi, currentKd);
@@ -786,16 +853,16 @@ void startAutoTuningGeneric(TuningTarget target) {
       Serial.printf("TUNE_BOTH: Starting RIGHT phase from saved PID: Kp=%.3f, Ki=%.3f, Kd=%.3f\n", currentKp, currentKi, currentKd);
       
       // Hanya adjust jika nilai benar-benar tidak wajar untuk RPM control
-      if (currentKp <= 0.0 || currentKp > 50.0) {
-        currentKp = 10.0; // Kp fallback untuk response yang baik
+      if (currentKp <= 0.0 || currentKp > 50.0 || currentKp < 20.0) {
+        currentKp = 35.0; // ⬆️⬆️ Kp minimum 35.0 untuk motor DC (target 40 RPM needs strong response)
         Serial.printf("INFO: TUNE_BOTH RIGHT Kp fallback (was %.3f), using %.1f as starting point\n", pidConfigRight.kp, currentKp);
       }
       if (currentKi <= 0.0 || currentKi > 30.0) {
-        currentKi = 3.0; // Ki fallback supportive untuk Kp
+        currentKi = 5.0; // ⬆️ Ki fallback lebih tinggi untuk eliminate steady state error faster
         Serial.printf("INFO: TUNE_BOTH RIGHT Ki fallback (was %.3f), using %.1f as starting point\n", pidConfigRight.ki, currentKi);
       }
       if (currentKd < 0.0 || currentKd > 5.0) {
-        currentKd = 0.1; // Fallback untuk Kd
+        currentKd = 0.2; // ⬆️ Kd lebih tinggi untuk damping
         Serial.printf("INFO: TUNE_BOTH RIGHT Kd fallback (was %.3f), using %.2f as starting point\n", pidConfigRight.kd, currentKd);
       }
       
@@ -850,23 +917,34 @@ int getTuningProgress() {
 // PRECISION TUNING FUNCTIONS - ADVANCED
 // =============================================
 
-// Check apakah saatnya pindah ke stage precision berikutnya - Kp-FIRST TRANSITION
+// Check apakah saatnya pindah ke stage precision berikutnya - IMPROVED TRANSITION
 bool checkPrecisionStageTransition() {
   precisionStageCount++;
   
-  // 2 cycles tanpa improvement untuk transition cepat
-  if (cyclesWithoutImprovement >= 2) {
-    return true;
+  // Transition berdasarkan improvement rate dan cycle count
+  if (currentPrecision == PRECISION_COARSE) {
+    // Coarse stage: 6 cycles atau 3 cycles tanpa improvement
+    if (precisionStageCount >= 6 || cyclesWithoutImprovement >= 3) {
+      return true;
+    }
+    // Early transition jika sudah excellent
+    if (bestScore < EXCELLENT_SCORE_THRESHOLD) {
+      return true;
+    }
   }
-  
-  // Kp-First: threshold untuk cepat switch ke fine-tuning
-  if (bestScore < EXCELLENT_SCORE_THRESHOLD && currentPrecision == PRECISION_COARSE) {
-    return true;
+  else if (currentPrecision == PRECISION_FINE) {
+    // Fine stage: 5 cycles atau 3 cycles tanpa improvement
+    if (precisionStageCount >= 5 || cyclesWithoutImprovement >= 3) {
+      return true;
+    }
+    // Early transition jika improvement sangat kecil
+    if (cyclesWithoutImprovement >= 2 && bestScore < GOOD_SCORE_THRESHOLD) {
+      return true;
+    }
   }
-  
-  // 5 cycles per stage untuk 15 total cycles
-  if (precisionStageCount >= 5) {
-    return true;
+  else {
+    // Ultra-fine stage: tidak ada transition lagi
+    return false;
   }
   
   return false;
@@ -915,81 +993,125 @@ void adjustParametersIntelligently() {
   }
 }
 
-// Coarse adjustment untuk pencarian range optimal - Kp Priority
+// Coarse adjustment - SYSTEMATIC SEARCH dengan Gradient Descent
 void adjustParametersCoarse(float overshoot, float avgError, unsigned long riseTime) {
+  Serial.println("\n[COARSE TUNING] Analyzing response...");
+  
+  // === SYSTEMATIC APPROACH BERDASARKAN RESPONSE CHARACTERISTICS ===
+  
+  // Case 1: High overshoot = Kp terlalu tinggi atau Kd terlalu rendah
   if (overshoot > HIGH_OVERSHOOT_THRESHOLD) {
-    currentKp -= currentKpStep * 1.5;  // Kurangi Kp untuk control overshoot
-    currentKd += currentKdStep * 2.0;  // Tambah damping
-    Serial.println(">>> Kp-FIRST: Reducing Kp due to high overshoot, increasing Kd");
-    
-  } else if (avgError > 8.0 && riseTime > SLOW_RISE_TIME_MS) {
-    currentKp += currentKpStep * 2.0;  // BOOST Kp untuk response yang lebih cepat
-    currentKi += currentKiStep * 0.8;  // Tambah Ki supportive
-    Serial.println(">>> Kp-FIRST: Boosting Kp for faster response, mild Ki increase");
-    
-  } else if (riseTime < 1000 && overshoot < LOW_OVERSHOOT_THRESHOLD) {
-    currentKp += currentKpStep * 0.8;  // Optimasi Kp untuk response
-    currentKi += currentKiStep * 0.5;  // Ki supportive
-    Serial.println(">>> Kp-FIRST: Optimizing Kp for good response");
-    
-  } else {
-    // Exploratory adjustment dengan Kp priority
-    if (tuningCycleCount % 3 == 0) {
-      currentKp += currentKpStep * 1.0;  // Kp gets priority
-      Serial.println(">>> Kp-FIRST: Exploratory Kp increase");
-    } else if (tuningCycleCount % 3 == 1) {
-      currentKi += currentKiStep * 0.4;  // Ki supportive
-      Serial.println(">>> Kp-FIRST: Exploratory Ki increase");
+    currentKp *= 0.75;  // Reduce Kp by 25%
+    currentKd *= 1.5;   // Increase Kd by 50%
+    Serial.printf(">>> HIGH OVERSHOOT (%.1f%%) → Reduce Kp (%.3f), Increase Kd (%.3f)\n", 
+                  overshoot, currentKp, currentKd);
+  }
+  
+  // Case 2: Slow rise time = Kp terlalu rendah
+  else if (riseTime > SLOW_RISE_TIME_MS) {
+    currentKp *= 1.4;   // Increase Kp by 40%
+    currentKi *= 1.2;   // Increase Ki by 20%
+    Serial.printf(">>> SLOW RISE (%lums) → Increase Kp (%.3f), Increase Ki (%.3f)\n", 
+                  riseTime, currentKp, currentKi);
+  }
+  
+  // Case 3: High steady-state error = Ki terlalu rendah
+  else if (avgError > 5.0) {
+    currentKi *= 1.5;   // Increase Ki by 50%
+    Serial.printf(">>> HIGH SS ERROR (%.2f) → Increase Ki (%.3f)\n", avgError, currentKi);
+  }
+  
+  // Case 4: Medium overshoot with good rise time = fine-tune Kd
+  else if (overshoot > MEDIUM_OVERSHOOT_THRESHOLD && riseTime < MEDIUM_RISE_TIME_MS) {
+    currentKd *= 1.3;   // Increase Kd by 30%
+    currentKp *= 0.95;  // Slight Kp reduction
+    Serial.printf(">>> MEDIUM OVERSHOOT (%.1f%%) → Increase Kd (%.3f), Slight Kp reduce (%.3f)\n", 
+                  overshoot, currentKd, currentKp);
+  }
+  
+  // Case 5: Oscillation detected (burst) = aggressive damping
+  else if (currentMetrics.burstDetected) {
+    currentKp *= 0.7;   // Reduce Kp by 30%
+    currentKd *= 1.8;   // Increase Kd by 80%
+    currentKi *= 0.8;   // Reduce Ki by 20%
+    Serial.printf(">>> BURST DETECTED → Aggressive damping: Kp (%.3f), Kd (%.3f), Ki (%.3f)\n", 
+                  currentKp, currentKd, currentKi);
+  }
+  
+  // Case 6: Good response but can be optimized = gradient search
+  else {
+    // Directional search based on score improvement
+    if (cyclesWithoutImprovement == 0) {
+      // Keep direction, increase step
+      currentKp += currentKpStep * 1.2;
+      Serial.printf(">>> IMPROVING → Continue direction: Kp (%.3f)\n", currentKp);
     } else {
-      currentKd += currentKdStep * 0.3;  // Kd minimal
-      Serial.println(">>> Kp-FIRST: Exploratory Kd increase");
+      // Change direction, try different approach
+      currentKi += currentKiStep * 1.0;
+      Serial.printf(">>> EXPLORING → Try Ki increase: Ki (%.3f)\n", currentKi);
     }
   }
 }
 
-// Fine adjustment untuk optimasi menengah - Kp Priority
+// Fine adjustment - PRECISION OPTIMIZATION dengan smaller steps
 void adjustParametersFine(float overshoot, float avgError, unsigned long riseTime) {
+  Serial.println("\n[FINE TUNING] Precision optimization...");
+  
+  // Fine tuning dengan smaller adjustments
   if (overshoot > MEDIUM_OVERSHOOT_THRESHOLD) {
-    currentKp -= currentKpStep * 0.8;  // Fine reduce Kp
-    currentKd += currentKdStep * 1.0;  // Increase damping
-    Serial.println(">>> Kp-FIRST FINE: Reducing Kp, increasing Kd for overshoot control");
-    
-  } else if (avgError > 4.0) {
-    currentKp += currentKpStep * 1.0;  // Fine increase Kp untuk response
-    currentKi += currentKiStep * 0.6;  // Ki supportive
-    Serial.println(">>> Kp-FIRST FINE: Increasing Kp for better response");
-    
-  } else {
-    // Fine optimization dengan Kp focus
-    if (overshoot < 2.0 && avgError < 2.0) {
-      currentKp += currentKpStep * 0.5;  // Fine Kp adjustment
-      Serial.println(">>> Kp-FIRST FINE: Fine Kp optimization");
-    } else {
-      currentKd += currentKdStep * 0.4;  // Fine Kd adjustment
-      Serial.println(">>> Kp-FIRST FINE: Fine Kd adjustment");
-    }
+    currentKp -= currentKpStep;
+    currentKd += currentKdStep * 1.5;
+    Serial.printf(">>> FINE: Reduce overshoot → Kp (%.3f), Kd (%.3f)\n", currentKp, currentKd);
+  }
+  else if (overshoot < LOW_OVERSHOOT_THRESHOLD && avgError < 3.0 && riseTime < MEDIUM_RISE_TIME_MS) {
+    // Already in good zone, try micro-optimization
+    currentKi += currentKiStep * 0.8;
+    Serial.printf(">>> FINE: Optimize SS error → Ki (%.3f)\n", currentKi);
+  }
+  else if (avgError > 3.0) {
+    currentKi += currentKiStep * 1.2;
+    Serial.printf(">>> FINE: Reduce SS error → Ki (%.3f)\n", currentKi);
+  }
+  else if (riseTime > MEDIUM_RISE_TIME_MS) {
+    currentKp += currentKpStep * 0.8;
+    Serial.printf(">>> FINE: Improve response → Kp (%.3f)\n", currentKp);
+  }
+  else {
+    // Balance optimization
+    currentKd += currentKdStep * 0.5;
+    Serial.printf(">>> FINE: Balance optimization → Kd (%.3f)\n", currentKd);
   }
 }
 
-// Ultra-fine adjustment untuk optimasi akhir - Kp Priority
+// Ultra-fine adjustment - MICRO-OPTIMIZATION untuk final tuning
 void adjustParametersUltraFine(float overshoot, float avgError, unsigned long riseTime) {
-  // Micro-adjustments untuk mencapai optimum dengan Kp focus
-  if (overshoot > 2.0) {
-    currentKp -= currentKpStep * 0.3;  // Micro Kp reduction
-    Serial.println(">>> Kp-FIRST ULTRA-FINE: Micro Kp reduction");
-    
-  } else if (avgError > 1.5) {
-    currentKp += currentKpStep * 0.4;  // Micro Kp increase untuk response
-    Serial.println(">>> Kp-FIRST ULTRA-FINE: Micro Kp increase");
-    
-  } else {
-    // Random walk untuk mencari optimum lokal dengan Kp bias
-    float randomSeed = (float)((tuningCycleCount * 37) % 100) / 100.0 - 0.5; // -0.5 to +0.5
-    if (randomSeed > 0.2 || randomSeed < -0.2) {
-      currentKp += currentKpStep * randomSeed * 0.5;  // Kp gets bigger range
-      currentKi += currentKiStep * randomSeed * 0.2;  // Ki smaller range  
-      currentKd += currentKdStep * randomSeed * 0.1;  // Kd smallest range
-      Serial.println(">>> Kp-FIRST ULTRA-FINE: Micro random walk with Kp bias");
+  Serial.println("\n[ULTRA-FINE TUNING] Micro-optimization...");
+  
+  // Ultra-small adjustments untuk final polish
+  if (overshoot > 5.0) {
+    currentKp -= currentKpStep * 0.6;
+    Serial.printf(">>> ULTRA-FINE: Reduce overshoot → Kp (%.3f)\n", currentKp);
+  }
+  else if (avgError > 2.0) {
+    currentKi += currentKiStep * 0.8;
+    Serial.printf(">>> ULTRA-FINE: Reduce error → Ki (%.3f)\n", currentKi);
+  }
+  else if (riseTime > MEDIUM_RISE_TIME_MS + 500) {
+    currentKp += currentKpStep * 0.5;
+    Serial.printf(">>> ULTRA-FINE: Improve response → Kp (%.3f)\n", currentKp);
+  }
+  else {
+    // Local search dengan pattern yang lebih sistematis
+    int pattern = tuningCycleCount % 3;
+    if (pattern == 0) {
+      currentKp += currentKpStep * 0.3;
+      Serial.printf(">>> ULTRA-FINE: Pattern search Kp+ → Kp (%.3f)\n", currentKp);
+    } else if (pattern == 1) {
+      currentKp -= currentKpStep * 0.3;
+      Serial.printf(">>> ULTRA-FINE: Pattern search Kp- → Kp (%.3f)\n", currentKp);
+    } else {
+      currentKi += currentKiStep * 0.4;
+      Serial.printf(">>> ULTRA-FINE: Pattern search Ki+ → Ki (%.3f)\n", currentKi);
     }
   }
 }

@@ -31,7 +31,7 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
     if (mode == PID_MODE_MAJU || mode == PID_MODE_MAJU_MASSA || mode == PID_MODE_MUNDUR || mode == PID_MODE_MUNDUR_MASSA) {
       softStartTime = millis();
       softStartActive = true;
-      pidSpeed = maxMotorRpm / 4; // Start with 25% of maxMotorRpm
+      pidSpeed = maxMotorRpm / 2; // 🔧 FIX #2: Start with 50% of maxMotorRpm (was 25%)
     }
     // Reset PID data when mode changes to prevent carry-over
     if (mode != lastMode) {
@@ -53,9 +53,9 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
       targetBaseSpeed = maxMotorRpm * 3 / 2;
     }
     
-    if (elapsedTime < 5000) { // 5 seconds soft start duration
-      // Gradually increase from 25% to 100% of baseSpeed over 5 seconds
-      int targetSpeed = map(elapsedTime, 0, 5000, targetBaseSpeed / 4, targetBaseSpeed);
+    if (elapsedTime < 2000) { // 🔧 FIX #1: 2 seconds soft start (was 5 seconds)
+      // Gradually increase from 50% to 100% of baseSpeed over 2 seconds
+      int targetSpeed = map(elapsedTime, 0, 2000, targetBaseSpeed / 2, targetBaseSpeed);
       pidSpeed = targetSpeed;
     } else {
       // Soft start complete
@@ -82,33 +82,57 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
   }
 
   // Select PID parameters based on movement mode
-  float currentKp, currentKi, currentKd;
+  float baseKp, baseKi, baseKd;
   if (mode == PID_MODE_MAJU || mode == PID_MODE_FORCEMAJU) {
     // Use Default PID parameters for forward movement
-    currentKp = kpLinefollowerForwardDefault;
-    currentKi = kiLinefollowerForwardDefault;
-    currentKd = kdLinefollowerForwardDefault;
+    baseKp = kpLinefollowerForwardDefault;
+    baseKi = kiLinefollowerForwardDefault;
+    baseKd = kdLinefollowerForwardDefault;
   } else if (mode == PID_MODE_MAJU_MASSA) {
     // Use WithMassa PID parameters for forward movement with load
-    currentKp = kpLinefollowerForwardWithMassa;
-    currentKi = kiLinefollowerForwardWithMassa;
-    currentKd = kdLinefollowerForwardWithMassa;
+    baseKp = kpLinefollowerForwardWithMassa;
+    baseKi = kiLinefollowerForwardWithMassa;
+    baseKd = kdLinefollowerForwardWithMassa;
   } else if (mode == PID_MODE_MUNDUR || mode == PID_MODE_FORCEMUNDUR) {
     // Use Default PID parameters for backward movement
-    currentKp = kpLinefollowerBackwardDefault;
-    currentKi = kiLinefollowerBackwardDefault;
-    currentKd = kdLinefollowerBackwardDefault;
+    baseKp = kpLinefollowerBackwardDefault;
+    baseKi = kiLinefollowerBackwardDefault;
+    baseKd = kdLinefollowerBackwardDefault;
   } else if (mode == PID_MODE_MUNDUR_MASSA) {
     // Use WithMassa PID parameters for backward movement with load
-    currentKp = kpLinefollowerBackwardWithMassa;
-    currentKi = kiLinefollowerBackwardWithMassa;
-    currentKd = kdLinefollowerBackwardWithMassa;
+    baseKp = kpLinefollowerBackwardWithMassa;
+    baseKi = kiLinefollowerBackwardWithMassa;
+    baseKd = kdLinefollowerBackwardWithMassa;
   } else {
     // Default to legacy values for other modes
-    currentKp = kpLinefollower;
-    currentKi = kiLinefollower;
-    currentKd = kdLinefollower;
+    baseKp = kpLinefollower;
+    baseKi = kiLinefollower;
+    baseKd = kdLinefollower;
   }
+
+  // 🔧 FIX #3: GAIN SCHEDULING - Scale PID gains based on current speed
+  // This prevents overshoot during soft start when speed is low
+  float speedRatio;
+  int targetSpeed = maxMotorRpm;
+  if (mode == PID_MODE_MAJU_MASSA || mode == PID_MODE_MUNDUR_MASSA) {
+    targetSpeed = maxMotorRpm * 3 / 2;
+  }
+  
+  if (softStartActive && pidSpeed < targetSpeed) {
+    // During soft start: scale gains proportionally to speed
+    // At 50% speed → 50% gain, at 100% speed → 100% gain
+    speedRatio = (float)pidSpeed / (float)targetSpeed;
+    // Clamp minimum ratio to 0.5 (50%) to maintain some control authority
+    speedRatio = constrain(speedRatio, 0.5, 1.0);
+  } else {
+    // Full speed: use 100% gain
+    speedRatio = 1.0;
+  }
+  
+  // Apply speed-scaled gains
+  float currentKp = baseKp * speedRatio;
+  float currentKi = baseKi * speedRatio;
+  float currentKd = baseKd * speedRatio;
 
   // Use computePID function with proper integral constraints
   // setpoint = 0 (target center), input = -pidError (current error with correct sign)

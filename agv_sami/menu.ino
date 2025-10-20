@@ -1141,6 +1141,13 @@ void displayMotorTestRPM() {
 }
 
 void handleMotorTestRPM() {
+  // Request RPM data from slave periodically
+  unsigned long currentTime = millis();
+  if (currentTime - lastRpmRequestTime >= RPM_REQUEST_INTERVAL) {
+    requestRpmDataFromSlave();  // Request current RPM values
+    lastRpmRequestTime = currentTime;
+  }
+  
   if (UP()) {
     motorTestState = 1;  // Set to forward
   } else if (DOWN()) {
