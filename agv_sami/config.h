@@ -598,6 +598,8 @@ struct RfidWarehouse {
   bool isActive;
 };
 
+bool updatestations = false;
+
 RfidUjung rfidUjungList[MAX_RFID_UJUNG];
 RfidWarehouse rfidWarehouseList[MAX_RFID_WAREHOUSE];
 int rfidUjungCount = 0;

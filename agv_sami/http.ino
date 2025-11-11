@@ -67,6 +67,12 @@ bool loadTargetStationsListFromPreferences() {
 // --- HANDLER ENDPOINT HTTP ---
 // Handler untuk memperbarui daftar stasiun
 void handleUpdateTargetStations() {
+  // Validasi: updatestations hanya bisa dilakukan saat AGV di warehouse
+  if (!updatestations) {
+    server.send(403, "application/json", "{\"status\":\"error\", \"message\":\"Update stations gagal. AGV harus berhenti di warehouse terlebih dahulu.\"}");
+    return;
+  }
+
   if (!server.hasArg("plain")) {
     server.send(400, "text/plain", "Error: Body JSON tidak ada.");
     return;
