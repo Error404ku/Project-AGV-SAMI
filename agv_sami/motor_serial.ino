@@ -4,13 +4,7 @@
 // Forward declaration for safeDelay function from menu.ino
 extern void safeDelay(unsigned long ms);
 
-void setupMotorSerial() {
-  // Inisialisasi Serial0 untuk komunikasi dengan ESP32 kedua
-  Serial.begin(921600);
-  
-  // Request PID data dari motor controller saat startup
-  requestPidDataFromSlave();
-}
+
 
 // =============== NEW RPM-BASED FUNCTIONS ===============
 

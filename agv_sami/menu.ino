@@ -33,22 +33,8 @@ void safeDelay(unsigned long ms) {
 
 // Fungsi untuk inisialisasi temporary variables dari nilai asli
 void initMenuTempVariables() {
-  tempKp = kpLinefollower;
-  tempKi = kiLinefollower;
-  tempKd = kdLinefollower;
 
-  tempKpForwardWithMassa = kpLinefollowerForwardWithMassa;
-  tempKiForwardWithMassa = kiLinefollowerForwardWithMassa;
-  tempKdForwardWithMassa = kdLinefollowerForwardWithMassa;
-  tempKpForwardDefault = kpLinefollowerForwardDefault;
-  tempKiForwardDefault = kiLinefollowerForwardDefault;
-  tempKdForwardDefault = kdLinefollowerForwardDefault;
-  tempKpBackwardWithMassa = kpLinefollowerBackwardWithMassa;
-  tempKiBackwardWithMassa = kiLinefollowerBackwardWithMassa;
-  tempKdBackwardWithMassa = kdLinefollowerBackwardWithMassa;
-  tempKpBackwardDefault = kpLinefollowerBackwardDefault;
-  tempKiBackwardDefault = kiLinefollowerBackwardDefault;
-  tempKdBackwardDefault = kdLinefollowerBackwardDefault;
+
   tempBaseSpeed = baseSpeed;
   tempInvertY = invertMotorY;
   tempInvertX = invertMotorX;
@@ -210,35 +196,6 @@ void saveSettings() {
     Serial.println(verifyKp, 2);
   }
 
-  // Apply PID values
-  kpLinefollower = tempKp;
-  kiLinefollower = tempKi;
-  kdLinefollower = tempKd;
-  
-
-  
-  // Apply Forward PID WithMassa values
-  kpLinefollowerForwardWithMassa = tempKpForwardWithMassa;
-  kiLinefollowerForwardWithMassa = tempKiForwardWithMassa;
-  kdLinefollowerForwardWithMassa = tempKdForwardWithMassa;
-  
-  // Apply Forward PID Default values
-  kpLinefollowerForwardDefault = tempKpForwardDefault;
-  kiLinefollowerForwardDefault = tempKiForwardDefault;
-  kdLinefollowerForwardDefault = tempKdForwardDefault;
-  
-  // Apply Backward PID WithMassa values
-  kpLinefollowerBackwardWithMassa = tempKpBackwardWithMassa;
-  kiLinefollowerBackwardWithMassa = tempKiBackwardWithMassa;
-  kdLinefollowerBackwardWithMassa = tempKdBackwardWithMassa;
-  
-  // Apply Backward PID Default values
-  kpLinefollowerBackwardDefault = tempKpBackwardDefault;
-  kiLinefollowerBackwardDefault = tempKiBackwardDefault;
-  kdLinefollowerBackwardDefault = tempKdBackwardDefault;
-
-  // Debug: Print saved values in saveSettings
-  // Serial.println() - removed for production
 
   // Apply Motor values
   baseSpeed = tempBaseSpeed;
@@ -2193,9 +2150,6 @@ void handlePidSettings() {
   }
 
   if (STOP()) {
-    kpLinefollower = tempKp;
-    kiLinefollower = tempKi;
-    kdLinefollower = tempKd;
     saveSettings();
     currentMenu = MENU_MAIN;
     menuStartIndex = 0;  // Reset scroll position

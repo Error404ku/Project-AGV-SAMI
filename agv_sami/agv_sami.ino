@@ -4,37 +4,38 @@
 // extern bool modeMundur; // Removed - not used
 
 void setup() {
-  setupAll();
-
+  setuplamp();
+  setupMusic();
+  setupDisplay();
+  setupMenu();  // Initialize menu system
+  // Setup RS485 communication for both Serial1 and Serial2
+  setupRS485(BAUDRATE);        // Serial1 untuk sensor magnet
+  setupRS485_Serial2(BAUDRATE); // Serial2 untuk sensor ultrasonik
+  safeDelayLocal(200);
+  
+  setupSensorMagnet(SLAVEID_MAGNET_DEPAN);  
+  setupSensorUltrasonic(SLAVEID_ULTRASONIK_DEPAN);
+  
+  setupHook();  // setupBuzzer();
+  setupWifi();  // Setup WiFi configuration
+  
+  startWifiConnection();  // Auto-start WiFi connection
+  setupWebServer();  // Setup Web Server - CRITICAL for HTTP access
+  setupTombol();
+  setupRfid();
+  
+  // Initialize performance optimization
+  resetSensorTimers();
+  
   // Initialize performance optimization system
   initPerformanceOptimization();
-
+  
   // Load all AGV states efficiently in one call
   loadAllAGVStatesFromPreferences();
 
-  // Initialize ultrasonic sensor if not already done
-  static bool ultrasonicSensorInitialized = false;
-  if (!ultrasonicSensorInitialized) {
-    setupUltrasonikWithParams(SLAVEID_ULTRASONIK_DEPAN);
-    ultrasonicSensorInitialized = true;
-  }
-
-  // Wait for PID data from motor controller slave before proceeding
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Waiting for PID");
-  lcd.setCursor(0, 1);
-  lcd.print("Data from Slave");
+  setupMotor();  // Setup motor serial communication
   
-  // Loop until PID data is received or timeout
-  while (!checkSystemReadyStatus()) {
-    // Handle incoming serial data while waiting
-    handleMotorControllerSerial();
-    delay(50); // Small delay to prevent watchdog issues
-    // esp_task_wdt_reset(); // Reset watchdog
-  }
-  
-  // System is now ready
+  // Show message that AGV System is now ready
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("AGV System");

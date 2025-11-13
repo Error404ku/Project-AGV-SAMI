@@ -1,214 +1,142 @@
+// Helper function: Initialize soft start state
+void initSoftStart(int initialSpeed) {
+  softStartTime = millis();
+  softStartActive = true;
+  pidSpeed = initialSpeed;
+}
 
+// Helper function: Reset PID state
+void resetPIDState() {
+  pidData[0].integral = 0;
+  pidData[0].derivative = 0;
+  pidData[0].previousError = 0;
+}
 
-// ===================================================================
-// PID CONTROLLER VARIABLES SUDAH DIPINDAHKAN KE config.h
-// ===================================================================
+// Helper function: Check if mode requires soft start
+bool isSoftStartMode(PidMode mode) {
+  return (mode == PID_MODE_MAJU || mode == PID_MODE_MAJU_MASSA || 
+          mode == PID_MODE_MUNDUR || mode == PID_MODE_MUNDUR_MASSA);
+}
+
+// Helper function: Get PID parameters based on mode
+void getPIDParameters(PidMode mode, float& kp, float& ki, float& kd) {
+  if (mode == PID_MODE_MAJU) {
+    kp = tempKpForwardDefault;
+    ki = tempKiForwardDefault;
+    kd = tempKdForwardDefault;
+  } else if (mode == PID_MODE_MAJU_MASSA) {
+    kp = tempKpForwardWithMassa;
+    ki = tempKiForwardWithMassa;
+    kd = tempKdForwardWithMassa;
+  } else {
+    // Default fallback - use forward default parameters
+    kp = tempKpForwardDefault;
+    ki = tempKiForwardDefault;
+    kd = tempKdForwardDefault;
+  }
+}
+
+// Helper function: Calculate speed ratio for gain scheduling
+float calculateSpeedRatio(bool isSoftStart, int currentSpeed, int targetSpeed) {
+  if (!isSoftStart || currentSpeed >= targetSpeed) {
+    return 1.0;
+  }
+  return constrain((float)currentSpeed / (float)targetSpeed, 0.5, 1.0);
+}
+
+// Helper function: Calculate integral constraints
+void calculateIntegralConstraints(float ki, double& minIntegral, double& maxIntegral) {
+  if (ki > 0.001) {
+    minIntegral = -500.0 / ki;
+    maxIntegral = 500.0 / ki;
+  } else {
+    minIntegral = 0.0;
+    maxIntegral = 0.0;
+  }
+}
+
 void pidLinefollower(int errorPosisi, PidMode mode) {
-  // Reset watchdog timer untuk operasi PID yang intensif
-  // esp_task_wdt_reset();
-  
-  // Soft start variables
-  // Check for magnet loss error (errorValue = 99)
+  // === PHASE 1: Handle Magnet Loss ===
   if (errorPosisi == 99 && mode != PID_MODE_BERHENTI) {
-    // Emergency stop - no magnet detected for 5 seconds
-    rpmMotor(0, 0);  // Use PWM stop command
-    softStartActive = true;
-    pidSpeed = 0;
-    #ifdef DEBUG_PID
-    #endif
-    // Debug removed for performance
+    rpmMotor(0, 0);
+    initSoftStart(0);
     music(MUSIC_MODE_OUTOFLINE);
-    return;  // Exit function early
+    return;
   }
   
-  // Check if AGV is back on track and stop music if it's OUTOFLINE mode (magnet loss music)
+  // === PHASE 2: Handle Recovery from Magnet Loss ===
   if (errorPosisi != 99 && statusMusic && currentMusicMode == MUSIC_MODE_OUTOFLINE) {
-      softStartTime = millis();
-      softStartActive = true;
-      pidSpeed = maxMotorRpm / 2; 
+    initSoftStart(maxMotorRpm / 2);
     stopMusic();
   }
 
-  // Initialize soft start when mode changes or first call
-  if (mode != lastMode || (!softStartActive && pidSpeed == 0)) {
-    if (mode == PID_MODE_MAJU || mode == PID_MODE_MAJU_MASSA || mode == PID_MODE_MUNDUR || mode == PID_MODE_MUNDUR_MASSA) {
-      softStartTime = millis();
-      softStartActive = true;
-      pidSpeed = maxMotorRpm / 2; // 🔧 FIX #2: Start with 50% of maxMotorRpm (was 25%)
+  // === PHASE 3: Handle Mode Changes ===
+  bool modeChanged = (mode != lastMode);
+  bool needsInitialization = (!softStartActive && pidSpeed == 0);
+  
+  if (modeChanged || needsInitialization) {
+    if (isSoftStartMode(mode)) {
+      initSoftStart(maxMotorRpm / 2);
     }
-    // Reset PID data when mode changes to prevent carry-over
-    if (mode != lastMode) {
-      pidData[0].integral = 0;
-      pidData[0].derivative = 0;
-      pidData[0].previousError = 0;
+    
+    if (modeChanged) {
+      resetPIDState();
+      lastMode = mode;
     }
-    lastMode = mode;
   }
   
-  // Soft start implementation - gradually increase speed
-  if (softStartActive && (mode == PID_MODE_MAJU || mode == PID_MODE_MAJU_MASSA || mode == PID_MODE_MUNDUR || mode == PID_MODE_MUNDUR_MASSA)) {
-    unsigned long currentTime = millis();
-    unsigned long elapsedTime = currentTime - softStartTime;
+  // === PHASE 4: Soft Start Speed Ramp ===
+  if (softStartActive && (mode == PID_MODE_MAJU || mode == PID_MODE_MAJU_MASSA)) {
+    unsigned long elapsedTime = millis() - softStartTime;
     
-    // Determine target speed based on mode
-    int targetBaseSpeed = maxMotorRpm;
-    if (mode == PID_MODE_MAJU_MASSA || mode == PID_MODE_MUNDUR_MASSA) {
-      targetBaseSpeed = maxMotorRpm * 3 / 2;
-    }
-    
-    if (elapsedTime < 2000) { // 🔧 FIX #1: 2 seconds soft start (was 5 seconds)
-      // Gradually increase from 50% to 100% of baseSpeed over 2 seconds
-      int targetSpeed = map(elapsedTime, 0, 2000, targetBaseSpeed / 2, targetBaseSpeed);
-      pidSpeed = targetSpeed;
+    if (elapsedTime < 2000) {
+      pidSpeed = map(elapsedTime, 0, 2000, maxMotorRpm / 2, maxMotorRpm);
     } else {
-      // Soft start complete
-      pidSpeed = targetBaseSpeed;
+      pidSpeed = maxMotorRpm;
       softStartActive = false;
     }
-  } else if (mode == PID_MODE_FORCEMAJU || mode == PID_MODE_FORCEMUNDUR) {
-    // For force modes, use baseSpeed directly
-    pidSpeed = maxMotorRpm;
-  } else if (mode == PID_MODE_STOPPELANPELAN) {
-    // For gradual stop, use current pidSpeed
-    // pidSpeed will be handled in the switch case
   } else if (mode == PID_MODE_BERHENTI || mode == PID_MODE_DEFAULT) {
-    // Reset for stop modes
     pidSpeed = 0;
     softStartActive = false;
   }
 
-  pidError = errorPosisi;
-
-  // Apply X-axis inversion (kiri-kanan) if enabled
+  // === PHASE 5: Apply Motor X-axis Inversion ===
   if (invertMotorX) {
-    pidError = -pidError;
+    errorPosisi = -errorPosisi;
   }
 
-  // Select PID parameters based on movement mode
+  // === PHASE 6: Get PID Parameters ===
   float baseKp, baseKi, baseKd;
-  if (mode == PID_MODE_MAJU || mode == PID_MODE_FORCEMAJU) {
-    // Use Default PID parameters for forward movement
-    baseKp = kpLinefollowerForwardDefault;
-    baseKi = kiLinefollowerForwardDefault;
-    baseKd = kdLinefollowerForwardDefault;
-  } else if (mode == PID_MODE_MAJU_MASSA) {
-    // Use WithMassa PID parameters for forward movement with load
-    baseKp = kpLinefollowerForwardWithMassa;
-    baseKi = kiLinefollowerForwardWithMassa;
-    baseKd = kdLinefollowerForwardWithMassa;
-  } else if (mode == PID_MODE_MUNDUR || mode == PID_MODE_FORCEMUNDUR) {
-    // Use Default PID parameters for backward movement
-    baseKp = kpLinefollowerBackwardDefault;
-    baseKi = kiLinefollowerBackwardDefault;
-    baseKd = kdLinefollowerBackwardDefault;
-  } else if (mode == PID_MODE_MUNDUR_MASSA) {
-    // Use WithMassa PID parameters for backward movement with load
-    baseKp = kpLinefollowerBackwardWithMassa;
-    baseKi = kiLinefollowerBackwardWithMassa;
-    baseKd = kdLinefollowerBackwardWithMassa;
-  } else {
-    // Default to legacy values for other modes
-    baseKp = kpLinefollower;
-    baseKi = kiLinefollower;
-    baseKd = kdLinefollower;
-  }
+  getPIDParameters(mode, baseKp, baseKi, baseKd);
 
-  // 🔧 FIX #3: GAIN SCHEDULING - Scale PID gains based on current speed
-  // This prevents overshoot during soft start when speed is low
-  float speedRatio;
-  int targetSpeed = maxMotorRpm;
-  if (mode == PID_MODE_MAJU_MASSA || mode == PID_MODE_MUNDUR_MASSA) {
-    targetSpeed = maxMotorRpm * 3 / 2;
-  }
+  // === PHASE 7: Gain Scheduling ===
+  float speedRatio = calculateSpeedRatio(softStartActive, pidSpeed, maxMotorRpm);
   
-  if (softStartActive && pidSpeed < targetSpeed) {
-    // During soft start: scale gains proportionally to speed
-    // At 50% speed → 50% gain, at 100% speed → 100% gain
-    speedRatio = (float)pidSpeed / (float)targetSpeed;
-    // Clamp minimum ratio to 0.5 (50%) to maintain some control authority
-    speedRatio = constrain(speedRatio, 0.5, 1.0);
-  } else {
-    // Full speed: use 100% gain
-    speedRatio = 1.0;
-  }
-  
-  // Apply speed-scaled gains
   float currentKp = baseKp * speedRatio;
   float currentKi = baseKi * speedRatio;
   float currentKd = baseKd * speedRatio;
 
-  // Use computePID function with proper integral constraints
-  // setpoint = 0 (target center), input = -pidError (current error with correct sign)
+  // === PHASE 8: Calculate Integral Constraints ===
   double minintegral, maxintegral;
-  if (currentKi > 0.001) {  // Prevent divide by zero
-    minintegral = -500.0 / currentKi;
-    maxintegral = 500.0 / currentKi;
-  } else {
-    // If Ki is zero or near zero, disable integral
-    minintegral = 0.0;
-    maxintegral = 0.0;
-  }
-  // Fix: Use correct error sign - pidError is already the deviation from center
-  double koreksi = computePID(0, 0, -pidError, currentKp, currentKi, currentKd, minintegral, maxintegral);
-  
-  int motorKiri = pidSpeed + (int)koreksi;   // Fixed: subtract correction for left motor
-  int motorKanan = pidSpeed - (int)koreksi;  // Fixed: add correction for right motor
+  calculateIntegralConstraints(currentKi, minintegral, maxintegral);
 
-  // Apply PID corrections directly to RPM values
-  // maxMotorRpm is the desired speed setting for AGV
-  // Maximum constraint is 90 RPM (hardware limit)
+  // === PHASE 9: Compute PID Correction ===
+  double koreksi = computePID(0, 0, -errorPosisi, currentKp, currentKi, currentKd, 
+                               minintegral, maxintegral);
   
-  int rpmKiri = constrain(motorKiri, -90, 90);
-  int rpmKanan = constrain(motorKanan, -90, 90);
+  // === PHASE 10: Apply Motor Commands ===
+  int rpmKiri = constrain(pidSpeed + (int)koreksi, -90, 90);
+  int rpmKanan = constrain(pidSpeed - (int)koreksi, -90, 90);
   
   switch (mode) {
     case PID_MODE_MAJU:
-      rpmMotor(rpmKiri, rpmKanan);  // RPM: left motor, right motor
-      break;
     case PID_MODE_MAJU_MASSA:
-      rpmMotor(rpmKiri, rpmKanan);  // RPM: left motor, right motor
+      rpmMotor(rpmKiri, rpmKanan);
       break;
-    case PID_MODE_MUNDUR:
-      rpmMotor(-rpmKiri, -rpmKanan);  // RPM: reverse direction
-      break;
-    case PID_MODE_MUNDUR_MASSA:
-      rpmMotor(-rpmKiri, -rpmKanan);  // RPM: reverse direction
-      break;
-    case PID_MODE_FORCEMUNDUR:
-      rpmMotor(-maxMotorRpm, -maxMotorRpm);  // Force backward with setting speed
-      break;
-    case PID_MODE_FORCEMAJU:
-      rpmMotor(maxMotorRpm, maxMotorRpm);  // Force forward with setting speed
-      break;
-    case PID_MODE_STOPPELANPELAN:
-      if (!sudahStopPelanPelan) {
-        rpmMotor(maxMotorRpm / 2, maxMotorRpm / 2);  // Gradual stop with half setting speed
-        startTimer(&stopPelanPelanTimer, 500);
-        sudahStopPelanPelan = true;
-      } else if (checkTimer(&stopPelanPelanTimer)) {
-        pwmMotor(0, 0);
-      } else if (!isTimerActive(&stopPelanPelanTimer)) {
-        pwmMotor(0, 0);
-      }
-      break;
+      
     case PID_MODE_BERHENTI:
     case PID_MODE_DEFAULT:
       pwmMotor(0, 0);
       break;
   }
-  
-  #ifdef DEBUG_PID
-  // Debug output every 100ms to monitor PID behavior
-  static unsigned long lastDebugTime = 0;
-  if (millis() - lastDebugTime > 100) {
-    // Serial.printf("[PID] E=%d V=%d Kp=%.1f Ki=%.1f Kd=%.1f U=%.1f L=%d R=%d\n", 
-    //               errorPosisi, pidSpeed, currentKp, currentKi, currentKd, 
-    //               koreksi, motorKiri, motorKanan);
-    lastDebugTime = millis();
-  }
-  #endif
-  
-  // // Serial.println() - removed for production // Tidak bisa mencetak enum secara langsung
-  
-  // Note: lastError is now handled inside computePID function via pidData[0].previousError
 }

@@ -61,11 +61,6 @@ enum AgvState {
 enum PidMode {
   PID_MODE_MAJU,
   PID_MODE_MAJU_MASSA,
-  PID_MODE_MUNDUR,
-  PID_MODE_MUNDUR_MASSA,
-  PID_MODE_FORCEMUNDUR,
-  PID_MODE_FORCEMAJU,
-  PID_MODE_STOPPELANPELAN,
   PID_MODE_BERHENTI,
   PID_MODE_DEFAULT
 };
@@ -137,10 +132,6 @@ unsigned long lastLeftPress = 0;
 unsigned long lastRightPress = 0;
 unsigned long lastStartPress = 0;
 unsigned long lastStopPress = 0;
-
-// --- PID CONTROLLER VARIABLES ---
-float pidError = 0;
-bool sudahStopPelanPelan = false;
 
 // Soft start variables for PID
 static unsigned long softStartTime = 0;
@@ -519,35 +510,6 @@ int pwmKanan, pwmKiri;
 // K 0.5 1.5 0.0
 double kp = 0.2, ki = 0.4, kd = 0.0;
 
-
-
-// PID Parameters for Forward Movement WithMassa
-float kpLinefollowerForwardWithMassa = 0.0;  // Kp untuk gerakan maju dengan massa - will be loaded from preferences
-float kiLinefollowerForwardWithMassa = 0.0;   // Ki untuk gerakan maju dengan massa - will be loaded from preferences
-float kdLinefollowerForwardWithMassa = 0.0;   // Kd untuk gerakan maju dengan massa - will be loaded from preferences
-
-// PID Parameters for Forward Movement Default
-float kpLinefollowerForwardDefault = 0.0;  // Kp untuk gerakan maju default - will be loaded from preferences
-float kiLinefollowerForwardDefault = 0.0;   // Ki untuk gerakan maju default - will be loaded from preferences
-float kdLinefollowerForwardDefault = 0.0;   // Kd untuk gerakan maju default - will be loaded from preferences
-
-// PID Parameters for Backward Movement WithMassa
-float kpLinefollowerBackwardWithMassa = 0.0; // Kp untuk gerakan mundur dengan massa - will be loaded from preferences
-float kiLinefollowerBackwardWithMassa = 0.0;  // Ki untuk gerakan mundur dengan massa - will be loaded from preferences
-float kdLinefollowerBackwardWithMassa = 0.0;  // Kd untuk gerakan mundur dengan massa - will be loaded from preferences
-
-// PID Parameters for Backward Movement Default
-float kpLinefollowerBackwardDefault = 0.0; // Kp untuk gerakan mundur default - will be loaded from preferences
-float kiLinefollowerBackwardDefault = 0.0;  // Ki untuk gerakan mundur default - will be loaded from preferences
-float kdLinefollowerBackwardDefault = 0.0;  // Kd untuk gerakan mundur default - will be loaded from preferences
-
-// Legacy PID variables (for backward compatibility)
-float kpLinefollower = 0.0;  // Will be initialized from preferences in setupMenu()
-float kiLinefollower = 0.0;   // Will be initialized from preferences in setupMenu()
-float kdLinefollower = 0.0;   // Will be initialized from preferences in setupMenu()
-// int pwm_min = -1023;
-// int pwm_zero = 0;
-// int pwm_max = 1023;
 
 // int maxrpm = 900;
 // int minrpm = -900;

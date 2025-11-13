@@ -10,11 +10,30 @@ void safeDelayLocal(int ms) {
 }
 
 void setupMotor() {
-  // Setup komunikasi serial dengan ESP32 motor controller
-  setupMotorSerial(); // Panggil fungsi setup motor serial yang benar
-   
+  // Inisialisasi Serial0 untuk komunikasi dengan ESP32 kedua
+  Serial.begin(921600);
+
+  // Request PID data dari motor controller saat startup
+  requestPidDataFromSlave();
+
   // Test komunikasi - use RPM command for stopping
-  sendRPM(0, 0); // Stop semua motor saat startup dengan RPM command
+  sendRPM(0, 0);  // Stop semua motor saat startup dengan RPM command
+
+  // Wait for PID data from motor controller before proceeding
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Waiting for PID");
+  lcd.setCursor(0, 1);
+  lcd.print("Data from Slave");
+  
+  // Loop until PID data is received or timeout
+  while (!checkSystemReadyStatus()) {
+    // Handle incoming serial data while waiting
+    handleMotorControllerSerial();
+    delay(50); // Small delay to prevent watchdog issues
+    // esp_task_wdt_reset(); // Reset watchdog
+  }
+
 }
 
 void setupMusic() {
@@ -47,47 +66,30 @@ void setuplamp() {
 
 
 // setup display
-void initializeDisplay() {
+
+
+void setupDisplay() {
+  // Initialize I2C SDA 3, SCL 8
+  Wire.begin(sdaPin, sclPin);
+
+  delay(100);
+
   // I2C address scanner disabled for production
   byte count = 0;
   for (byte i = 8; i < 120; i++) {
     Wire.beginTransmission(i);
     if (Wire.endTransmission() == 0) {
       count++;
-      if (i == LCD_ADDRESS) {
-        // LCD found at expected address
-      }
     }
-  }
-  
-  if (count == 0) {
-    // No I2C devices found - check wiring
   }
 
   // Initialize LCD with error handling
   lcd.begin(LCD_COLUMNS, LCD_ROWS);
   
-  // Test LCD communication
+  // Clear LCD and display startup message
   lcd.backlight();
   lcd.setCursor(0, 0);
-  lcd.print("LCD Test OK        ");
-  lcd.setCursor(0, 1);
   lcd.print("AGV System Ready   ");
-  
-  // Verify LCD is responding
-  delay(500);
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Display Ready      ");
-  // LCD initialization completed
-}
-
-void setupDisplay() {
-  // Initialize I2C SDA 3, SCL 8
-  Wire.begin(sdaPin, sclPin);
-  delay(100);
-  // Initialize display
-  initializeDisplay();
 }
 
 void setupWebServer() {
@@ -237,6 +239,11 @@ void setupSensorUltrasonic(int slaveId) {
     // Serial debug removed for production
   }
 
+  static bool ultrasonicSensorInitialized = false;
+  if (!ultrasonicSensorInitialized) {
+    setupUltrasonikWithParams(SLAVEID_ULTRASONIK_DEPAN);
+    ultrasonicSensorInitialized = true;
+  }
   // Serial debug removed for production
 }
 
@@ -328,34 +335,7 @@ void setupMenu() {
   tempMotorPidKp = 1.0;   // Default value, not loaded from preferences
   tempMotorPidKi = 0.15;  // Default value, not loaded from preferences  
   tempMotorPidKd = 0.0;   // Default value, not loaded from preferences
-
-  // Apply PID values
-  kpLinefollower = tempKp;
-  kiLinefollower = tempKi;
-  kdLinefollower = tempKd;
-  
-
-  
-  // Apply Forward PID WithMassa values
-  kpLinefollowerForwardWithMassa = tempKpForwardWithMassa;
-  kiLinefollowerForwardWithMassa = tempKiForwardWithMassa;
-  kdLinefollowerForwardWithMassa = tempKdForwardWithMassa;
-  
-  // Apply Forward PID Default values
-  kpLinefollowerForwardDefault = tempKpForwardDefault;
-  kiLinefollowerForwardDefault = tempKiForwardDefault;
-  kdLinefollowerForwardDefault = tempKdForwardDefault;
-  
-  // Apply Backward PID WithMassa values
-  kpLinefollowerBackwardWithMassa = tempKpBackwardWithMassa;
-  kiLinefollowerBackwardWithMassa = tempKiBackwardWithMassa;
-  kdLinefollowerBackwardWithMassa = tempKdBackwardWithMassa;
-  
-  // Apply Backward PID Default values
-  kpLinefollowerBackwardDefault = tempKpBackwardDefault;
-  kiLinefollowerBackwardDefault = tempKiBackwardDefault;
-  kdLinefollowerBackwardDefault = tempKdBackwardDefault;
-  
+        
   // Apply Motor values
   baseSpeed = tempBaseSpeed;
 
@@ -417,9 +397,6 @@ void setupMenu() {
 
   // Load stations list from HTTP preferences
   loadTargetStationsListFromPreferences();
-
-  // Serial debug removed for production
-  // Serial debug removed for production
 }
 
 void setupTombol() {
@@ -431,33 +408,3 @@ void setupTombol() {
   pinMode(stopPin, INPUT_PULLDOWN);   // STOP - active HIGH
 }
 
-void setupAll() {
-  
-  setupMotor();
-  setuplamp();
-  setupMusic();
-  setupDisplay();
-  setupMenu();  // Initialize menu system
-  // Setup RS485 communication for both Serial1 and Serial2
-  setupRS485(BAUDRATE);        // Serial1 untuk sensor magnet
-  setupRS485_Serial2(BAUDRATE); // Serial2 untuk sensor ultrasonik
-  safeDelayLocal(200);
-  
-  setupSensorMagnet(SLAVEID_MAGNET_DEPAN);  
-  setupSensorUltrasonic(SLAVEID_ULTRASONIK_DEPAN);
-  
-  setupHook();  // setupBuzzer();
-  setupWifi();  // Setup WiFi configuration
-  
-  startWifiConnection();  // Auto-start WiFi connection
-  setupWebServer();  // Setup Web Server - CRITICAL for HTTP access
-  setupTombol();
-  setupRfid();
-  // Initialize performance optimization
-  resetSensorTimers();
-  
-  lcd.clear();
-  lcd.setCursor(0, 1);
-  lcd.println("SETUP ALL SELESAI");
-  safeDelayLocal(1000);
-}
