@@ -43,7 +43,6 @@
 
 enum AgvState {
   AGV_STATE_MOVE_FORWARD,
-  AGV_STATE_MOVE_BACKWARD,
   AGV_STATE_STOP,
   AGV_STATE_TERMINAL_PICKUP,
   AGV_STATE_TERMINAL_DROP,
@@ -163,7 +162,6 @@ size_t minFreeHeap = 0;
 
 // AGV State variables
 AgvState currentStateAgv = AGV_STATE_NULL;
-AgvState moveStateAgv = AGV_STATE_MOVE_FORWARD;
 AgvState currentRFID = AGV_STATE_NULL;
 static bool firstChange = true;
 
@@ -646,10 +644,7 @@ void silentMusic();  // Fungsi untuk mengaktifkan pin 6 (Silent)
 
 static bool forceLeft = false;
 static bool inLine = true;
-enum moveStateAGV {
-  LAST_STATE_MOVE_FORWARD,
-  LAST_STATE_MOVE_BACKWARD
-};
+
 // Error codes definition
 #define ERROR_SENSOR_COMMUNICATION 1
 #define ERROR_MOTOR_CONTROL 2
@@ -739,19 +734,14 @@ void resetUjungSlowMode();
 // AGV Movement functions
 void agvMode(AgvState state);
 void agvMoveForward();
-void agvMoveBackward();
 void agvWarehouse();
 void agvStation();
 void agvTerminalPickup();
 void agvTerminalDrop();
 void agvStop();
-void moveStateAGV(AgvState lastState);
 String agvStateToString(AgvState state);
 AgvState stringToAgvState(String stateString);
 void saveCurrentStateAGVToPreferences(AgvState currentState);
-// AgvState loadCurrentStateAGVFromPreferences();
-void savemoveStateAGVToPreferences(AgvState lastState);
-// AgvState loadmoveStateAGVFromPreferences();
 void loadAllAGVStatesFromPreferences();
 
 // Hook control function
@@ -863,7 +853,6 @@ void initErrorRecovery();
 
 // Global AGV state tracking variables
 extern AgvState currentStateAgv;
-extern AgvState moveStateAgv;
 // String variables ujungRfidId, terminalDropRfidId, terminalPickUpRfidId already defined above
 
 
