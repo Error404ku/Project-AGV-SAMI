@@ -104,6 +104,11 @@ int BAUDRATE = 115200;
 
 // --- SENSOR MAGNET VARIABLES ---
 int currentMagnetSlaveId = SLAVEID_MAGNET_DEPAN;
+int lastErrorValue = 99;
+unsigned long lastDetectionTime = 0;
+
+// --- LOGIC AGV VARIABLES ---
+bool stopCalledPickup = false;
 
 // --- SENSOR ULTRASONIK VARIABLES ---
 bool obstacleDetected = false;

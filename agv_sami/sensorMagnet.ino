@@ -1,16 +1,3 @@
-// ===================================================================
-// HIGHLY OPTIMIZED MAGNETIC SENSOR MODULE
-// ===================================================================
-// Advanced Performance Optimizations:
-// 1. Eliminated redundant Modbus initialization
-// 2. Added intelligent slave ID switching with validation
-// 3. Optimized memory usage with static variables
-// 4. Enhanced error recovery with exponential backoff
-// 5. Reduced CPU cycles by 40% through efficient polling
-// 6. Added sensor health monitoring
-// 7. Zero-overhead slave ID switching
-// ===================================================================
-
 void preTransmissionMagnet() {
   // Removed debug output for faster performance
   digitalWrite(MAX485_RE, 1);
@@ -22,13 +9,6 @@ void postTransmissionMagnet() {
   digitalWrite(MAX485_RE, 0);
   digitalWrite(MAX485_DE, 0);
 }
-
-
-// Fungsi bacaSensorGaris dihapus karena tidak digunakan dan kosong
-
-// ==================== TIMER VARIABLES FOR 5-SECOND DETECTION ====================
-static int lastErrorValue = 99;
-static unsigned long lastDetectionTime = 0;
 
 // ==================== HIGHLY OPTIMIZED SENSOR READING ====================
 void loopMagneticSensor() {
@@ -127,13 +107,7 @@ void loopMagneticSensor() {
   }
 }
 
-// ==================== FILTER GRUP MAGNET TERDEKAT ====================
-/**
- * Filter grup magnet yang terpisah, hanya mempertahankan grup terdekat dari titik tengah
- * Hanya diterapkan pada sensor magnet belakang
- * @param bitmask Bitmask sensor magnet
- * @return Filtered bitmask dengan hanya grup terdekat
- */
+
 uint16_t filterClosestMagnetGroup(uint16_t bitmask) {
   // Quick check untuk no active segments
   if (bitmask == 0xFFFF) {
@@ -251,9 +225,6 @@ int hitungErrorPosisi(uint16_t bitmask) {
         segmenTertinggi = segmenSaatIni;
     }
   }
-
-  if (jumlahSegmenAktif == 0)
-    return 99;
 
   // Logika baru: cek dua-duanya lalu ambil dominasi
   int errorKiri = 0, errorKanan = 0;
