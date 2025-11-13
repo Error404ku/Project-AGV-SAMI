@@ -54,13 +54,7 @@ bool loadTargetStationsListFromPreferences() {
       for (JsonVariant v : array) {
         targetStationsList.push_back(v.as<int>());
       }
-      // Serial.println("Berhasil memuat daftar stasiun ke RAM. Jumlah stasiun: " + String(targetStationsList.size()));
-    } else {
-      // Serial.println("Data dari Preferences bukan format array JSON yang diharapkan.");
     }
-  } else {
-    // Serial.print("Gagal mem-parsing data stasiun dari Preferences: ");
-    // Serial.println(error.c_str());
   }
   return true;
 }

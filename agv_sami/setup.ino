@@ -1,14 +1,3 @@
-// Forward declaration for safeDelay function from menu.ino
-extern void safeDelay(int ms);
-
-// Simple safe delay implementation for setup.ino
-void safeDelayLocal(int ms) {
-  unsigned long startTime = millis();
-  while (millis() - startTime < ms) {
-    delay(10); // Small delay to prevent tight loop
-  }
-}
-
 void setupMotor() {
   // Inisialisasi Serial0 untuk komunikasi dengan ESP32 kedua
   Serial.begin(921600);
@@ -93,9 +82,6 @@ void setupDisplay() {
 }
 
 void setupWebServer() {
-  // Muat daftar stasiun dari Preferences saat startup
-  loadTargetStationsListFromPreferences();
-
   lcd.setCursor(0, 0);
   lcd.print("SETUP WIFI");
  
@@ -185,8 +171,6 @@ void setupRS485_Serial2(int baudrate) {
 }
 
 void setupSensorMagnet(int slaveId) {
-  // Serial debug removed for production
-
   // Check if Serial1 is available
   if (!Serial1) {
     // Serial debug removed for production
@@ -408,3 +392,7 @@ void setupTombol() {
   pinMode(stopPin, INPUT_PULLDOWN);   // STOP - active HIGH
 }
 
+void setupPreferences(){
+  loadAllAGVStatesFromPreferences();
+  loadTargetStationsListFromPreferences();
+}

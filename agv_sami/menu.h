@@ -145,8 +145,7 @@ void displayRpmTuningMenu();
 void handleRpmTuningMenu();
 void displayTuningStatus();
 void displayTuningStartMenu(String motorName);
-void handleTuningStartMenu(String command);
-void safeDelay(unsigned long ms);  // Safe delay with watchdog reset
+void handleTuningStartMenu(String command);  // Safe delay with watchdog reset
 void handleRpmTuningMenu();
 void displayTuningStatus();
 void sendTuningCommand(String command);

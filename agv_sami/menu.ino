@@ -1,13 +1,7 @@
 #include "menu.h"
 
 // Safe delay function
-void safeDelay(unsigned long ms) {
-  unsigned long start = millis();
-  while (millis() - start < ms) {
-    delay(100);
-    if (millis() - start >= ms) break;
-  }
-}
+
 
 // Using menu.h definitions only - removed duplicates
 #define MENU_MUSIC_ON 40
@@ -2180,7 +2174,7 @@ void handleTargetSettings() {
         lcd.clear();
         lcd.setCursor(0, 1);
         lcd.print("Stations cleared!");
-        safeDelay(1500);  // Use safe delay with watchdog reset
+        Delay(1500);  // Use safe delay with watchdog reset
 
         // Reset state
         isClearingStations = false;
@@ -2227,12 +2221,12 @@ void handleRfidSettings() {
         rfidDisplay[8] = '\0';
         lcd.print(rfidDisplay);
         lcd.print("...");
-        safeDelay(2000);  // Use safe delay with watchdog reset
+        delay(2000);  // Use safe delay with watchdog reset
       } else {
         lcd.clear();
         lcd.setCursor(0, 1);
         lcd.print("Error saving!");
-        safeDelay(2000);  // Use safe delay with watchdog reset
+        delay(2000);  // Use safe delay with watchdog reset
       }
 
       // Reset scanning state
@@ -2777,11 +2771,9 @@ void handleMagnetCheck() {
   if (LEFT()) {
     // Switch to front magnet sensor
     switchMagnetSensor(true);
-    startTimer(&magnetSwitchTimer, 100);  // Non-blocking delay to prevent multiple triggers
   } else if (RIGHT()) {
     // Switch to back magnet sensor
     switchMagnetSensor(false);
-    startTimer(&magnetSwitchTimer, 100);  // Non-blocking delay to prevent multiple triggers
   } else if (STOP()) {
     currentMenu = MENU_MAIN;
     menuStartIndex = 0;
@@ -4911,7 +4903,7 @@ void handleTuningStartMenu(String command) {
         lcd.setCursor(0, 2);
         lcd.print("Mohon tunggu...");
         
-        safeDelay(2000);  // Use safe delay with watchdog reset
+        delay(2000);  // Use safe delay with watchdog reset
         
         menuNeedsRefresh = true;
         break;
@@ -4924,7 +4916,7 @@ void handleTuningStartMenu(String command) {
         lcd.setCursor(0, 2);
         lcd.print("tuning...");
         
-        safeDelay(2000);  // Use safe delay with watchdog reset
+        delay(2000);  // Use safe delay with watchdog reset
         
         menuNeedsRefresh = true;
         break;
