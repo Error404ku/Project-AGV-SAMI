@@ -1,4 +1,3 @@
-static bool stopCalledPickup = false;
 // Fungsi ini mengatur mode operasi AGV berdasarkan status yang diberikan.
 void agvMode(AgvState state) {
   switch (state) {

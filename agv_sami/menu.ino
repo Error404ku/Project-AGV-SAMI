@@ -82,7 +82,7 @@ void saveSettings() {
   Serial.println("\n=== SAVING SETTINGS ===");
   
   if (!preferences.begin("agv-settings", false)) {
-    Serial.println("ERROR: Failed to open preferences for writing!");
+    logError(ERROR_INVALID_CONFIGURATION, "Failed to open preferences for writing");
     return;
   }
   
@@ -117,7 +117,7 @@ void saveSettings() {
   Serial.print("Bytes written: ");
   Serial.println(bytesWritten);
   if (bytesWritten == 0) {
-    Serial.println("ERROR: Failed to write kpFwdDefault!");
+    logError(ERROR_INVALID_CONFIGURATION, "Failed to write kpFwdDefault");
   }
   
   Serial.print("Saving kiFwdDefault: ");
@@ -183,11 +183,8 @@ void saveSettings() {
   Serial.println(verifyKp, 2);
   
   if (abs(verifyKp - tempKpForwardDefault) > 0.01) {
-    Serial.println("WARNING: Value mismatch after save!");
-    Serial.print("Expected: ");
-    Serial.println(tempKpForwardDefault, 2);
-    Serial.print("Got: ");
-    Serial.println(verifyKp, 2);
+    String msg = "Value mismatch - Expected: " + String(tempKpForwardDefault, 2) + ", Got: " + String(verifyKp, 2);
+    logError(ERROR_INVALID_CONFIGURATION, msg);
   }
 
 
