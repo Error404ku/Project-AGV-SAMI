@@ -4,14 +4,15 @@
 // extern bool modeMundur; // Removed - not used
 
 void setup() {
+  setupPreferences();
   setuplamp();
   setupMusic();
   setupDisplay();
   setupMenu();  // Initialize menu system
+
   // Setup RS485 communication for both Serial1 and Serial2
   setupRS485(BAUDRATE);        // Serial1 untuk sensor magnet
   setupRS485_Serial2(BAUDRATE); // Serial2 untuk sensor ultrasonik
-  safeDelayLocal(200);
   
   setupSensorMagnet(SLAVEID_MAGNET_DEPAN);  
   setupSensorUltrasonic(SLAVEID_ULTRASONIK_DEPAN);
@@ -23,16 +24,7 @@ void setup() {
   setupWebServer();  // Setup Web Server - CRITICAL for HTTP access
   setupTombol();
   setupRfid();
-  
-  // Initialize performance optimization
-  resetSensorTimers();
-  
-  // Initialize performance optimization system
-  initPerformanceOptimization();
-  
-  // Load all AGV states efficiently in one call
-  loadAllAGVStatesFromPreferences();
-
+  resetSensorTimers(); 
   setupMotor();  // Setup motor serial communication
   
   // Show message that AGV System is now ready
@@ -45,7 +37,6 @@ void setup() {
 }
 
 void loop() {
-  // esp_task_wdt_reset();
   
   // Static variables for double click STOP functionality - moved to loop scope
   static bool firstStopClick = false;
@@ -70,23 +61,6 @@ void loop() {
   
   // Handle incoming serial data from motor controller
   handleMotorControllerSerial();
-  
-  // Monitor system health (setiap 5 detik) - debug disabled
-  static unsigned long lastSystemCheck = 0;
-  if (millis() - lastSystemCheck > 5000) {
-    size_t freeHeap = ESP.getFreeHeap();
-    if (freeHeap < 15000) { // Less than 15KB free
-      // Low memory warning disabled for production
-      // Stop semua motor untuk menghemat resources
-      rpmMotor(0, 0);  // Use RPM stop command
-      hook(STOP_HOOK);
-      if (freeHeap < 8000) {
-        // Critical memory restart disabled for production
-        ESP.restart();
-      }
-    }
-    lastSystemCheck = millis();
-  }
   
   server.handleClient();
   loopWifi();  // Handle WiFi connection monitoring
@@ -236,8 +210,5 @@ void loop() {
     softStartActive = true;
     pidSpeed = baseSpeed / 4;
   }
-  
-  // Reset watchdog timer to prevent reboot
-  // esp_task_wdt_reset();
-  
+    
 }

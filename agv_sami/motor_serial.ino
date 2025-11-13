@@ -2,13 +2,6 @@
 // RPM-based motor control via Serial communication to ESP32 motor controller
 
 // Forward declaration for safeDelay function from menu.ino
-extern void safeDelay(unsigned long ms);
-
-
-
-// =============== NEW RPM-BASED FUNCTIONS ===============
-
-
 void sendRPM(int rpmKiri, int rpmKanan) {
   // Batasi RPM dalam range yang aman (10-90)
   rpmKiri = constrain(rpmKiri, -90, 90);
@@ -333,7 +326,7 @@ bool checkSystemReadyStatus() {
     lcd.print("PID Request");
     lcd.setCursor(0, 1);
     lcd.print("TIMEOUT - Default");
-    safeDelay(1000);
+    delay(1000);
     
     // Set default PID values jika timeout untuk motor kanan
     if (!pidDataReceivedRight) {
