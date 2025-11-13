@@ -156,7 +156,7 @@ const char* getCurrentMode() {
 const int maxErrorRecoveryAttempts = 3;
 
 // Global AGV state tracking variables - moved to config.h as extern declarations
-// AgvState currentStateAgv, moveStateAgv, terminalDropRfidId, terminalPickUpRfidId, ujungRfidId, exceptErrorPosition
+// AgvState currentStateAgv, terminalDropRfidId, terminalPickUpRfidId, ujungRfidId, exceptErrorPosition
 
 
 

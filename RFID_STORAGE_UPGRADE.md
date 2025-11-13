@@ -1,20 +1,24 @@
 # RFID Storage Upgrade - Split Namespace Solution
 
 ## Problem
+
 - ESP32 NVS memiliki limit ~90-100 keys per namespace
 - Setiap station menggunakan 2 keys (station{i} + rfid{i})
 - 40 stations = 80 keys, mendekati limit
 - **Tidak bisa menyimpan lebih dari 40 stations** meskipun MAX_RFID_STATIONS = 50
 
 ## Solution Implemented
+
 **Split Namespace Strategy** - Membagi storage menjadi 2 namespace:
 
 ### Namespace 1: "rfid-stations"
+
 - Menyimpan stations 0-39 (40 stations)
 - 80 keys + 1 count key = 81 keys total
 - **DATA LAMA TETAP AMAN** - tidak perlu input ulang
 
 ### Namespace 2: "rfid-stations-2"
+
 - Menyimpan stations 40-49 (10 stations)
 - 20 keys + 1 count key = 21 keys total
 - Otomatis digunakan ketika station count > 40
@@ -24,6 +28,7 @@
 ### File: `sensorRfid.ino`
 
 #### 1. Modified `loadRfidStations()`
+
 ```cpp
 // Load dari namespace pertama (0-39)
 preferences.begin("rfid-stations", false);
@@ -35,6 +40,7 @@ preferences.begin("rfid-stations-2", false);
 ```
 
 #### 2. Modified `saveRfidStations()`
+
 ```cpp
 // Save ke namespace pertama (0-39)
 preferences.begin("rfid-stations", false);
@@ -48,6 +54,7 @@ if (rfidStationCount > 40) {
 ```
 
 #### 3. Modified `deleteRfidStation()`
+
 ```cpp
 // Auto-cleanup namespace kedua jika count turun <= 40
 if (rfidStationCount <= 40) {
@@ -58,6 +65,7 @@ if (rfidStationCount <= 40) {
 ```
 
 ## Benefits
+
 ✅ **Backward Compatible** - Data 40 stations yang sudah ada tetap aman
 ✅ **No Re-input Required** - Tidak perlu scan ulang RFID yang sudah tersimpan
 ✅ **Full Capacity** - Sekarang bisa menyimpan sampai 50 stations
@@ -67,6 +75,7 @@ if (rfidStationCount <= 40) {
 ## Storage Architecture
 
 ### Before (Limited to 40)
+
 ```
 "rfid-stations" namespace:
 ├── stationCount = 40
@@ -76,6 +85,7 @@ Total: 81 keys (LIMIT REACHED)
 ```
 
 ### After (Up to 50)
+
 ```
 "rfid-stations" namespace:
 ├── stationCount = 40
@@ -91,6 +101,7 @@ Total: 21 keys
 ```
 
 ## Testing Checklist
+
 - [ ] Load existing 40 stations (should work without re-input)
 - [ ] Add station 41-50 via auto input menu
 - [ ] Verify all 50 stations loaded correctly after restart
@@ -101,19 +112,23 @@ Total: 21 keys
 ## Technical Notes
 
 ### Key Mapping
+
 - **Namespace 1**: `station{i}`, `rfid{i}` where i = 0 to 39
 - **Namespace 2**: `station{i}`, `rfid{i}` where i = 0 to 9 (mapped to array index 40-49)
 
 ### Memory Usage
+
 - **Namespace 1**: ~2800 bytes (40 stations × ~70 bytes)
 - **Namespace 2**: ~700 bytes (10 stations × ~70 bytes)
 - **Total**: ~3500 bytes (well within 4-8KB NVS limit per namespace)
 
 ### Key Count
+
 - **Namespace 1**: 81 keys (under 90-100 limit)
 - **Namespace 2**: 21 keys (under 90-100 limit)
 
 ## Compilation Result
+
 ```
 Sketch uses 1093615 bytes (83%) of program storage space
 Global variables use 50968 bytes (15%) of dynamic memory
@@ -121,9 +136,11 @@ Status: ✅ SUCCESS
 ```
 
 ## Date
+
 November 13, 2025
 
 ## Related Files
+
 - `agv_sami/sensorRfid.ino` - Modified load/save/delete functions
 - `agv_sami/config.h` - MAX_RFID_STATIONS = 50 (unchanged)
 - `agv_sami/menu.ino` - Auto input station (unchanged)

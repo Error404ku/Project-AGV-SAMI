@@ -96,11 +96,6 @@ void modeDisplayMoveForward() {
   displaySensorData();
 }
 
-void modeDisplayMoveBackward() {
-  scrollText(0, "Mode : Move Backward", 500);
-  displaySensorData();
-}
-
 /*
  * Hapus fungsi scrollText() Anda yang lama.
  * Ganti fungsi modeDisplayTerminalPickup() dengan yang ini.

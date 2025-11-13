@@ -5,9 +5,6 @@ void agvMode(AgvState state) {
     case AGV_STATE_MOVE_FORWARD:
       agvMoveForward();
       break;
-    case AGV_STATE_MOVE_BACKWARD:
-      agvMoveBackward();
-      break;
     case AGV_STATE_STOP:
       static bool stopCalled = false;
         if (!stopCalled) {
@@ -33,14 +30,14 @@ void agvMode(AgvState state) {
   }
 }
 
+// Global flag untuk reset warehouse state
+static bool warehouseNeedReset = false;
+
 // Fungsi untuk reset state warehouse saat load dari preferences
 void resetWarehouseState() {
-  // Reset static variables di agvWarehouse()
+  // Set flag global agar agvWarehouse() melakukan reset saat dipanggil berikutnya
   // Ini diperlukan agar setelah restart, AGV tidak langsung jalan
-  // Static variables tidak otomatis reset saat ESP32 restart
-  // Set flag agar agvWarehouse() melakukan reset internal
-  static bool needReset = false;
-  needReset = true;
+  warehouseNeedReset = true;
 }
 
 // Fungsi ini menangani logika AGV saat berada di gudang.
@@ -49,14 +46,13 @@ void agvWarehouse() {
   static bool showingErrorMessage = false;
   static unsigned long errorMessageStartTime = 0;
   static bool needsDisplayRefresh = false;
-  static bool needReset = true;  // Flag untuk reset saat pertama kali dipanggil setelah load state
   
   // Reset trigger saat pertama kali dipanggil setelah restart/load state
-  if (needReset) {
+  if (warehouseNeedReset) {
     trigger = false;
     showingErrorMessage = false;
     needsDisplayRefresh = false;
-    needReset = false;  // Reset hanya sekali
+    warehouseNeedReset = false;  // Reset hanya sekali
   }
   
   saveCurrentStateAGVToPreferences(AGV_STATE_WAREHOUSE);
@@ -133,19 +129,14 @@ void agvStation() {
   if (trigger) {
     // Cek apakah masih ada station di StationList
     if (targetStationsList.size() == 0) {
-      // Tidak ada station tersisa, ubah ke mode backward
+      // Tidak ada station tersisa
       softStartTime = millis();
       softStartActive = true;
       pidSpeed = maxMotorRpm / 2;  // 🔧 FIX #2: 50% initial speed (was 25%, was baseSpeed)
-      moveStateAgv = AGV_STATE_MOVE_FORWARD;
       agvMode(AGV_STATE_MOVE_FORWARD);
     } else {
-      // Masih ada station, lanjutkan sesuai arah sebelumnya
-      if (moveStateAgv == AGV_STATE_MOVE_FORWARD) {
-        agvMode(AGV_STATE_MOVE_FORWARD);
-      } else if (moveStateAgv == AGV_STATE_MOVE_BACKWARD) {
-        agvMode(AGV_STATE_MOVE_BACKWARD);
-      }
+      // Masih ada station, lanjutkan maju
+      agvMode(AGV_STATE_MOVE_FORWARD);
     }
     trigger = false;
     return;
@@ -240,7 +231,6 @@ void agvMoveForward() {
   saveCurrentStateAGVToPreferences(AGV_STATE_MOVE_FORWARD);
   checkObstacles();
   modeDisplayMoveForward();
-  moveStateAGV(AGV_STATE_MOVE_FORWARD);
   // Cek RFID yang terdeteksi untuk mode switching (harus dilakukan sebelum getStationFromLastRfid)
   String currentRfid = String(lastScannedRfidOptimized);
   unsigned long currentTime = millis();
@@ -304,7 +294,7 @@ void agvMoveForward() {
     }
   } else if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, getRfidForStation(1))) {
     newRfidScanned = false; // Reset flag
-    if (currentRFID = AGV_STATE_WAREHOUSE){
+    if (currentRFID == AGV_STATE_WAREHOUSE){
       exceptErrorPosition = false;
     } else {
       exceptErrorPosition = true;
@@ -344,98 +334,14 @@ void agvMoveForward() {
   }
 }
 
-// Fungsi ini menangani logika AGV saat bergerak mundur.
-void agvMoveBackward() {
-  saveCurrentStateAGVToPreferences(AGV_STATE_MOVE_BACKWARD);
-  modeDisplayMoveBackward();
-  checkObstacles();
-  moveStateAGV(AGV_STATE_MOVE_BACKWARD);
-  // AGV bergerak mundur otomatis tanpa perlu menekan START
-  // Logika pergerakan mundur:
-  // Cek apakah RFID warehouse terdeteksi untuk mengabaikan error saat mundur
-  String currentRfid = String(lastScannedRfidOptimized);
-  if (currentRfid.length() > 0 && isRfidMatch(currentRfid, terminalDropRfidId)) {
-      newRfidScanned = false; // Reset flag
-      currentRFID = AGV_STATE_TERMINAL_DROP;
-      agvMode(AGV_STATE_TERMINAL_DROP);
-      return;
-  } else if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, getRfidForStation(1)) && exceptErrorPosition != true) {
-    newRfidScanned = false; // Reset flag
-    exceptErrorPosition = true;
-    saveExceptErrorFlag();
-  }
-
-  if (targetStationsList.size() != 0) {
-    // Cek apakah ada RFID yang terbaca
-    int currentStation = getStationFromLastRfid();
-
-    // Jika ada stasiun yang terdeteksi, cek apakah ada di target list
-    if (currentStation != -1) {
-      // Cari apakah stasiun ini ada di targetStationsList
-      for (int i = 0; i < targetStationsList.size(); i++) {
-        if (targetStationsList[i] == currentStation) {
-          removeTargetStationById(currentStation);
-          stopMusic();
-          moveStateAGV(AGV_STATE_MOVE_BACKWARD);
-          agvMode(AGV_STATE_STATION);
-          return;
-        }
-      }
-    }
-  }
-  // Jika tidak ada hambatan dan bukan stasiun target, lanjutkan bergerak
-  if (!obstacleDetected) {
-    music(MUSIC_MODE_ON);
-    // Abaikan error jika exceptErrorPosition = true dan segment aktif >5
-    if (exceptErrorPosition && totalSensorAktif > 5) {
-      pidLinefollower(0, PID_MODE_MUNDUR);  // Error = 0
-    } else {
-      if (targetStationsList.size() != 0){
-        pidLinefollower(errorValue, PID_MODE_MUNDUR);  // Error normal
-      } else {
-        pidLinefollower(errorValue, PID_MODE_MUNDUR);
-      }
-    }
-  }
-}
-
 // Helper function untuk memeriksa kecocokan RFID
 bool isRfidMatch(const String& currentRfid, const String& targetRfid) {
   return targetRfid.length() > 0 && currentRfid.equals(targetRfid);
 }
 
-// Fungsi ini menyimpan status terakhir AGV (maju atau mundur).
-void moveStateAGV(AgvState lastState) {
-  if (lastState == AGV_STATE_MOVE_FORWARD) {
-    moveStateAgv = AGV_STATE_MOVE_FORWARD;
-  } else if (lastState == AGV_STATE_MOVE_BACKWARD) {
-    moveStateAgv = AGV_STATE_MOVE_BACKWARD;
-  }
-
-  // Simpan moveStateAGV ke preferences
-  savemoveStateAGVToPreferences(moveStateAgv);
-}
-
-// Fungsi untuk menyimpan moveStateAGV ke Preferences
-void savemoveStateAGVToPreferences(AgvState lastState) {
-  // Konversi state ke string
-  String stateString = agvStateToString(lastState);
-
-  // Simpan ke Preferences
-  preferences.begin("agv-state", false);
-  preferences.putString("last_state", stateString);
-  preferences.end();
-
-  // Serial.println() - removed for production
-}
-
 // Fungsi gabungan untuk memuat semua state AGV dari Preferences
 void loadAllAGVStatesFromPreferences() {
   preferences.begin("agv-state", true);
-
-  // Load move state (last_state)
-  String moveStateString = preferences.getString("last_state", "MOVE_FORWARD");
-  moveStateAgv = stringToAgvState(moveStateString);
 
   // Load current state
   String currentStateString = preferences.getString("current_state", "NULL");
@@ -454,8 +360,6 @@ String agvStateToString(AgvState state) {
   switch (state) {
     case AGV_STATE_MOVE_FORWARD:
       return "MOVE_FORWARD";
-    case AGV_STATE_MOVE_BACKWARD:
-      return "MOVE_BACKWARD";
     case AGV_STATE_TERMINAL_PICKUP:
       return "TERMINAL_PICKUP";
     case AGV_STATE_TERMINAL_DROP:
@@ -494,8 +398,6 @@ void saveCurrentStateAGVToPreferences(AgvState currentState) {
 AgvState stringToAgvState(String stateString) {
   if (stateString == "MOVE_FORWARD") {
     return AGV_STATE_MOVE_FORWARD;
-  } else if (stateString == "MOVE_BACKWARD") {
-    return AGV_STATE_MOVE_BACKWARD;
   } else if (stateString == "TERMINAL_PICKUP") {
     return AGV_STATE_TERMINAL_PICKUP;
   } else if (stateString == "TERMINAL_DROP") {
@@ -512,16 +414,3 @@ AgvState stringToAgvState(String stateString) {
     return AGV_STATE_NULL;  // Default state
   }
 }
-
-// Fungsi untuk memuat current state AGV dari Preferences (backward compatibility)
-// AgvState loadCurrentStateAGVFromPreferences() {
-//     preferences.begin("agv-state", true);
-//     String stateString = preferences.getString("current_state", "STOP");
-//     preferences.end();
-
-//     AgvState loadedState = stringToAgvState(stateString);
-//     currentStateAgv = loadedState;
-
-//     // Serial.println() - removed for production
-//     return loadedState;
-// }

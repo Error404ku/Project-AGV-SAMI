@@ -14,8 +14,7 @@ void resetPIDState() {
 
 // Helper function: Check if mode requires soft start
 bool isSoftStartMode(PidMode mode) {
-  return (mode == PID_MODE_MAJU || mode == PID_MODE_MAJU_MASSA || 
-          mode == PID_MODE_MUNDUR || mode == PID_MODE_MUNDUR_MASSA);
+  return (mode == PID_MODE_MAJU || mode == PID_MODE_MAJU_MASSA);
 }
 
 // Helper function: Get PID parameters based on mode

@@ -115,13 +115,9 @@ void loop() {
     
     if (currentStateAgv != AGV_STATE_NULL){
       // --- Pembacaan sensor sesuai mode ---
-      if (moveStateAgv == AGV_STATE_MOVE_FORWARD) {
-        setMagnetSlaveId(SLAVEID_MAGNET_DEPAN);
-        setUltrasonicSlaveId(SLAVEID_ULTRASONIK_DEPAN);
-      } else if (moveStateAgv == AGV_STATE_MOVE_BACKWARD) {
-        setMagnetSlaveId(SLAVEID_MAGNET_BELAKANG);
-        setUltrasonicSlaveId(SLAVEID_ULTRASONIK_BELAKANG);
-      }
+      // Selalu gunakan sensor depan (hanya maju)
+      setMagnetSlaveId(SLAVEID_MAGNET_DEPAN);
+      setUltrasonicSlaveId(SLAVEID_ULTRASONIK_DEPAN);
       // Don't call agvMode() when showing stop message to prevent display override
       if (!showingStopMessage) {
         agvMode(currentStateAgv);
