@@ -105,10 +105,7 @@ void setupWebServer() {
   // Registrasi Endpoint HTTP yang diminta
   server.on("/updatestations", HTTP_POST, handleUpdateTargetStations);  // Untuk menyimpan/menimpa daftar stasiun
   server.on("/showstations", HTTP_GET, handleShowTargetStations);       // Untuk menampilkan daftar stasiun
-  server.on("/showstationaddresses", HTTP_GET, handleShowStationAddresses); // Untuk menampilkan alamat station RFID
-  server.on("/showujungstations", HTTP_GET, handleShowUjungStations);   // Untuk menampilkan data ujung station RFID
-  server.on("/showwarehouserfid", HTTP_GET, handleShowWarehouseRfid);   // Untuk menampilkan data warehouse RFID
-  server.on("/showterminalrfid", HTTP_GET, handleShowTerminalRfid);     // Untuk menampilkan data terminal RFID
+  server.on("/showallrfid", HTTP_GET, handleShowAllRfid);               // Untuk menampilkan SEMUA RFID yang terdaftar
   
   // WiFi Configuration endpoints
   server.on("/", HTTP_GET, handleRoot);                          // Halaman utama dengan menu
@@ -265,6 +262,8 @@ void setupRfid() {
 void setupMenu() {
   preferences.begin("agv-settings", true);
 
+  Serial.println("\n=== LOADING SETTINGS ===");
+  
   // Load PID settings with proper default values
   tempKp = preferences.getDouble("kpLinefollower", 70.0);
   tempKi = preferences.getDouble("kiLinefollower", 0.0);
@@ -279,8 +278,16 @@ void setupMenu() {
   
   // Load Forward PID Default settings with proper default values
   tempKpForwardDefault = preferences.getDouble("kpFwdDefault", 70.0);
+  Serial.print("Loaded kpFwdDefault: ");
+  Serial.println(tempKpForwardDefault, 2);
+  
   tempKiForwardDefault = preferences.getDouble("kiFwdDefault", 0.0);
+  Serial.print("Loaded kiFwdDefault: ");
+  Serial.println(tempKiForwardDefault, 2);
+  
   tempKdForwardDefault = preferences.getDouble("kdFwdDefault", 0.0);
+  Serial.print("Loaded kdFwdDefault: ");
+  Serial.println(tempKdForwardDefault, 2);
   
   // Load Backward PID WithMassa settings with proper default values
   tempKpBackwardWithMassa = preferences.getDouble("kpBwdMassa", 70.0);
@@ -388,6 +395,8 @@ void setupMenu() {
   motorPidKdLeft = tempMotorPidKd;
 
   preferences.end();
+  
+  Serial.println("=== SETTINGS LOADED ===\n");
 
   // Load RFID stations
   loadRfidStations();
@@ -400,7 +409,8 @@ void setupMenu() {
   // Load Terminal RFID data
   loadTerminalRfid();
   
-
+  // Load Ujung Slow Mode
+  loadUjungSlowMode();
   
   // Load except error position flag
   loadExceptErrorFlag();

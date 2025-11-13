@@ -11,8 +11,8 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
   // Check for magnet loss error (errorValue = 99)
   if (errorPosisi == 99 && mode != PID_MODE_BERHENTI) {
     // Emergency stop - no magnet detected for 5 seconds
-    pwmMotor(0, 0);  // Use PWM stop command
-    softStartActive = false;
+    rpmMotor(0, 0);  // Use PWM stop command
+    softStartActive = true;
     pidSpeed = 0;
     #ifdef DEBUG_PID
     #endif
@@ -23,6 +23,9 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
   
   // Check if AGV is back on track and stop music if it's OUTOFLINE mode (magnet loss music)
   if (errorPosisi != 99 && statusMusic && currentMusicMode == MUSIC_MODE_OUTOFLINE) {
+      softStartTime = millis();
+      softStartActive = true;
+      pidSpeed = maxMotorRpm / 2; 
     stopMusic();
   }
 

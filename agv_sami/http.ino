@@ -140,52 +140,63 @@ void handleShowStationAddresses() {
   server.send(200, "application/json", output);
 }
 
-// Handler untuk menampilkan data ujung station RFID
-void handleShowUjungStations() {
-  DynamicJsonDocument doc(1024);
-  JsonArray array = doc.to<JsonArray>();
-  
-  for (int i = 0; i < rfidUjungCount; i++) {
-    if (rfidUjungList[i].isActive) {
-      JsonObject ujung = array.createNestedObject();
-      ujung["ujungId"] = rfidUjungList[i].ujungId;
-      ujung["rfidId"] = rfidUjungList[i].rfidId;
-    }
-  }
-  
-  String output;
-  serializeJsonPretty(doc, output);
-  
-  // Serial debug removed for production
-  server.send(200, "application/json", output);
-}
-
-// Handler untuk menampilkan data warehouse RFID
-void handleShowWarehouseRfid() {
-  DynamicJsonDocument doc(1024);
-  JsonArray array = doc.to<JsonArray>();
-  
-  for (int i = 0; i < rfidWarehouseCount; i++) {
-    if (rfidWarehouseList[i].isActive) {
-      JsonObject warehouse = array.createNestedObject();
-      warehouse["warehouseId"] = rfidWarehouseList[i].warehouseId;
-      warehouse["rfidId"] = rfidWarehouseList[i].rfidId;
-    }
-  }
-  
-  String output;
-  serializeJsonPretty(doc, output);
-  
-  server.send(200, "application/json", output);
-}
-
-// Handler untuk menampilkan data terminal RFID
-void handleShowTerminalRfid() {
-  DynamicJsonDocument doc(1024);
+// Handler untuk menampilkan SEMUA RFID yang terdaftar
+void handleShowAllRfid() {
+  DynamicJsonDocument doc(4096); // Buffer lebih besar untuk semua data
   JsonObject root = doc.to<JsonObject>();
   
-  root["terminalDropRfid"] = terminalDropRfidId;
-  root["terminalPickUpRfid"] = terminalPickUpRfidId;
+  // Status dan message
+  root["status"] = "success";
+  root["message"] = "Data RFID berhasil diambil";
+  
+  // Array data untuk menyimpan semua RFID
+  JsonArray dataArray = root.createNestedArray("data");
+  
+  // 1. Tambahkan Stations RFID
+  for (int i = 0; i < rfidStationCount; i++) {
+    if (rfidStations[i].isActive) {
+      JsonObject item = dataArray.createNestedObject();
+      item["name"] = "Station " + String(rfidStations[i].stationId);
+      item["rfid"] = rfidStations[i].rfidId;
+      item["type"] = "station";
+    }
+  }
+  
+  // 2. Tambahkan Ujung RFID
+  for (int i = 0; i < rfidUjungCount; i++) {
+    if (rfidUjungList[i].isActive) {
+      JsonObject item = dataArray.createNestedObject();
+      item["name"] = "Station Ujung " + String(rfidUjungList[i].ujungId);
+      item["rfid"] = rfidUjungList[i].rfidId;
+      item["type"] = "ujung";
+    }
+  }
+  
+  // 3. Tambahkan Warehouse RFID
+  for (int i = 0; i < rfidWarehouseCount; i++) {
+    if (rfidWarehouseList[i].isActive) {
+      JsonObject item = dataArray.createNestedObject();
+      item["name"] = "Warehouse " + String(rfidWarehouseList[i].warehouseId);
+      item["rfid"] = rfidWarehouseList[i].rfidId;
+      item["type"] = "warehouse";
+    }
+  }
+  
+  // 4. Tambahkan Terminal Drop RFID
+  if (terminalDropRfidId.length() > 0) {
+    JsonObject item = dataArray.createNestedObject();
+    item["name"] = "Terminal Drop";
+    item["rfid"] = terminalDropRfidId;
+    item["type"] = "terminal_drop";
+  }
+  
+  // 5. Tambahkan Terminal PickUp RFID
+  if (terminalPickUpRfidId.length() > 0) {
+    JsonObject item = dataArray.createNestedObject();
+    item["name"] = "Terminal PickUp";
+    item["rfid"] = terminalPickUpRfidId;
+    item["type"] = "terminal_pickup";
+  }
   
   String output;
   serializeJsonPretty(doc, output);

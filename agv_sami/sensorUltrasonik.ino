@@ -139,7 +139,7 @@ void checkObstacles() {
       music(MUSIC_MODE_OBSTACLE);
       softStartTime = millis();
       softStartActive = true;
-      pidSpeed = baseSpeed / 4;
+      pidSpeed = maxMotorRpm / 2;  // 🔧 FIX: Use RPM mode, not PWM (was baseSpeed/2)
       musicAlreadyPlaying = true;
     }
   } else if (!obstacleDetected && previousObstacleState) {

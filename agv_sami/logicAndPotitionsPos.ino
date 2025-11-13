@@ -81,3 +81,26 @@ void saveTerminalPickUpRfid(String rfidId) {
   terminalPickUpRfidId = rfidId;
   // Serial.println() - removed for production
 }
+
+/***********************************************************
+ *  UJUNG RFID SLOW MODE FUNCTIONS                       *
+ ***********************************************************/
+void loadUjungSlowMode() {
+  preferences.begin("agv-ujung", true);
+  isUjungSlowMode = preferences.getBool("slowMode", false);
+  preferences.end();
+  // Serial.println() - removed for production
+}
+
+void saveUjungSlowMode() {
+  preferences.begin("agv-ujung", false);
+  preferences.putBool("slowMode", isUjungSlowMode);
+  preferences.end();
+  // Serial.println() - removed for production
+}
+
+void resetUjungSlowMode() {
+  isUjungSlowMode = false;
+  saveUjungSlowMode();
+  // Serial.println() - removed for production
+}

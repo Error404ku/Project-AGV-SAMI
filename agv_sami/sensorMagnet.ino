@@ -260,6 +260,7 @@ int hitungErrorPosisi(uint16_t bitmask) {
   if (currentMagnetSlaveId == SLAVEID_MAGNET_DEPAN) {
     if (segmenTerendah < 6) {
       switch (segmenTerendah) {
+        case 6: errorKiri = -1; break;   // Koreksi ringan
         case 5: errorKiri = -2; break;   // Koreksi ringan
         case 4: errorKiri = -3; break;  // Koreksi sedang
         case 3: errorKiri = -4; break;  // Koreksi kuat
@@ -269,6 +270,7 @@ int hitungErrorPosisi(uint16_t bitmask) {
     }
     if (segmenTertinggi > 11) {
       switch (segmenTertinggi) {
+        case 11: errorKanan = 1; break;   // Koreksi ringan
         case 12: errorKanan = 2; break;   // Koreksi ringan
         case 13: errorKanan = 3; break;  // Koreksi sedang
         case 14: errorKanan = 4; break;  // Koreksi kuat

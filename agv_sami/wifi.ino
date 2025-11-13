@@ -56,14 +56,33 @@ void startWifiConnection() {
 
 // Fungsi untuk loop WiFi - dipanggil di loop() jika diperlukan
 void loopWifi() {
+  static unsigned long lastReconnectAttempt = 0;
+  unsigned long currentTime = millis();
+  
+  // Check if we're in connecting state
+  if (isConnectingWifi) {
+    // Check for connection timeout (30 seconds)
+    if (currentTime - wifiConnectStartTime > 30000) {
+      // Connection attempt timed out
+      isConnectingWifi = false;
+      // Serial.println("WiFi connection timeout");
+    }
+    // Check if connection succeeded
+    else if (WiFi.status() == WL_CONNECTED) {
+      // Successfully connected
+      isConnectingWifi = false;
+      // Serial.println("WiFi connected successfully");
+    }
+    // Still connecting, do nothing
+    return;
+  }
+  
   // Check WiFi connection status and handle reconnection if needed
-  if (WiFi.status() != WL_CONNECTED && !isConnectingWifi) {
-    // Auto-reconnect if not currently connecting
-    unsigned long currentTime = millis();
-    static unsigned long lastReconnectAttempt = 0;
-    
-    if (currentTime - lastReconnectAttempt > 5000) { // Try reconnect every 5 seconds
+  if (WiFi.status() != WL_CONNECTED) {
+    // Auto-reconnect with proper interval (15 seconds)
+    if (currentTime - lastReconnectAttempt > 5000) {
       lastReconnectAttempt = currentTime;
+      // Serial.println("WiFi disconnected, attempting reconnect...");
       startWifiConnection();
     }
   }

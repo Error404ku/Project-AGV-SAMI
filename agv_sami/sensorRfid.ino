@@ -87,11 +87,14 @@ void receivedDataError(Wiegand::DataError error, uint8_t* rawData, uint8_t rawBi
 
 // RFID Station Management Functions
 void loadRfidStations() {
+  // Load from first namespace (stations 0-39)
   preferences.begin("rfid-stations", false);
-
   rfidStationCount = preferences.getInt("stationCount", 0);
 
-  for (int i = 0; i < rfidStationCount && i < MAX_RFID_STATIONS; i++) {
+  // Limit to 40 for first namespace
+  int firstBatchCount = (rfidStationCount > 40) ? 40 : rfidStationCount;
+  
+  for (int i = 0; i < firstBatchCount; i++) {
     char stationKey[20], rfidKey[20];
     sprintf(stationKey, "station%d", i);
     sprintf(rfidKey, "rfid%d", i);
@@ -100,16 +103,40 @@ void loadRfidStations() {
     rfidStations[i].rfidId = preferences.getString(rfidKey, "");
     rfidStations[i].isActive = (rfidStations[i].stationId > 0 && rfidStations[i].rfidId.length() > 0);
   }
-
   preferences.end();
+
+  // Load from second namespace (stations 40-49)
+  preferences.begin("rfid-stations-2", false);
+  int secondBatchCount = preferences.getInt("stationCount", 0);
+  
+  for (int i = 0; i < secondBatchCount && (40 + i) < MAX_RFID_STATIONS; i++) {
+    char stationKey[20], rfidKey[20];
+    sprintf(stationKey, "station%d", i);
+    sprintf(rfidKey, "rfid%d", i);
+
+    int arrayIndex = 40 + i;
+    rfidStations[arrayIndex].stationId = preferences.getInt(stationKey, 0);
+    rfidStations[arrayIndex].rfidId = preferences.getString(rfidKey, "");
+    rfidStations[arrayIndex].isActive = (rfidStations[arrayIndex].stationId > 0 && rfidStations[arrayIndex].rfidId.length() > 0);
+  }
+  preferences.end();
+
+  // Update total count
+  if (rfidStationCount < 40 && secondBatchCount > 0) {
+    rfidStationCount = 40 + secondBatchCount;
+  } else if (rfidStationCount >= 40) {
+    rfidStationCount = firstBatchCount + secondBatchCount;
+  }
 }
 
 void saveRfidStations() {
+  // Save to first namespace (stations 0-39)
   preferences.begin("rfid-stations", false);
+  
+  int firstBatchCount = (rfidStationCount > 40) ? 40 : rfidStationCount;
+  preferences.putInt("stationCount", firstBatchCount);
 
-  preferences.putInt("stationCount", rfidStationCount);
-
-  for (int i = 0; i < rfidStationCount && i < MAX_RFID_STATIONS; i++) {
+  for (int i = 0; i < firstBatchCount; i++) {
     char stationKey[20], rfidKey[20];
     sprintf(stationKey, "station%d", i);
     sprintf(rfidKey, "rfid%d", i);
@@ -117,8 +144,26 @@ void saveRfidStations() {
     preferences.putInt(stationKey, rfidStations[i].stationId);
     preferences.putString(rfidKey, rfidStations[i].rfidId);
   }
-
   preferences.end();
+
+  // Save to second namespace (stations 40-49)
+  if (rfidStationCount > 40) {
+    preferences.begin("rfid-stations-2", false);
+    
+    int secondBatchCount = rfidStationCount - 40;
+    preferences.putInt("stationCount", secondBatchCount);
+
+    for (int i = 0; i < secondBatchCount && (40 + i) < MAX_RFID_STATIONS; i++) {
+      char stationKey[20], rfidKey[20];
+      sprintf(stationKey, "station%d", i);
+      sprintf(rfidKey, "rfid%d", i);
+
+      int arrayIndex = 40 + i;
+      preferences.putInt(stationKey, rfidStations[arrayIndex].stationId);
+      preferences.putString(rfidKey, rfidStations[arrayIndex].rfidId);
+    }
+    preferences.end();
+  }
 }
 
 int findRfidStation(int stationId) {
@@ -179,6 +224,14 @@ bool deleteRfidStation(int stationId) {
     rfidStations[rfidStationCount].isActive = false;
 
     saveRfidStations();
+    
+    // Clear second namespace if count drops to 40 or below
+    if (rfidStationCount <= 40) {
+      preferences.begin("rfid-stations-2", false);
+      preferences.clear();
+      preferences.end();
+    }
+    
     return true;
   }
   return false;

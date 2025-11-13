@@ -583,7 +583,7 @@ RfidStation rfidStations[MAX_RFID_STATIONS];
 int rfidStationCount = 0;
 
 // RFID Ujung and Warehouse Management
-const int MAX_RFID_UJUNG = 1;
+const int MAX_RFID_UJUNG = 2;
 const int MAX_RFID_WAREHOUSE = 1;
 
 struct RfidUjung {
@@ -604,6 +604,9 @@ RfidUjung rfidUjungList[MAX_RFID_UJUNG];
 RfidWarehouse rfidWarehouseList[MAX_RFID_WAREHOUSE];
 int rfidUjungCount = 0;
 int rfidWarehouseCount = 0;
+bool isUjungSlowMode = false;  // false = cepat, true = lambat
+unsigned long lastUjungDetectionTime = 0;  // Timer untuk debounce ujung RFID
+const unsigned long UJUNG_IGNORE_DURATION = 5000;  // Durasi debounce 2 detik (2000ms)
 
 // Auto input station removed - using existing RfidStation structure
 
@@ -760,6 +763,11 @@ void saveUjungRfid(String rfidId);
 void loadTerminalRfid();
 void saveTerminalDropRfid(String rfidId);
 void saveTerminalPickUpRfid(String rfidId);
+
+// Ujung RFID Slow Mode functions
+void loadUjungSlowMode();
+void saveUjungSlowMode();
+void resetUjungSlowMode();
 
 // AGV Movement functions
 void agvMode(AgvState state);

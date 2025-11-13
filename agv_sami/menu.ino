@@ -99,8 +99,20 @@ void displayMenuFooter(const char* text) {
 }
 
 void saveSettings() {
-  preferences.begin("agv-settings", false);
+  Serial.println("\n=== SAVING SETTINGS ===");
+  
+  if (!preferences.begin("agv-settings", false)) {
+    Serial.println("ERROR: Failed to open preferences for writing!");
+    return;
+  }
+  
+  // Check free entries
+  size_t freeEntries = preferences.freeEntries();
+  Serial.print("NVS Free Entries: ");
+  Serial.println(freeEntries);
+  
   delay(50);
+  
   // Save PID values
   preferences.putDouble("kpLinefollower", tempKp);
   preferences.putDouble("kiLinefollower", tempKi);
@@ -114,8 +126,30 @@ void saveSettings() {
   preferences.putDouble("kdFwdMassa", tempKdForwardWithMassa);
   
   // Save Forward PID Default values
-  preferences.putDouble("kpFwdDefault", tempKpForwardDefault);
+  Serial.print("Saving kpFwdDefault: ");
+  Serial.println(tempKpForwardDefault, 2);
+  
+  // CRITICAL FIX: Remove old key first to avoid corruption
+  preferences.remove("kpFwdDefault");
+  delay(10);
+  
+  size_t bytesWritten = preferences.putDouble("kpFwdDefault", tempKpForwardDefault);
+  Serial.print("Bytes written: ");
+  Serial.println(bytesWritten);
+  if (bytesWritten == 0) {
+    Serial.println("ERROR: Failed to write kpFwdDefault!");
+  }
+  
+  Serial.print("Saving kiFwdDefault: ");
+  Serial.println(tempKiForwardDefault, 2);
+  preferences.remove("kiFwdDefault");
+  delay(10);
   preferences.putDouble("kiFwdDefault", tempKiForwardDefault);
+  
+  Serial.print("Saving kdFwdDefault: ");
+  Serial.println(tempKdForwardDefault, 2);
+  preferences.remove("kdFwdDefault");
+  delay(10);
   preferences.putDouble("kdFwdDefault", tempKdForwardDefault);
   
   // Save Backward PID WithMassa values
@@ -156,12 +190,25 @@ void saveSettings() {
   preferences.putDouble("motorPidKd", tempMotorPidKd);
   
   // Save individual motor PID settings
-  preferences.putDouble("motorPidKpRight", tempMotorPidKpRight);
-  preferences.putDouble("motorPidKiRight", tempMotorPidKiRight);
-  preferences.putDouble("motorPidKdRight", tempMotorPidKdRight);
-  preferences.putDouble("motorPidKpLeft", tempMotorPidKpLeft);
-  preferences.putDouble("motorPidKiLeft", tempMotorPidKiLeft);
-  preferences.putDouble("motorPidKdLeft", tempMotorPidKdLeft);
+  preferences.putDouble("motorKpR", tempMotorPidKpRight);
+  preferences.putDouble("motorKiR", tempMotorPidKiRight);
+  preferences.putDouble("motorKdR", tempMotorPidKdRight);
+  preferences.putDouble("motorKpL", tempMotorPidKpLeft);
+  preferences.putDouble("motorKiL", tempMotorPidKiLeft);
+  preferences.putDouble("motorKdL", tempMotorPidKdLeft);
+
+  // VERIFY: Read back to confirm save
+  double verifyKp = preferences.getDouble("kpFwdDefault", -1.0);
+  Serial.print("VERIFY after save - kpFwdDefault: ");
+  Serial.println(verifyKp, 2);
+  
+  if (abs(verifyKp - tempKpForwardDefault) > 0.01) {
+    Serial.println("WARNING: Value mismatch after save!");
+    Serial.print("Expected: ");
+    Serial.println(tempKpForwardDefault, 2);
+    Serial.print("Got: ");
+    Serial.println(verifyKp, 2);
+  }
 
   // Apply PID values
   kpLinefollower = tempKp;
@@ -213,8 +260,24 @@ void saveSettings() {
   minSafeDistanceFront = tempMinSafeDistanceFront;
   minSafeDistanceBack = tempMinSafeDistanceBack;
 
+  // Apply Motor Control settings
+  maxMotorRpm = tempMaxMotorRpm;
+  motorPidKp = tempMotorPidKp;
+  motorPidKi = tempMotorPidKi;
+  motorPidKd = tempMotorPidKd;
+  
+  // Apply individual motor PID settings
+  motorPidKpRight = tempMotorPidKpRight;
+  motorPidKiRight = tempMotorPidKiRight;
+  motorPidKdRight = tempMotorPidKdRight;
+  motorPidKpLeft = tempMotorPidKpLeft;
+  motorPidKiLeft = tempMotorPidKiLeft;
+  motorPidKdLeft = tempMotorPidKdLeft;
+
   // End preferences session
   preferences.end();
+  
+  Serial.println("=== SETTINGS SAVED SUCCESSFULLY ===\n");
 }
 
 
@@ -320,7 +383,8 @@ void handleMenu() {
   switch (currentMenu) {
     case MENU_MAIN:
       displayMainMenu();
-      pwmMotor(0, 0);  // Use PWM stop command
+      rpmMotor(0, 0);
+      Serial.println("STOP"); // Use PWM stop command
       stopMusic();
       digitalWrite(lampPin, HIGH);
       if (currentMillis - lastButtonPress >= buttonDelay) {
@@ -1283,14 +1347,14 @@ void handlePidForwardSubmenu() {
     if (selectedParam == 0) {
       // WithMassa PID
       lcd.clear();
-      initMenuTempVariables();  // Initialize temporary variables from global values
+      // initMenuTempVariables() already called in parent menu
       currentMenu = MENU_PID_FORWARD_WITHMASSA;
       selectedParam = 0; // Reset for PID parameter selection
       menuNeedsRefresh = true;
     } else if (selectedParam == 1) {
       // Default PID
       lcd.clear();
-      initMenuTempVariables();  // Initialize temporary variables from global values
+      // initMenuTempVariables() already called in parent menu
       currentMenu = MENU_PID_FORWARD_DEFAULT;
       selectedParam = 0; // Reset for PID parameter selection
       menuNeedsRefresh = true;
@@ -1341,14 +1405,14 @@ void handlePidBackwardSubmenu() {
     if (selectedParam == 0) {
       // WithMassa PID
       lcd.clear();
-      initMenuTempVariables();  // Initialize temporary variables from global values
+      // initMenuTempVariables() already called in parent menu
       currentMenu = MENU_PID_BACKWARD_WITHMASSA;
       selectedParam = 0; // Reset for PID parameter selection
       menuNeedsRefresh = true;
     } else if (selectedParam == 1) {
       // Default PID
       lcd.clear();
-      initMenuTempVariables();  // Initialize temporary variables from global values
+      // initMenuTempVariables() already called in parent menu
       currentMenu = MENU_PID_BACKWARD_DEFAULT;
       selectedParam = 0; // Reset for PID parameter selection
       menuNeedsRefresh = true;
@@ -1431,10 +1495,6 @@ void handlePidForwardWithMassaSettings() {
         case 1: tempKiForwardWithMassa += pidIncrement; break;
         case 2: tempKdForwardWithMassa += pidIncrement; break;
       }
-      // Update values in memory
-      kpLinefollowerForwardWithMassa = tempKpForwardWithMassa;
-      kiLinefollowerForwardWithMassa = tempKiForwardWithMassa;
-      kdLinefollowerForwardWithMassa = tempKdForwardWithMassa;
       lastRightPress = currentMillis;
     } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
       // Button is being held - increment by 1.0 every 100ms
@@ -1445,10 +1505,6 @@ void handlePidForwardWithMassaSettings() {
           case 1: tempKiForwardWithMassa += pidIncrement; break;
           case 2: tempKdForwardWithMassa += pidIncrement; break;
         }
-        // Update values in memory
-        kpLinefollowerForwardWithMassa = tempKpForwardWithMassa;
-        kiLinefollowerForwardWithMassa = tempKiForwardWithMassa;
-        kdLinefollowerForwardWithMassa = tempKdForwardWithMassa;
         lastRightPress = currentMillis;
       }
     }
@@ -1470,10 +1526,6 @@ void handlePidForwardWithMassaSettings() {
         case 1: tempKiForwardWithMassa = max(0.0, tempKiForwardWithMassa - pidIncrement); break;
         case 2: tempKdForwardWithMassa = max(0.0, tempKdForwardWithMassa - pidIncrement); break;
       }
-      // Update values in memory
-      kpLinefollowerForwardWithMassa = tempKpForwardWithMassa;
-      kiLinefollowerForwardWithMassa = tempKiForwardWithMassa;
-      kdLinefollowerForwardWithMassa = tempKdForwardWithMassa;
       lastLeftPress = currentMillis;
     } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
       // Button is being held - decrement by 1.0 every 100ms
@@ -1484,10 +1536,6 @@ void handlePidForwardWithMassaSettings() {
           case 1: tempKiForwardWithMassa = max(0.0, tempKiForwardWithMassa - pidIncrement); break;
           case 2: tempKdForwardWithMassa = max(0.0, tempKdForwardWithMassa - pidIncrement); break;
         }
-        // Update values in memory
-        kpLinefollowerForwardWithMassa = tempKpForwardWithMassa;
-        kiLinefollowerForwardWithMassa = tempKiForwardWithMassa;
-        kdLinefollowerForwardWithMassa = tempKdForwardWithMassa;
         lastLeftPress = currentMillis;
       }
     }
@@ -1571,10 +1619,6 @@ void handlePidForwardDefaultSettings() {
         case 1: tempKiForwardDefault += pidIncrement; break;
         case 2: tempKdForwardDefault += pidIncrement; break;
       }
-      // Update values in memory
-      kpLinefollowerForwardDefault = tempKpForwardDefault;
-      kiLinefollowerForwardDefault = tempKiForwardDefault;
-      kdLinefollowerForwardDefault = tempKdForwardDefault;
       lastRightPress = currentMillis;
     } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
       // Button is being held - increment by 1.0 every 100ms
@@ -1585,10 +1629,6 @@ void handlePidForwardDefaultSettings() {
           case 1: tempKiForwardDefault += pidIncrement; break;
           case 2: tempKdForwardDefault += pidIncrement; break;
         }
-        // Update values in memory
-        kpLinefollowerForwardDefault = tempKpForwardDefault;
-        kiLinefollowerForwardDefault = tempKiForwardDefault;
-        kdLinefollowerForwardDefault = tempKdForwardDefault;
         lastRightPress = currentMillis;
       }
     }
@@ -1610,10 +1650,6 @@ void handlePidForwardDefaultSettings() {
         case 1: tempKiForwardDefault = max(0.0, tempKiForwardDefault - pidIncrement); break;
         case 2: tempKdForwardDefault = max(0.0, tempKdForwardDefault - pidIncrement); break;
       }
-      // Update values in memory
-      kpLinefollowerForwardDefault = tempKpForwardDefault;
-      kiLinefollowerForwardDefault = tempKiForwardDefault;
-      kdLinefollowerForwardDefault = tempKdForwardDefault;
       lastLeftPress = currentMillis;
     } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
       // Button is being held - decrement by 0.1 every 100ms
@@ -1624,10 +1660,6 @@ void handlePidForwardDefaultSettings() {
           case 1: tempKiForwardDefault = max(0.0, tempKiForwardDefault - pidIncrement); break;
           case 2: tempKdForwardDefault = max(0.0, tempKdForwardDefault - pidIncrement); break;
         }
-        // Update values in memory
-        kpLinefollowerForwardDefault = tempKpForwardDefault;
-        kiLinefollowerForwardDefault = tempKiForwardDefault;
-        kdLinefollowerForwardDefault = tempKdForwardDefault;
         lastLeftPress = currentMillis;
       }
     }
@@ -1638,6 +1670,7 @@ void handlePidForwardDefaultSettings() {
   if (STOP()) {
     // Save settings before going back
     saveSettings();
+    delay(200);
     currentMenu = MENU_PID_FORWARD;
     selectedParam = 0;
     menuNeedsRefresh = true;
@@ -1712,10 +1745,6 @@ void handlePidBackwardWithMassaSettings() {
         case 1: tempKiBackwardWithMassa += pidIncrement; break;
         case 2: tempKdBackwardWithMassa += pidIncrement; break;
       }
-      // Update values in memory
-      kpLinefollowerBackwardWithMassa = tempKpBackwardWithMassa;
-      kiLinefollowerBackwardWithMassa = tempKiBackwardWithMassa;
-      kdLinefollowerBackwardWithMassa = tempKdBackwardWithMassa;
       lastRightPress = currentMillis;
     } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
       // Button is being held - increment by 1.0 every 100ms
@@ -1726,10 +1755,6 @@ void handlePidBackwardWithMassaSettings() {
           case 1: tempKiBackwardWithMassa += pidIncrement; break;
           case 2: tempKdBackwardWithMassa += pidIncrement; break;
         }
-        // Update values in memory
-        kpLinefollowerBackwardWithMassa = tempKpBackwardWithMassa;
-        kiLinefollowerBackwardWithMassa = tempKiBackwardWithMassa;
-        kdLinefollowerBackwardWithMassa = tempKdBackwardWithMassa;
         lastRightPress = currentMillis;
       }
     }
@@ -1751,10 +1776,6 @@ void handlePidBackwardWithMassaSettings() {
         case 1: tempKiBackwardWithMassa = max(0.0, tempKiBackwardWithMassa - pidIncrement); break;
         case 2: tempKdBackwardWithMassa = max(0.0, tempKdBackwardWithMassa - pidIncrement); break;
       }
-      // Update values in memory
-      kpLinefollowerBackwardWithMassa = tempKpBackwardWithMassa;
-      kiLinefollowerBackwardWithMassa = tempKiBackwardWithMassa;
-      kdLinefollowerBackwardWithMassa = tempKdBackwardWithMassa;
       lastLeftPress = currentMillis;
     } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
       // Button is being held - decrement by 1.0 every 100ms
@@ -1765,10 +1786,6 @@ void handlePidBackwardWithMassaSettings() {
           case 1: tempKiBackwardWithMassa = max(0.0, tempKiBackwardWithMassa - pidIncrement); break;
           case 2: tempKdBackwardWithMassa = max(0.0, tempKdBackwardWithMassa - pidIncrement); break;
         }
-        // Update values in memory
-        kpLinefollowerBackwardWithMassa = tempKpBackwardWithMassa;
-        kiLinefollowerBackwardWithMassa = tempKiBackwardWithMassa;
-        kdLinefollowerBackwardWithMassa = tempKdBackwardWithMassa;
         lastLeftPress = currentMillis;
       }
     }
@@ -1846,31 +1863,23 @@ void handlePidBackwardDefaultSettings() {
       rightHoldStart = currentMillis;
       rightHolding = true;
       
-      // Single click - increment by 0.1
-      pidIncrement = 0.1f;
+      // Single click - increment by 0.01
+      pidIncrement = 0.01f;
       switch (selectedParam) {
         case 0: tempKpBackwardDefault += pidIncrement; break;
         case 1: tempKiBackwardDefault += pidIncrement; break;
         case 2: tempKdBackwardDefault += pidIncrement; break;
       }
-      // Update values in memory
-      kpLinefollowerBackwardDefault = tempKpBackwardDefault;
-      kiLinefollowerBackwardDefault = tempKiBackwardDefault;
-      kdLinefollowerBackwardDefault = tempKdBackwardDefault;
       lastRightPress = currentMillis;
     } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
-      // Button is being held - increment by 1.0 every 100ms
-      if (currentMillis - lastRightPress >= 100) {
-        pidIncrement = 1.0f;
+      // Button is being held - increment by 0.1 every 500ms
+      if (currentMillis - lastRightPress >= 500) {
+        pidIncrement = 0.1f;
         switch (selectedParam) {
           case 0: tempKpBackwardDefault += pidIncrement; break;
           case 1: tempKiBackwardDefault += pidIncrement; break;
           case 2: tempKdBackwardDefault += pidIncrement; break;
         }
-        // Update values in memory
-        kpLinefollowerBackwardDefault = tempKpBackwardDefault;
-        kiLinefollowerBackwardDefault = tempKiBackwardDefault;
-        kdLinefollowerBackwardDefault = tempKdBackwardDefault;
         lastRightPress = currentMillis;
       }
     }
@@ -1885,31 +1894,23 @@ void handlePidBackwardDefaultSettings() {
       leftHoldStart = currentMillis;
       leftHolding = true;
       
-      // Single click - decrement by 0.1
-      pidIncrement = 0.1f;
+      // Single click - decrement by 0.01
+      pidIncrement = 0.01f;
       switch (selectedParam) {
         case 0: tempKpBackwardDefault = max(0.0, tempKpBackwardDefault - pidIncrement); break;
         case 1: tempKiBackwardDefault = max(0.0, tempKiBackwardDefault - pidIncrement); break;
         case 2: tempKdBackwardDefault = max(0.0, tempKdBackwardDefault - pidIncrement); break;
       }
-      // Update values in memory
-      kpLinefollowerBackwardDefault = tempKpBackwardDefault;
-      kiLinefollowerBackwardDefault = tempKiBackwardDefault;
-      kdLinefollowerBackwardDefault = tempKdBackwardDefault;
       lastLeftPress = currentMillis;
     } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
-      // Button is being held - decrement by 1.0 every 100ms
-      if (currentMillis - lastLeftPress >= 100) {
-        pidIncrement = 1.0f;
+      // Button is being held - decrement by 0.1 every 500ms
+      if (currentMillis - lastLeftPress >= 500) {
+        pidIncrement = 0.1f;
         switch (selectedParam) {
           case 0: tempKpBackwardDefault = max(0.0, tempKpBackwardDefault - pidIncrement); break;
           case 1: tempKiBackwardDefault = max(0.0, tempKiBackwardDefault - pidIncrement); break;
           case 2: tempKdBackwardDefault = max(0.0, tempKdBackwardDefault - pidIncrement); break;
         }
-        // Update values in memory
-        kpLinefollowerBackwardDefault = tempKpBackwardDefault;
-        kiLinefollowerBackwardDefault = tempKiBackwardDefault;
-        kdLinefollowerBackwardDefault = tempKdBackwardDefault;
         lastLeftPress = currentMillis;
       }
     }
@@ -2473,12 +2474,6 @@ void handleMotorSettings() {
 
 void handleResetMenu() {
   if (START()) {
-    // Begin preferences session
-    preferences.begin("agv-settings", false);
-
-    // Clear all preferences
-    preferences.clear();
-
     // Reset PID values to defaults
     tempKp = 70.0;
     tempKi = 0.0;
@@ -2531,7 +2526,12 @@ void handleResetMenu() {
     tempMinSafeDistanceFront = 30;
     tempMinSafeDistanceBack = 20;  // Default safe distance
 
-    // Save default values
+    // Clear all preferences first before saving
+    preferences.begin("agv-settings", false);
+    preferences.clear();
+    preferences.end();
+
+    // Save default values (saveSettings will handle begin/end)
     saveSettings();
 
     // Clear RFID stations too
@@ -2545,8 +2545,6 @@ void handleResetMenu() {
     // Clear targetStationsList in memory
     targetStationsList.clear();
 
-    // End preferences session
-    preferences.end();
     currentMenu = MENU_MAIN;
     menuStartIndex = 0;  // Reset scroll position
     menuNeedsRefresh = true;
@@ -2982,15 +2980,49 @@ void displayRfidUjung() {
   lcd.print(MAX_RFID_UJUNG);
   lcd.print("        ");
   
-  lcd.setCursor(0, 2);
-  lcd.print("A:Scan B:View C:Del ");
+  // Tampilkan daftar RFID yang sudah tersimpan
+  if (rfidUjungCount > 0) {
+    lcd.setCursor(0, 2);
+    lcd.print("1:");
+    if (rfidUjungList[0].isActive) {
+      lcd.print(rfidUjungList[0].rfidId.substring(0, 17));
+    } else {
+      lcd.print("Empty           ");
+    }
+  } else {
+    lcd.setCursor(0, 2);
+    lcd.print("1:Empty             ");
+  }
   
-  lcd.setCursor(0, 3);
-  lcd.print("STOP:Back           ");
+  if (rfidUjungCount > 1) {
+    lcd.setCursor(0, 3);
+    lcd.print("2:");
+    if (rfidUjungList[1].isActive) {
+      lcd.print(rfidUjungList[1].rfidId.substring(0, 17));
+    } else {
+      lcd.print("Empty           ");
+    }
+  } else {
+    lcd.setCursor(0, 3);
+    lcd.print("2:Empty             ");
+  }
 }
 
 void handleRfidUjung() {
   if (START()) { // Scan RFID
+    // Cek apakah sudah penuh
+    if (rfidUjungCount >= MAX_RFID_UJUNG) {
+      lcd.setCursor(0, 1);
+      lcd.print("Storage Full!       ");
+      lcd.setCursor(0, 2);
+      lcd.print("Delete data first   ");
+      lcd.setCursor(0, 3);
+      lcd.print("STOP:Back           ");
+      delay(2000);
+      displayRfidUjung();
+      return;
+    }
+    
     lcd.setCursor(0, 1);
     lcd.print("Scanning RFID...    ");
     lcd.setCursor(0, 2);
@@ -3009,16 +3041,36 @@ void handleRfidUjung() {
         String rfidData = String(lastScannedRfidOptimized);
         newRfidScanned = false;
 
+        // Cek apakah RFID sudah ada di list
+        bool alreadyExists = false;
+        for (int i = 0; i < rfidUjungCount; i++) {
+          if (rfidUjungList[i].rfidId == rfidData) {
+            alreadyExists = true;
+            break;
+          }
+        }
         
-        // Hanya simpan 1 data - ganti data lama jika ada
-        rfidUjungList[0].ujungId = 1;
-        rfidUjungList[0].rfidId = rfidData;
-        rfidUjungList[0].isActive = true;
-        rfidUjungCount = 1;  // Selalu 1 data saja
+        if (alreadyExists) {
+          lcd.setCursor(0, 1);
+          lcd.print("RFID Already Exists!");
+          lcd.setCursor(0, 2);
+          lcd.print("                    ");
+          delay(2000);
+          displayRfidUjung();
+          return;
+        }
+        
+        // Simpan RFID baru
+        rfidUjungList[rfidUjungCount].ujungId = rfidUjungCount + 1;
+        rfidUjungList[rfidUjungCount].rfidId = rfidData;
+        rfidUjungList[rfidUjungCount].isActive = true;
+        rfidUjungCount++;
         saveRfidUjungToPreferences();
         
-        // Sinkronisasi dengan ujungRfidId untuk logika AGV
-        saveUjungRfid(rfidData);
+        // Sinkronisasi dengan ujungRfidId untuk logika AGV (simpan RFID pertama)
+        if (rfidUjungCount == 1) {
+          saveUjungRfid(rfidData);
+        }
         
         lcd.setCursor(0, 1);
         lcd.print("RFID Saved!         ");
@@ -3059,11 +3111,12 @@ void handleRfidUjung() {
       lcd.print("]             ");
       
       lcd.setCursor(0, 2);
-      lcd.print(rfidUjungList[viewIndex].rfidId.substring(0, 16));
-      lcd.print("    ");
+      lcd.print("ID: ");
+      lcd.print(rfidUjungList[viewIndex].ujungId);
+      lcd.print("              ");
       
       lcd.setCursor(0, 3);
-      lcd.print("^v:Nav STOP:Back    ");
+      lcd.print(rfidUjungList[viewIndex].rfidId.substring(0, 20));
       
       if (UP() && viewIndex > 0) {
         viewIndex--;
@@ -3078,27 +3131,90 @@ void handleRfidUjung() {
       delay(50);
     }
     
-  } else if (RIGHT()) { // Delete all
-    displayMenuHeader("Delete All Ujung");
+  } else if (RIGHT()) { // Delete menu
+    displayMenuHeader("Delete RFID Ujung");
     lcd.setCursor(0, 1);
-    lcd.print("Are you sure?       ");
+    lcd.print("A:Del1 B:Del2 C:All ");
     lcd.setCursor(0, 2);
-    lcd.print("A:Yes B:No          ");
+    lcd.print("STOP:Back           ");
     
     while (true) {
-      if (START()) {
-        rfidUjungCount = 0;
+      if (START()) { // Delete RFID 1
+        if (rfidUjungCount < 1) {
+          lcd.setCursor(0, 1);
+          lcd.print("No Data at Index 1  ");
+          delay(1500);
+          displayRfidUjung();
+          return;
+        }
+        
+        // Shift data jika ada RFID ke-2
+        if (rfidUjungCount == 2) {
+          rfidUjungList[0] = rfidUjungList[1];
+          rfidUjungList[0].ujungId = 1;
+        }
+        rfidUjungCount--;
         saveRfidUjungToPreferences();
         
-        // Hapus juga ujungRfidId dari logika AGV
-        saveUjungRfid("");
+        // Update ujungRfidId
+        if (rfidUjungCount > 0) {
+          saveUjungRfid(rfidUjungList[0].rfidId);
+        } else {
+          saveUjungRfid("");
+        }
         
         lcd.setCursor(0, 1);
-        lcd.print("All Data Deleted!   ");
-        delay(2000);
+        lcd.print("RFID 1 Deleted!     ");
+        delay(1500);
         displayRfidUjung();
         return;
-      } else if (LEFT() || STOP()) {
+        
+      } else if (LEFT()) { // Delete RFID 2
+        if (rfidUjungCount < 2) {
+          lcd.setCursor(0, 1);
+          lcd.print("No Data at Index 2  ");
+          delay(1500);
+          displayRfidUjung();
+          return;
+        }
+        
+        rfidUjungCount--;
+        saveRfidUjungToPreferences();
+        
+        lcd.setCursor(0, 1);
+        lcd.print("RFID 2 Deleted!     ");
+        delay(1500);
+        displayRfidUjung();
+        return;
+        
+      } else if (RIGHT()) { // Delete All
+        displayMenuHeader("Delete All Ujung");
+        lcd.setCursor(0, 1);
+        lcd.print("Are you sure?       ");
+        lcd.setCursor(0, 2);
+        lcd.print("A:Yes B:No          ");
+        
+        while (true) {
+          if (START()) {
+            rfidUjungCount = 0;
+            saveRfidUjungToPreferences();
+            
+            // Hapus juga ujungRfidId dari logika AGV
+            saveUjungRfid("");
+            
+            lcd.setCursor(0, 1);
+            lcd.print("All Data Deleted!   ");
+            delay(2000);
+            displayRfidUjung();
+            return;
+          } else if (LEFT() || STOP()) {
+            displayRfidUjung();
+            return;
+          }
+          delay(50);
+        }
+        
+      } else if (STOP()) {
         displayRfidUjung();
         return;
       }

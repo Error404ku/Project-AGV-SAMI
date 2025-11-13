@@ -52,8 +52,10 @@ void loop() {
   static bool showingStopMessage = false;
   static unsigned long stopMessageStartTime = 0;
   static bool lastStopState = false;
+  static bool exitRequested = false; // Flag to track exit request
   const unsigned long doubleClickInterval = 2000; // 2 seconds
   const unsigned long messageDisplayTime = 2000; // 2 seconds to show message
+  const unsigned long exitMessageTime = 1500; // 1.5 seconds for exit message
   
   // Only proceed with normal operations if system is ready
   if (!systemReadyToRun) {
@@ -141,16 +143,43 @@ void loop() {
     
     // Handle stop message display timing - show for full 2 seconds
     if (showingStopMessage) {
-      if (millis() - stopMessageStartTime >= messageDisplayTime) {
+      unsigned long elapsed = millis() - stopMessageStartTime;
+      unsigned long displayDuration = exitRequested ? exitMessageTime : messageDisplayTime;
+      
+      if (elapsed >= displayDuration) {
         showingStopMessage = false;
         lcd.clear();
+        
+        // If exit was requested, perform exit now
+        if (exitRequested) {
+          agvMode(AGV_STATE_STOP);
+          isAgvMode = false;
+          resetDisplayFlags();
+          newRfidScanned = false;
+          agvStopCalled = false;
+          buttonStep = 0;
+          
+          // Reset all double click variables
+          firstStopClick = false;
+          firstStopTime = 0;
+          lastStopState = false;
+          exitRequested = false;
+          
+          return; // Exit AGV mode immediately
+        }
+        
         resetDisplayRequested = true;
       }
       // Continue normal loop execution while showing message
+      // If exit requested, ignore STOP button completely
+      if (exitRequested) {
+        lastStopState = currentStopState; // Update state to prevent false triggers
+        return; // Skip all button processing
+      }
     }
     
-    // Detect button press (rising edge)
-    if (currentStopState && !lastStopState) {
+    // Detect button press (rising edge) - only if not exiting
+    if (currentStopState && !lastStopState && !exitRequested) {
       unsigned long currentTime = millis();
       
       if (!firstStopClick) {
@@ -172,43 +201,19 @@ void loop() {
       } else {
         // Check if second click is within interval
         if (currentTime - firstStopTime <= doubleClickInterval) {
-          // Valid double click - exit AGV mode
+          // Valid double click - show exit message first
           lcd.clear();
           lcd.setCursor(0, 0);
           lcd.print("Exiting AGV Mode");
           lcd.setCursor(0, 1);
           lcd.print("Please wait...");
-          delay(1500); // Show exit message
           
-          agvMode(AGV_STATE_STOP);
-          isAgvMode = false;
-          resetDisplayFlags();
-          newRfidScanned = false;
-          agvStopCalled = false;
-          buttonStep = 0;
-          
-          // Reset all double click variables
-          firstStopClick = false;
-          firstStopTime = 0;
-          showingStopMessage = false;
-          lastStopState = false;
-          
-          return; // Exit AGV mode immediately
-        } else {
-          // Second click too late, treat as new first click
-          firstStopClick = true;
-          firstStopTime = currentTime;
-          
-          // Show message on LCD
-          lcd.clear();
-          lcd.setCursor(0, 0);
-          lcd.print("STOP 1x detected");
-          lcd.setCursor(0, 1);
-          lcd.print("Click again to exit");
-          
-          // Start message display timer
+          // Set flag to show message for 1500ms before exiting
           showingStopMessage = true;
+          firstStopClick = false; // Prevent re-triggering
           stopMessageStartTime = currentTime;
+          exitRequested = true; // Mark for exit after message display
+          
         }
       }
     }
