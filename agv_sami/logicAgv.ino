@@ -148,7 +148,6 @@ void agvTerminalDrop() {
   static int dropProcessStep = 0; 
   saveCurrentStateAGVToPreferences(AGV_STATE_TERMINAL_DROP);
   modeDisplayTerminalDrop();
-  static unsigned long lastStopTime = 0;
   static unsigned long currentTime = millis();
   music(MUSIC_MODE_ON);
   switch (dropProcessStep) {
@@ -213,7 +212,7 @@ void agvTerminalPickup() {
       stopCalledPickup = false;
       softStartTime = millis();
       softStartActive = true;
-      pidSpeed = baseSpeed / 2;  // 🔧 FIX #2: 50% initial speed (was 25%)
+      pidSpeed = maxMotorRpm / 2;  // 🔧 FIX #2: 50% initial speed (was 25%, was baseSpeed)
       agvMode(AGV_STATE_MOVE_FORWARD);
     }
   }

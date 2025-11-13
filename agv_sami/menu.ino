@@ -2174,7 +2174,7 @@ void handleTargetSettings() {
         lcd.clear();
         lcd.setCursor(0, 1);
         lcd.print("Stations cleared!");
-        Delay(1500);  // Use safe delay with watchdog reset
+        delay(1500);
 
         // Reset state
         isClearingStations = false;
