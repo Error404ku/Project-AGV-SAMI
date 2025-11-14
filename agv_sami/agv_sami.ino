@@ -66,7 +66,7 @@ void loop() {
   loopWifi();  // Handle WiFi connection monitoring
   
   // Rate-limited sensor readings to reduce delays
-  if (shouldReadRfid()) {
+  if (checkRateLimit(lastRfidRead, RFID_READ_INTERVAL_MS)) {
     loopRfid();  // Handle RFID scanning
   }
 
@@ -76,7 +76,7 @@ void loop() {
     // esp_task_wdt_reset();
     
     // Original sensor reading
-    if (shouldReadUltrasonic()) {
+    if (checkRateLimit(lastUltrasonicRead, ULTRASONIC_READ_INTERVAL_MS)) {
       loopUltrasonik();
     }
     

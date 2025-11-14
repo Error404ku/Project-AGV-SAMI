@@ -128,8 +128,6 @@ void resetPerformanceStats() {
 // Replace String operations with char arrays for better performance
 char statusJalanOptimized[16] = "BERHENTI";
 char currentModeOptimized[16] = "WAREHOUSE";
-char lastScannedRfidOptimized[32] = ""; // Optimized RFID storage
-bool newRfidScanned = false; // Flag untuk RFID baru yang terbaca
 
 void setStatusJalan(const char* status) {
   strncpy(statusJalanOptimized, status, sizeof(statusJalanOptimized) - 1);
@@ -215,8 +213,8 @@ bool attemptErrorRecovery(int errorCode) {
       return recoverMotorControl();
 
     case 3: // ERROR_RFID_COMMUNICATION
-      // Reinitialize RFID
-      return recoverRfidCommunication();
+      // Reinitialize RFID (function commented out)
+      return false; // recoverRfidCommunication();
 
     case 4: // ERROR_WIFI_CONNECTION
       // Attempt WiFi reconnection

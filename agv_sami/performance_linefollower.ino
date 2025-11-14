@@ -4,35 +4,13 @@
 
 #include "performance_linefollower.h"
 
-// Rate limiting functions
-bool shouldReadMagnet() {
+// Helper function untuk rate limiting
+bool checkRateLimit(unsigned long& lastReadTime, unsigned long interval) {
     if (!enableSensorRateLimiting) return true;
     
     unsigned long currentTime = millis();
-    if (currentTime - lastMagnetRead >= MAGNET_READ_INTERVAL_MS) {
-        lastMagnetRead = currentTime;
-        return true;
-    }
-    return false;
-}
-
-bool shouldReadUltrasonic() {
-    if (!enableSensorRateLimiting) return true;
-    
-    unsigned long currentTime = millis();
-    if (currentTime - lastUltrasonicRead >= ULTRASONIC_READ_INTERVAL_MS) {
-        lastUltrasonicRead = currentTime;
-        return true;
-    }
-    return false;
-}
-
-bool shouldReadRfid() {
-    if (!enableSensorRateLimiting) return true;
-    
-    unsigned long currentTime = millis();
-    if (currentTime - lastRfidRead >= RFID_READ_INTERVAL_MS) {
-        lastRfidRead = currentTime;
+    if (currentTime - lastReadTime >= interval) {
+        lastReadTime = currentTime;
         return true;
     }
     return false;
@@ -43,9 +21,4 @@ void resetSensorTimers() {
     lastMagnetRead = currentTime;
     lastUltrasonicRead = currentTime;
     lastRfidRead = currentTime;
-}
-
-// Function to toggle rate limiting
-void setRateLimiting(bool enabled) {
-    enableSensorRateLimiting = enabled;
 }

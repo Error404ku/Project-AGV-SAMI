@@ -1,6 +1,3 @@
-// Global flag untuk mereset display
-bool resetDisplayRequested = false;
-
 // Fungsi untuk mereset semua flag display
 void resetDisplayFlags() {
   resetDisplayRequested = true;
@@ -35,18 +32,9 @@ void displayPrint() {
   }
 }
 
-struct ScrollState {
-  String currentMessage;
-  String paddedMessage;
-  int scrollPos = 0;
-  unsigned long lastScrollTime = 0;
-};
-ScrollState scrollLine0;
-ScrollState scrollLine1;
-
 void scrollText(int row, String message, int delayTime) {
-  unsigned long lastScrollTime = 0;
-  int scrollPos = 0;
+  static unsigned long lastScrollTime = 0;
+  static int scrollPos = 0;
   // Inisialisasi ulang posisi scroll dan waktu jika pesan berubah atau fungsi dipanggil pertama kali
   static String currentMessage = "";
   if (message != currentMessage) {
@@ -96,11 +84,6 @@ void modeDisplayMoveForward() {
   displaySensorData();
 }
 
-/*
- * Hapus fungsi scrollText() Anda yang lama.
- * Ganti fungsi modeDisplayTerminalPickup() dengan yang ini.
- * Fungsi ini menerima parameter 'hookIsUp' untuk menentukan teks yang ditampilkan.
-*/
 void modeDisplayTerminalPickup(bool hookIsUp) {
   static bool lastHookIsUp = false;
   static AgvState lastCurrentStateAgv = AGV_STATE_STOP;

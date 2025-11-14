@@ -6,8 +6,6 @@
  *  WAREHOUSE & UJUNG RFID FUNCTIONS                     *
  ***********************************************************/
 
-
-
 void loadWarehouseUjungRfid() {
   preferences.begin("warehouse-ujung", false);
   warehouseRfidId = preferences.getString("warehouseRfid", "");

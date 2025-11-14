@@ -19,9 +19,7 @@ static unsigned long lastRfidRead = 0;
 static bool enableSensorRateLimiting = true;
 
 // Function prototypes
-bool shouldReadMagnet();
-bool shouldReadUltrasonic();
-bool shouldReadRfid();
+bool checkRateLimit(unsigned long& lastReadTime, unsigned long interval);
 void resetSensorTimers();
 
 #endif
