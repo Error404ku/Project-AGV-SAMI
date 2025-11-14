@@ -4,28 +4,42 @@
 // extern bool modeMundur; // Removed - not used
 
 void setup() {
+  Serial.begin(115200);
   setupPreferences();
   setuplamp();
   setupMusic();
   setupDisplay();
-  setupMenu();  // Initialize menu system
+  setupMenu();
+  Serial.println("Menu System Ready");  // Initialize menu system
 
   // Setup RS485 communication for both Serial1 and Serial2
   setupRS485(BAUDRATE);        // Serial1 untuk sensor magnet
+  Serial.println("RS485 Serial1 Ready");
   setupRS485_Serial2(BAUDRATE); // Serial2 untuk sensor ultrasonik
+  Serial.println("RS485 Serial2 Ready");
   
-  setupSensorMagnet(SLAVEID_MAGNET_DEPAN);  
+  setupSensorMagnet(SLAVEID_MAGNET_DEPAN);
+  Serial.println("Magnet Sensor Ready");  
   setupSensorUltrasonic(SLAVEID_ULTRASONIK_DEPAN);
+  Serial.println("Ultrasonic Sensor Ready");
   
   setupHook();  // setupBuzzer();
+  Serial.println("Hook Ready");
   setupWifi();  // Setup WiFi configuration
+  Serial.println("WiFi Ready");
   
   startWifiConnection();  // Auto-start WiFi connection
+  Serial.println("WiFi Connection Started");
   setupWebServer();  // Setup Web Server - CRITICAL for HTTP access
+  Serial.println("Web Server Ready");
   setupTombol();
+  Serial.println("Tombol Ready");
   setupRfid();
+  Serial.println("RFID Ready");
   resetSensorTimers(); 
+  Serial.println("Sensor Timers Reset");
   setupMotor();  // Setup motor serial communication
+  Serial.println("Motor Ready");
   
   // Show message that AGV System is now ready
   lcd.clear();
@@ -49,34 +63,43 @@ void loop() {
   const unsigned long messageDisplayTime = 2000; // 2 seconds to show message
   const unsigned long exitMessageTime = 1500; // 1.5 seconds for exit message
   
-  // Only proceed with normal operations if system is ready
-  if (!systemReadyToRun) {
+  // ===== SYSTEM READY CHECK - ONLY AT STARTUP =====
+  // Only block loop at startup, NOT during AGV operation
+  static bool initialStartupComplete = false;
+  if (!initialStartupComplete && !systemReadyToRun) {
     // Keep trying to get PID data if not received yet
     handleMotorControllerSerial();
     if (!checkSystemReadyStatus()) {
       delay(100);
-      return; // Don't proceed with normal loop until ready
+      return; // Don't proceed with normal loop until initial startup ready
     }
+    initialStartupComplete = true; // Mark that initial startup is complete
   }
   
-  // Handle incoming serial data from motor controller
-  handleMotorControllerSerial();
+  // ===== OPTIMIZED LOOP ORDER - PRIORITY-BASED =====
+  // PRIORITY 1: Critical Path - Line Following & Motor Control
+  loopMagneticSensor();           // Magnet sensor (CRITICAL for line following)
+  handleMotorControllerSerial();  // Motor control communication
   
-  server.handleClient();
-  loopWifi();  // Handle WiFi connection monitoring
+  // PRIORITY 2: Navigation & Safety
+  loopRfid();        // RFID position tracking (CRITICAL - no rate limit)
+  loopUltrasonik();  // Obstacle detection (already has internal 100ms rate limit)
   
-  // Rate-limited sensor readings to reduce delays
-  loopRfid();  // Handle RFID scanning
+  // PRIORITY 3: Network Tasks - Rate Limited to 20ms (50Hz)
+  static unsigned long lastNetwork = 0;
+  if (millis() - lastNetwork > 20) {
+    server.handleClient();
+    loopWifi();
+    lastNetwork = millis();
+  }
 
   if (isAgvMode) {
     
     // Reset watchdog sebelum operasi sensor
     // esp_task_wdt_reset();
     
-    // Original sensor reading
-    loopUltrasonik();
-    
-    loopMagneticSensor();
+    // Sensor readings moved to main loop for better priority management
+    // loopUltrasonik() and loopMagneticSensor() now called at top of loop
     
     lamp_flip_flop();
     

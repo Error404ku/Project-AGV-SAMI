@@ -89,14 +89,7 @@ void setupDisplay() {
 
   delay(100);
 
-  // I2C address scanner disabled for production
-  byte count = 0;
-  for (byte i = 8; i < 120; i++) {
-    Wire.beginTransmission(i);
-    if (Wire.endTransmission() == 0) {
-      count++;
-    }
-  }
+  Wire.beginTransmission(LCD_ADDRESS);
 
   // Initialize LCD with error handling
   lcd.begin(LCD_COLUMNS, LCD_ROWS);
@@ -140,7 +133,32 @@ void setupWebServer() {
 
 void setupUltrasonikWithParams(int slaveId) {
   // Initialize ultrasonic sensor with ModbusMaster (Serial2)
-  setupSensorUltrasonic(slaveId);
+  Serial.print("[SETUP] setupUltrasonikWithParams called with slaveId: ");
+  Serial.println(slaveId);
+  
+  // Check if Serial2 is available
+  if (!Serial2) {
+    Serial.println("[ERROR] Serial2 not available for ultrasonic sensor");
+    return;
+  }
+
+  Serial.println("[SETUP] Initializing ultrasonic node...");
+  ultrasonicNode.begin(slaveId, Serial2);
+  ultrasonicNode.preTransmission(preTransmissionUltrasonic);
+  ultrasonicNode.postTransmission(postTransmissionUltrasonic);
+
+  Serial.println("[SETUP] Setting ultrasonic slave ID...");
+  setUltrasonicSlaveId(slaveId);
+
+  // Test communication
+  Serial.println("[SETUP] Testing ultrasonic communication...");
+  uint8_t testResult = ultrasonicNode.readHoldingRegisters(0x0000, 5);
+  if (testResult == ultrasonicNode.ku8MBSuccess) {
+    Serial.println("[OK] Ultrasonic sensor communication successful");
+  } else {
+    Serial.print("[WARNING] Ultrasonic sensor communication failed, error code: ");
+    Serial.println(testResult);
+  }
 }
 
 void setupRS485(int baudrate) {
@@ -161,7 +179,8 @@ void setupRS485(int baudrate) {
 }
 
 void setupRS485_Serial2(int baudrate) {
-  // Serial debug removed for production
+  Serial.print("[SETUP] Initializing RS485 Serial2 with baudrate: ");
+  Serial.println(baudrate);
 
   // Initialize Serial2 for RS485 communication (Ultrasonic sensors)
   Serial2.begin(baudrate, SERIAL_8N1, RS485_RX2, RS485_TX2);
@@ -178,73 +197,54 @@ void setupRS485_Serial2(int baudrate) {
   delay(100);
 
   if (Serial2) {
-    // Serial debug removed for production
+    Serial.println("[OK] Serial2 initialized successfully");
   } else {
-    // Serial debug removed for production
+    Serial.println("[ERROR] Serial2 initialization failed!");
   }
 
-  // Serial debug removed for production
+  Serial.println("[SETUP] RS485 Serial2 setup complete");
 }
 
 void setupSensorMagnet(int slaveId) {
+  Serial.print("[SETUP] setupSensorMagnet called with slaveId: ");
+  Serial.println(slaveId);
+  
   // Check if Serial1 is available
   if (!Serial1) {
-    // Serial debug removed for production
+    Serial.println("[ERROR] Serial1 not available for magnet sensor");
     return;
   }
 
-  // Serial debug removed for production
+  Serial.println("[SETUP] Initializing magnet node...");
   magnetNode.begin(slaveId, Serial1);
   magnetNode.preTransmission(preTransmissionMagnet);
   magnetNode.postTransmission(postTransmissionMagnet);
 
-  // Serial debug removed for production
+  Serial.println("[SETUP] Setting magnet slave ID...");
   setMagnetSlaveId(slaveId);
 
   // Test communication
-  // Serial debug removed for production
+  Serial.println("[SETUP] Testing magnet sensor communication...");
   uint8_t testResult = magnetNode.readHoldingRegisters(0x0000, 2);
   if (testResult == magnetNode.ku8MBSuccess) {
-    // Serial debug removed for production
+    Serial.println("[OK] Magnet sensor communication successful");
   } else {
-    // Serial debug removed for production
+    Serial.print("[WARNING] Magnet sensor communication failed, error code: ");
+    Serial.println(testResult);
   }
 
-  // Serial debug removed for production
+  Serial.println("[SETUP] Magnet sensor setup complete");
 }
 
 void setupSensorUltrasonic(int slaveId) {
-  // Serial debug removed for production
+  Serial.print("[SETUP] setupSensorUltrasonic called with slaveId: ");
+  Serial.println(slaveId);
 
-  // Check if Serial2 is available
-  if (!Serial2) {
-    // Serial debug removed for production
-    return;
-  }
-
-  // Serial debug removed for production
-  ultrasonicNode.begin(slaveId, Serial2);// Slave ID untuk sensor ultrasonik (Serial2)
-  ultrasonicNode.preTransmission(preTransmissionUltrasonic);
-  ultrasonicNode.postTransmission(postTransmissionUltrasonic);
-
-  // Serial debug removed for production
-  setUltrasonicSlaveId(slaveId);
-
-  // Test communication
-  // Serial debug removed for production
-  uint8_t testResult = ultrasonicNode.readHoldingRegisters(0x0000, 5);
-  if (testResult == ultrasonicNode.ku8MBSuccess) {
-    // Serial debug removed for production
-  } else {
-    // Serial debug removed for production
-  }
-
-  static bool ultrasonicSensorInitialized = false;
-  if (!ultrasonicSensorInitialized) {
-    setupUltrasonikWithParams(SLAVEID_ULTRASONIK_DEPAN);
-    ultrasonicSensorInitialized = true;
-  }
-  // Serial debug removed for production
+  // REMOVED INFINITE RECURSION BUG!
+  // The recursive call to setupUltrasonikWithParams was causing stack overflow
+  // Now setupUltrasonikWithParams handles the actual initialization
+  
+  Serial.println("[SETUP] Ultrasonic sensor setup delegated to setupUltrasonikWithParams");
 }
 
 
@@ -348,7 +348,21 @@ void setupMenu() {
   
   Serial.println("=== SETTINGS LOADED ===\n");
 
-  // Load RFID stations
+}
+
+void setupTombol() {
+  pinMode(upPin, INPUT_PULLDOWN);     // UP - active HIGH
+  pinMode(downPin, INPUT_PULLDOWN);   // DOWN - active HIGH
+  pinMode(leftPin, INPUT_PULLDOWN);   // LEFT - active HIGH
+  pinMode(rightPin, INPUT_PULLDOWN);  // RIGHT - active HIGH
+  pinMode(startPin, INPUT_PULLDOWN);  // START - active HIGH
+  pinMode(stopPin, INPUT_PULLDOWN);   // STOP - active HIGH
+}
+
+void setupPreferences(){
+  loadAllAGVStatesFromPreferences();
+  loadTargetStationsListFromPreferences();
+    // Load RFID stations
   loadRfidStations();
   
   // Load RFID Ujung and Warehouse data
@@ -366,19 +380,5 @@ void setupMenu() {
   loadExceptErrorFlag();
 
   // Load stations list from HTTP preferences
-  loadTargetStationsListFromPreferences();
-}
-
-void setupTombol() {
-  pinMode(upPin, INPUT_PULLDOWN);     // UP - active HIGH
-  pinMode(downPin, INPUT_PULLDOWN);   // DOWN - active HIGH
-  pinMode(leftPin, INPUT_PULLDOWN);   // LEFT - active HIGH
-  pinMode(rightPin, INPUT_PULLDOWN);  // RIGHT - active HIGH
-  pinMode(startPin, INPUT_PULLDOWN);  // START - active HIGH
-  pinMode(stopPin, INPUT_PULLDOWN);   // STOP - active HIGH
-}
-
-void setupPreferences(){
-  loadAllAGVStatesFromPreferences();
   loadTargetStationsListFromPreferences();
 }

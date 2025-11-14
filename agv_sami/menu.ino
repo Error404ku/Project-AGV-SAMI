@@ -627,7 +627,7 @@ void handleMenu() {
       break;
 
     case MENU_MOTOR_TEST_RPM:
-      requestRpmDataFromSlave();
+      // requestRpmDataFromSlave();
       displayMotorTestRPM();
       handleMotorTestRPM();
       break;
@@ -1071,12 +1071,10 @@ void displayMotorTestRPM() {
 }
 
 void handleMotorTestRPM() {
-  // Request RPM data from slave periodically
-  unsigned long currentTime = millis();
-  if (currentTime - lastRpmRequestTime >= RPM_REQUEST_INTERVAL) {
+  // // Request RPM data from slave periodically
+
     requestRpmDataFromSlave();  // Request current RPM values
-    lastRpmRequestTime = currentTime;
-  }
+
   
   if (UP()) {
     motorTestState = 1;  // Set to forward
@@ -1412,7 +1410,7 @@ void handlePidForwardDefaultSettings() {
   };
   
   // Use reusable button handler (0.01 increment, 0.1 hold, 500ms interval)
-  handlePidButtonAdjustment(pidValues, selectedParam, 0.01f, 0.1f, 500);
+  handlePidButtonAdjustment(pidValues, selectedParam, 0.01f, 0.1f, 200);
 
   // Handle back button
   if (STOP()) {

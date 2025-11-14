@@ -295,6 +295,9 @@ const int MAX_RFID_WAREHOUSE = 1;
 // PID Configuration
 const int numOutputs = 10;
 
+  static bool needsSoftStart = true;
+
+
 // ===================================================================
 //                          DATA STRUCTURES
 // ===================================================================

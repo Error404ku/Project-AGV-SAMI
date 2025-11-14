@@ -41,9 +41,10 @@ void loopMagneticSensor() {
   int sensorIndex = (currentMagnetSlaveId == SLAVEID_MAGNET_DEPAN) ? 0 : 1;
   unsigned long currentMillis = millis();
   
-  // Exponential backoff for failed reads
+  // OPTIMIZED: Reduced backoff for faster recovery (200ms→50ms max)
+  // Pattern: 10ms, 20ms, 30ms, 40ms, 50ms... (safer for line following)
   if (consecutiveFailures[sensorIndex] > 0) {
-    unsigned long backoffDelay = min(200, (1 << consecutiveFailures[sensorIndex]) * 50);
+    unsigned long backoffDelay = min(50, 10 * consecutiveFailures[sensorIndex]);
     if (currentMillis - lastRetryTime[sensorIndex] < backoffDelay) {
       return;  // Skip this cycle for backoff
     }

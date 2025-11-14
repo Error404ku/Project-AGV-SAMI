@@ -254,16 +254,12 @@ void processMotorControllerMessage(String message) {
       Serial.println("Received Left Motor PID: Kp=" + String(kp) + " Ki=" + String(ki) + " Kd=" + String(kd));
     }
   } else if (message.startsWith("RPMSHOW:")) {
-    String rpmData = message.substring(8); // Remove "RPMSHOW:"
-    
-    int commaPos = rpmData.indexOf(',');
-    if (commaPos > 0) {
-      int rpmKanan = rpmData.substring(0, commaPos).toInt();
-      int rpmKiri = rpmData.substring(commaPos + 1).toInt();
-      
+    // OPTIMIZED: Direct sscanf parsing - no String allocation
+    float rpmKanan, rpmKiri;
+    if (sscanf(message.c_str() + 8, "%f,%f", &rpmKanan, &rpmKiri) == 2) {
       // Update current RPM values
-      currentRpmKanan = rpmKanan;
-      currentRpmKiri = rpmKiri;
+      currentRpmKanan = (int)rpmKanan;
+      currentRpmKiri = (int)rpmKiri;
     }
   } else if (message.startsWith("PIDRIGHT_SAVED:")) {
     // Handle PID Right Motor save confirmation

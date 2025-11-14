@@ -96,6 +96,7 @@ void agvWarehouse() {
   }else{
     stopCalledPickup = false; // Reset flag for next use
     updatestations = false;
+    needsSoftStart = true;
     agvMode(AGV_STATE_MOVE_FORWARD);
     trigger = false;
     return;
@@ -128,9 +129,11 @@ void agvStation() {
     // Check if there are still stations in the list
     if (targetStationsList.size() == 0) {
       // No more stations left
+      needsSoftStart = true;
       agvMode(AGV_STATE_MOVE_FORWARD);
     } else {
       // Still stations left, continue moving forward
+      needsSoftStart = true;
       agvMode(AGV_STATE_MOVE_FORWARD);
     }
     trigger = false; // Reset trigger
@@ -160,6 +163,7 @@ void agvTerminalDrop() {
       break;
     case 2: 
       dropProcessStep = 0; 
+      needsSoftStart = true;
       agvMode(AGV_STATE_MOVE_FORWARD);
       break;
   }
@@ -199,6 +203,7 @@ void agvTerminalPickup() {
     if (START()) {
       lastReadTime = currentTime;
       stopCalledPickup = false;
+      needsSoftStart = true;
       agvMode(AGV_STATE_MOVE_FORWARD);
     }
   }
@@ -214,13 +219,12 @@ void agvStop() {
 // Function to handle AGV logic when moving forward
 void agvMoveForward() {
   // Initialize soft start on first entry to MOVE_FORWARD state
-  static bool needsSoftStart = true;
-  if (needsSoftStart) {
-    softStartTime = millis();
-    softStartActive = true;
-    pidSpeed = maxMotorRpm / 2;
-    needsSoftStart = false;
-  }
+  // if (needsSoftStart) {
+  //   softStartTime = millis();
+  //   softStartActive = true;
+  //   pidSpeed = maxMotorRpm / 2;
+  //   needsSoftStart = false;
+  // }
   
   saveCurrentStateAGVToPreferences(AGV_STATE_MOVE_FORWARD);
   checkObstacles();
@@ -260,7 +264,7 @@ void agvMoveForward() {
       exceptErrorPosition = false;
       saveExceptErrorFlag();
       currentRFID = AGV_STATE_TERMINAL_PICKUP;
-      needsSoftStart = true;
+      
       agvMode(AGV_STATE_TERMINAL_PICKUP);
       return;
     // Check Warehouse RFID and Current State isn't Warehouse
@@ -270,14 +274,14 @@ void agvMoveForward() {
       exceptErrorPosition = true;
       saveExceptErrorFlag();
       currentRFID = AGV_STATE_WAREHOUSE;
-      needsSoftStart = true;
+      
       agvMode(AGV_STATE_WAREHOUSE);
       return;
     // Check Terminal Drop RFID and Current State isn't Terminal Drop
     } else  if (strcmp(currentRfid, terminalDropRfidId.c_str()) == 0 && currentRFID != AGV_STATE_TERMINAL_DROP) {
       newRfidScanned = false; // Reset flag
       currentRFID = AGV_STATE_TERMINAL_DROP;
-      needsSoftStart = true;
+      
       agvMode(AGV_STATE_TERMINAL_DROP);
       return;
     // Check RFID for station with exceptErrorPosition handling
@@ -303,7 +307,7 @@ void agvMoveForward() {
       if (targetStationsList[i] == currentStation) {
         removeTargetStationById(currentStation);
         stopMusic();
-        needsSoftStart = true;
+        
         agvMode(AGV_STATE_STATION);
         return;
       }

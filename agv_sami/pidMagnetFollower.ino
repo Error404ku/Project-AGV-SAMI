@@ -124,8 +124,10 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
                                minintegral, maxintegral);
   
   // === PHASE 10: Apply Motor Commands ===
-  int rpmKiri = constrain(pidSpeed + (int)koreksi, -90, 90);
-  int rpmKanan = constrain(pidSpeed - (int)koreksi, -90, 90);
+  // int rpmKiri = constrain(pidSpeed + (int)koreksi, -90, 90);
+  // int rpmKanan = constrain(pidSpeed - (int)koreksi, -90, 90);
+  int rpmKiri = constrain((int)koreksi, -90, 90);
+  int rpmKanan = constrain(- (int)koreksi, -90, 90);
   
   switch (mode) {
     case PID_MODE_MAJU:
