@@ -1,10 +1,6 @@
-extern int totalSensorAktif;  // counter sensor aktif
 // ===================================================================
 // RFID TERMINAL VARIABLES SUDAH DIPINDAHKAN KE config.h
 // ===================================================================
-
-
-
 
 /***********************************************************
  *  WAREHOUSE & UJUNG RFID FUNCTIONS                     *
@@ -16,23 +12,17 @@ void loadWarehouseUjungRfid() {
   preferences.begin("warehouse-ujung", false);
   warehouseRfidId = preferences.getString("warehouseRfid", "");
   ujungRfidId = preferences.getString("ujungRfid", "");
-
   preferences.end();
-  
   // Sinkronisasi dengan data dari rfidWarehouseList dan rfidUjungList
   if (warehouseRfidId.length() == 0 && rfidWarehouseCount > 0 && rfidWarehouseList[0].isActive) {
     warehouseRfidId = rfidWarehouseList[0].rfidId;
     saveWarehouseRfid(warehouseRfidId);
   }
-  
+
   if (ujungRfidId.length() == 0 && rfidUjungCount > 0 && rfidUjungList[0].isActive) {
     ujungRfidId = rfidUjungList[0].rfidId;
     saveUjungRfid(ujungRfidId);
   }
-  
-  // Serial.println() - removed for production
-  // Serial.println() - removed for production
-
 }
 
 void saveWarehouseRfid(String rfidId) {
@@ -40,7 +30,6 @@ void saveWarehouseRfid(String rfidId) {
   preferences.putString("warehouseRfid", rfidId);
   preferences.end();
   warehouseRfidId = rfidId;
-  // Serial.println() - removed for production
 }
 
 void saveUjungRfid(String rfidId) {
@@ -48,7 +37,6 @@ void saveUjungRfid(String rfidId) {
   preferences.putString("ujungRfid", rfidId);
   preferences.end();
   ujungRfidId = rfidId;
-  // Serial.println() - removed for production
 }
 
 
@@ -61,9 +49,6 @@ void loadTerminalRfid() {
   terminalDropRfidId = preferences.getString("terminalDrop", "");
   terminalPickUpRfidId = preferences.getString("terminalPickUp", "");
   preferences.end();
-  
-  // Serial.println() - removed for production
-  // Serial.println() - removed for production
 }
 
 void saveTerminalDropRfid(String rfidId) {
@@ -71,7 +56,6 @@ void saveTerminalDropRfid(String rfidId) {
   preferences.putString("terminalDrop", rfidId);
   preferences.end();
   terminalDropRfidId = rfidId;
-  // Serial.println() - removed for production
 }
 
 void saveTerminalPickUpRfid(String rfidId) {
@@ -79,7 +63,6 @@ void saveTerminalPickUpRfid(String rfidId) {
   preferences.putString("terminalPickUp", rfidId);
   preferences.end();
   terminalPickUpRfidId = rfidId;
-  // Serial.println() - removed for production
 }
 
 /***********************************************************
@@ -89,18 +72,15 @@ void loadUjungSlowMode() {
   preferences.begin("agv-ujung", true);
   isUjungSlowMode = preferences.getBool("slowMode", false);
   preferences.end();
-  // Serial.println() - removed for production
 }
 
 void saveUjungSlowMode() {
   preferences.begin("agv-ujung", false);
   preferences.putBool("slowMode", isUjungSlowMode);
   preferences.end();
-  // Serial.println() - removed for production
 }
 
 void resetUjungSlowMode() {
   isUjungSlowMode = false;
   saveUjungSlowMode();
-  // Serial.println() - removed for production
 }
