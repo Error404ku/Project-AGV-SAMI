@@ -20,18 +20,18 @@ bool isSoftStartMode(PidMode mode) {
 // Helper function: Get PID parameters based on mode
 void getPIDParameters(PidMode mode, float& kp, float& ki, float& kd) {
   if (mode == PID_MODE_MAJU) {
-    kp = tempKpForwardDefault;
-    ki = tempKiForwardDefault;
-    kd = tempKdForwardDefault;
+    kp = kpForwardDefault;
+    ki = kiForwardDefault;
+    kd = kdForwardDefault;
   } else if (mode == PID_MODE_MAJU_MASSA) {
-    kp = tempKpForwardWithMassa;
-    ki = tempKiForwardWithMassa;
-    kd = tempKdForwardWithMassa;
+    kp = kpForwardWithMassa;
+    ki = kiForwardWithMassa;
+    kd = kdForwardWithMassa;
   } else {
     // Default fallback - use forward default parameters
-    kp = tempKpForwardDefault;
-    ki = tempKiForwardDefault;
-    kd = tempKdForwardDefault;
+    kp = kpForwardDefault;
+    ki = kiForwardDefault;
+    kd = kdForwardDefault;
   }
 }
 
@@ -139,3 +139,4 @@ void pidLinefollower(int errorPosisi, PidMode mode) {
       break;
   }
 }
+

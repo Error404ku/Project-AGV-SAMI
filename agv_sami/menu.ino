@@ -1,61 +1,364 @@
-#include "menu.h"
-
-// Safe delay function
-
-
-// Using menu.h definitions only - removed duplicates
-#define MENU_MUSIC_ON 40
-#define MENU_MUSIC_OBSTACLE 41
-#define MENU_MUSIC_STATION 42
-#define MENU_MUSIC_OUTOFLINE 43
-#define MENU_HOOK_TEST 22
-#define MENU_MAGNET_CHECK 23
-#define MENU_ULTRASONIC_CHECK 24
-#define MENU_RESET_AGV_STATE 25
-
-// Local menu constants for RFID submenus
-#define MENU_RFID_UJUNG 15
-#define MENU_RFID_WAREHOUSE 16
-#define MENU_AUTO_INPUT_STATION 17
-#define MENU_TERMINAL_DROP 26
-#define MENU_TERMINAL_PICKUP 27
 // ===================================================================
-// MENU VARIABLES SUDAH DIPINDAHKAN KE config.h
+// ALL CONSTANTS AND DEFINES MOVED TO config.h
 // ===================================================================
 
-// Konstanta MAX_MANUAL_TARGETS sudah didefinisikan di config.h
+// ===================================================================
+// HELPER FUNCTIONS - Mengurangi nested if statements & complexity
+// ===================================================================
 
-// Fungsi untuk inisialisasi temporary variables dari nilai asli
-void initMenuTempVariables() {
+/**
+ * Macro untuk simplifikasi button timing check pattern
+ * Mengurangi nested if statements dengan early return pattern
+ */
+#define CHECK_BUTTON_TIMING(currentMillis, lastButtonPress) \
+  if ((currentMillis) - (lastButtonPress) < buttonDelay) break
 
+/**
+ * Update lastButtonPress jika ada button yang ditekan
+ */
+inline void updateButtonPressIfAnyPressed(unsigned long currentMillis, unsigned long& lastButtonPress) {
+  if (UP() || DOWN() || LEFT() || RIGHT() || START() || STOP()) {
+    lastButtonPress = currentMillis;
+  }
+}
 
-  tempBaseSpeed = baseSpeed;
-  tempInvertY = invertMotorY;
-  tempInvertX = invertMotorX;
-  tempInvertKanan = invertMotorKanan;
-  tempInvertKiri = invertMotorKiri;
-  tempInvertHook = invertHook;
-  tempMusicOnPin = musicOnPin;
-  tempMusicObstaclePin = musicObstaclePin;
-  tempMusicStationPin = musicStationPin;
-  tempMusicOutOfLinePin = musicOutOfLinePin;
-  selectedMusicPin = 0;
-  tempMinSafeDistanceFront = minSafeDistanceFront;
-  tempMinSafeDistanceBack = minSafeDistanceBack;
+// ===================================================================
+// REMOVED: initMenuTempVariables() function
+// Sekarang langsung edit variabel asli tanpa temporary variables
+// ===================================================================
+
+/**
+ * Check dan handle exit dari AGV mode
+ * @return true jika masih dalam AGV mode, false jika sudah keluar
+ */
+bool handleAgvModeExit() {
+  if (!isAgvMode) return false;
   
-  // Initialize Motor Control temp variables
-  tempMaxMotorRpm = maxMotorRpm;
-  tempMotorPidKp = motorPidKp;
-  tempMotorPidKi = motorPidKi;
-  tempMotorPidKd = motorPidKd;
+  if (STOP()) {
+    isAgvMode = false;
+    currentMenu = MENU_MAIN;
+    agvMode(AGV_STATE_STOP);
+    resetDisplayFlags();
+    newRfidScanned = false;
+    menuNeedsRefresh = true;
+  }
+  return true; // Masih dalam AGV mode
+}
+
+/**
+ * Handle navigasi UP/DOWN di main menu
+ * @param currentMillis Current timestamp
+ * @param lastButtonPress Reference to last button press time
+ * @return true jika ada input navigasi
+ */
+bool handleMainMenuNavigation(unsigned long currentMillis, unsigned long& lastButtonPress) {
+  if (currentMillis - lastButtonPress < buttonDelay) return false;
   
-  // Initialize individual motor PID temp variables
-  tempMotorPidKpRight = motorPidKpRight;
-  tempMotorPidKiRight = motorPidKiRight;
-  tempMotorPidKdRight = motorPidKdRight;
-  tempMotorPidKpLeft = motorPidKpLeft;
-  tempMotorPidKiLeft = motorPidKiLeft;
-  tempMotorPidKdLeft = motorPidKdLeft;
+  if (UP()) {
+    selectedItem = (selectedItem - 1 + maxItems) % maxItems;
+    lastButtonPress = currentMillis;
+    return true;
+  } 
+  
+  if (DOWN()) {
+    selectedItem = (selectedItem + 1) % maxItems;
+    lastButtonPress = currentMillis;
+    return true;
+  }
+  
+  if (STOP()) {
+    currentMenu = MENU_MAIN;
+    selectedItem = 0;
+    menuNeedsRefresh = true;
+    lastButtonPress = currentMillis;
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Handle pemilihan item di main menu (tombol START)
+ * @param currentMillis Current timestamp
+ * @param lastButtonPress Reference to last button press time
+ */
+void handleMainMenuSelection(unsigned long currentMillis, unsigned long& lastButtonPress) {
+  if (currentMillis - lastButtonPress < buttonDelay) return;
+  if (!START()) return;
+  
+  // Map selectedItem to corresponding menu constants
+  switch (selectedItem) {
+    case 0:  // AGV Mode
+      isAgvMode = true;
+      newRfidScanned = false;
+      menuStartIndex = 0;
+      menuNeedsRefresh = true;
+      break;
+      
+    case 1:  // Reset AGV State
+      currentMenu = MENU_RESET_AGV_STATE;
+      menuNeedsRefresh = true;
+      break;
+      
+    case 2:  // Motor Test
+      selectedItem = 0;
+      currentMenu = MENU_MOTOR_TEST;
+      menuNeedsRefresh = true;
+      break;
+      
+    case 3:  // PID Settings
+          currentMenu = MENU_PID_SETTINGS;
+      menuNeedsRefresh = true;
+      break;
+      
+    case 4:  // Target Settings
+      currentMenu = MENU_TARGET_SETTINGS;
+      menuNeedsRefresh = true;
+      break;
+      
+    case 5:  // Reset Settings
+      currentMenu = MENU_RESET;
+      menuNeedsRefresh = true;
+      break;
+      
+    case 6:  // RFID Settings
+      currentMenu = MENU_RFID_SETTINGS;
+      menuNeedsRefresh = true;
+      break;
+      
+    case 7:  // Motor Settings
+      currentMenu = MENU_MOTOR_SETTINGS;
+      selectedItem = 0;
+      menuNeedsRefresh = true;
+      break;
+      
+    case 8:  // Motor Invert
+      currentMenu = MENU_MOTOR_INVERT;
+      menuNeedsRefresh = true;
+      break;
+      
+    case 9:  // Music Settings
+      currentMenu = MENU_MUSIC_SETTINGS;
+      menuNeedsRefresh = true;
+      break;
+      
+    case 10:  // Music Test
+      currentMenu = MENU_MUSIC_TEST;
+      menuNeedsRefresh = true;
+      break;
+      
+    case 11:  // Hook Test
+      currentMenu = MENU_HOOK_TEST;
+      menuNeedsRefresh = true;
+      break;
+      
+    case 12:  // Magnet Check
+      currentMenu = MENU_MAGNET_CHECK;
+      menuNeedsRefresh = true;
+      break;
+      
+    case 13:  // Ultrasonic Check
+      currentMenu = MENU_ULTRASONIC_CHECK;
+      menuNeedsRefresh = true;
+      break;
+      
+    case 14:  // Ultrasonic Settings
+          selectedItem = 0;
+      currentMenu = MENU_ULTRASONIC_SETTINGS;
+      menuNeedsRefresh = true;
+      break;
+      
+    case 15:  // WiFi Settings
+      currentMenu = MENU_WIFI_SETTINGS;
+      menuNeedsRefresh = true;
+      break;
+      
+    case 16:  // Tuning RPM
+      currentMenu = MENU_RPM_TUNING;
+      selectedTuningItem = 0;
+      menuNeedsRefresh = true;
+      break;
+      
+    default:
+      currentMenu = MENU_MAIN;
+      menuNeedsRefresh = true;
+      break;
+  }
+  lastButtonPress = currentMillis;
+}
+
+/**
+ * Handle Motor Invert menu logic
+ * Extract dari handleMenu() untuk mengurangi complexity
+ */
+void handleMotorInvertMenu(unsigned long currentMillis, unsigned long& lastButtonPress) {
+  static bool displayInitialized;
+  static int lastSelectedInvertItem = -1;
+  static bool lastInvertValues[5];
+  
+  // Check if display needs refresh
+  bool needsRefresh = !displayInitialized || 
+                     selectedInvertItem != lastSelectedInvertItem ||
+                     invertMotorY != lastInvertValues[0] ||
+                     invertMotorX != lastInvertValues[1] ||
+                     invertMotorKanan != lastInvertValues[2] ||
+                     invertMotorKiri != lastInvertValues[3] ||
+                     invertHook != lastInvertValues[4];
+  
+  if (needsRefresh) {
+    displayMenuHeader("Motor Invert");
+
+    // Calculate what items to show (3 items max, with scrolling)
+    int startIdx = max(0, min(selectedInvertItem - 1, maxInvertItems - 3));
+
+    String invertLabels[5] = { "Y-Axis", "X-Axis", "M-Kanan", "M-Kiri", "Hook" };
+    bool* invertValues[5] = { &invertMotorY, &invertMotorX, &invertMotorKanan, &invertMotorKiri, &invertHook };
+
+    for (int i = 0; i < 3 && (startIdx + i) < maxInvertItems; i++) {
+      int itemIndex = startIdx + i;
+      lcd.setCursor(0, i + 1);
+      lcd.print("                    ");
+      lcd.setCursor(0, i + 1);
+
+      // Show cursor for selected item
+      lcd.print(itemIndex == selectedInvertItem ? "> " : "  ");
+      
+      // Show label and value
+      lcd.print(invertLabels[itemIndex]);
+      lcd.print(": ");
+      lcd.print(*invertValues[itemIndex] ? "Yes" : "No");
+
+      // Show controls on the right
+      lcd.setCursor(12, i + 1);
+      if (i == 0) lcd.print("UP/DN:Nav");
+      else if (i == 1) lcd.print("LF/RT:Set");
+      else if (i == 2) lcd.print("A:OK B:Back");
+    }
+    
+    // Update tracking variables
+    displayInitialized = true;
+    lastSelectedInvertItem = selectedInvertItem;
+    lastInvertValues[0] = invertMotorY;
+    lastInvertValues[1] = invertMotorX;
+    lastInvertValues[2] = invertMotorKanan;
+    lastInvertValues[3] = invertMotorKiri;
+    lastInvertValues[4] = invertHook;
+  }
+
+  if (currentMillis - lastButtonPress < buttonDelay) return;
+  
+  if (UP()) {
+    selectedInvertItem = (selectedInvertItem - 1 + maxInvertItems) % maxInvertItems;
+    lastButtonPress = currentMillis;
+  } else if (DOWN()) {
+    selectedInvertItem = (selectedInvertItem + 1) % maxInvertItems;
+    lastButtonPress = currentMillis;
+  } else if (LEFT() || RIGHT()) {
+    // Toggle selected item
+    switch (selectedInvertItem) {
+      case 0: invertMotorY = !invertMotorY; break;
+      case 1: invertMotorX = !invertMotorX; break;
+      case 2: invertMotorKanan = !invertMotorKanan; break;
+      case 3: invertMotorKiri = !invertMotorKiri; break;
+      case 4: invertHook = !invertHook; break;
+    }
+    lastButtonPress = currentMillis;
+  } else if (START()) {
+    // Save all settings
+    invertMotorY = invertMotorY;
+    invertMotorX = invertMotorX;
+    invertMotorKanan = invertMotorKanan;
+    invertMotorKiri = invertMotorKiri;
+    invertHook = invertHook;
+    saveSettings();
+    // Reset and exit
+    displayInitialized = false;
+    currentMenu = MENU_MAIN;
+    selectedInvertItem = 0;
+    menuStartIndex = 0;
+    menuNeedsRefresh = true;
+    lastButtonPress = currentMillis;
+  } else if (STOP()) {
+    // Cancel changes
+    invertMotorY = invertMotorY;
+    invertMotorX = invertMotorX;
+    invertMotorKanan = invertMotorKanan;
+    invertMotorKiri = invertMotorKiri;
+    invertHook = invertHook;
+    // Reset and exit
+    displayInitialized = false;
+    currentMenu = MENU_MAIN;
+    selectedInvertItem = 0;
+    menuStartIndex = 0;
+    menuNeedsRefresh = true;
+    lastButtonPress = currentMillis;
+  }
+}
+
+// ===================================================================
+// REUSABLE BUTTON HANDLER - Menghilangkan duplikasi 1280+ baris
+// ===================================================================
+
+/**
+ * Helper function untuk handle button adjustment dengan hold detection
+ * Menggantikan 8+ fungsi duplikat dengan 1 fungsi reusable
+ * @param values Array of 3 double pointers untuk Kp, Ki, Kd
+ * @param selectedParam Index parameter yang dipilih (0=Kp, 1=Ki, 2=Kd)
+ * @param smallIncrement Increment untuk single click (default 0.01)
+ * @param largeIncrement Increment untuk hold (default 0.1)
+ * @param holdInterval Interval update saat hold dalam ms (default 500)
+ */
+void handlePidButtonAdjustment(double* values[3], int selectedParam, 
+                               float smallIncrement = 0.01f, 
+                               float largeIncrement = 0.1f,
+                               unsigned long holdInterval = 500) {
+  // Static variables auto-initialize to 0/false - explicit init redundant
+  static unsigned long lastRightPress;
+  static unsigned long lastLeftPress;
+  static unsigned long rightHoldStart;
+  static unsigned long leftHoldStart;
+  static bool rightHolding;
+  static bool leftHolding;
+  
+  unsigned long currentMillis = millis();
+  
+  // Handle RIGHT button (increment)
+  if (digitalRead(rightPin) == HIGH) {
+    if (!rightHolding) {
+      // Button just pressed - single click increment
+      rightHoldStart = currentMillis;
+      rightHolding = true;
+      *values[selectedParam] += smallIncrement;
+      lastRightPress = currentMillis;
+    } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
+      // Button is being held - larger increment
+      if (currentMillis - lastRightPress >= holdInterval) {
+        *values[selectedParam] += largeIncrement;
+        lastRightPress = currentMillis;
+      }
+    }
+  } else {
+    rightHolding = false;
+  }
+  
+  // Handle LEFT button (decrement)
+  if (digitalRead(leftPin) == HIGH) {
+    if (!leftHolding) {
+      // Button just pressed - single click decrement
+      leftHoldStart = currentMillis;
+      leftHolding = true;
+      *values[selectedParam] = max(0.0, *values[selectedParam] - smallIncrement);
+      lastLeftPress = currentMillis;
+    } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
+      // Button is being held - larger decrement
+      if (currentMillis - lastLeftPress >= holdInterval) {
+        *values[selectedParam] = max(0.0, *values[selectedParam] - largeIncrement);
+        lastLeftPress = currentMillis;
+      }
+    }
+  } else {
+    leftHolding = false;
+  }
 }
 
 // Global display functions
@@ -78,6 +381,97 @@ void displayMenuFooter(const char* text) {
   lcd.print(text);
 }
 
+// ===================================================================
+// SETTINGS MANAGEMENT - Fix #6: Split long functions
+// ===================================================================
+
+/**
+ * Save PID settings to NVS
+ */
+void savePidSettings() {
+  // Save Line Follower PID
+  preferences.putDouble("kpLinefollower", kp);
+  preferences.putDouble("kiLinefollower", ki);
+  preferences.putDouble("kdLinefollower", kd);
+  
+  // Save Forward PID WithMassa
+  preferences.putDouble("kpFwdMassa", kpForwardWithMassa);
+  preferences.putDouble("kiFwdMassa", kiForwardWithMassa);
+  preferences.putDouble("kdFwdMassa", kdForwardWithMassa);
+  
+  // Save Forward PID Default (with corruption fix)
+  preferences.remove("kpFwdDefault");
+  delay(10);
+  preferences.putDouble("kpFwdDefault", kpForwardDefault);
+  
+  preferences.remove("kiFwdDefault");
+  delay(10);
+  preferences.putDouble("kiFwdDefault", kiForwardDefault);
+  
+  preferences.remove("kdFwdDefault");
+  delay(10);
+  preferences.putDouble("kdFwdDefault", kdForwardDefault);
+  
+  // Save Backward PID WithMassa
+  preferences.putDouble("kpBwdMassa", kpBackwardWithMassa);
+  preferences.putDouble("kiBwdMassa", kiBackwardWithMassa);
+  preferences.putDouble("kdBwdMassa", kdBackwardWithMassa);
+  
+  // Save Backward PID Default
+  preferences.putDouble("kpBwdDefault", kpBackwardDefault);
+  preferences.putDouble("kiBwdDefault", kiBackwardDefault);
+  preferences.putDouble("kdBwdDefault", kdBackwardDefault);
+}
+
+/**
+ * Save motor settings to NVS
+ */
+void saveMotorSettings() {
+  // Base speed
+  preferences.putInt("baseSpeed", baseSpeed);
+  
+  // Motor invert flags
+  preferences.putBool("invertY", invertMotorY);
+  preferences.putBool("invertX", invertMotorX);
+  preferences.putBool("invertKanan", invertMotorKanan);
+  preferences.putBool("invertKiri", invertMotorKiri);
+  preferences.putBool("invertHook", invertHook);
+  
+  // Motor Control PID
+  preferences.putInt("maxMotorRpm", maxMotorRpm);
+  preferences.putDouble("motorPidKp", motorPidKp);
+  preferences.putDouble("motorPidKi", motorPidKi);
+  preferences.putDouble("motorPidKd", motorPidKd);
+  
+  // Individual motor PID
+  preferences.putDouble("motorKpR", motorPidKpRight);
+  preferences.putDouble("motorKiR", motorPidKiRight);
+  preferences.putDouble("motorKdR", motorPidKdRight);
+  preferences.putDouble("motorKpL", motorPidKpLeft);
+  preferences.putDouble("motorKiL", motorPidKiLeft);
+  preferences.putDouble("motorKdL", motorPidKdLeft);
+}
+
+/**
+ * Save peripheral settings to NVS
+ */
+void savePeripheralSettings() {
+  // Music pins
+  preferences.putInt("musicOn", musicOnPin);
+  preferences.putInt("musicObstacle", musicObstaclePin);
+  preferences.putInt("musicStation", musicStationPin);
+  preferences.putInt("musicOutOfLine", musicOutOfLinePin);
+  preferences.putInt("musicWarning", musicWarningPin);
+  
+  // Ultrasonic settings
+  preferences.putUShort("SafeDistFront", minSafeDistanceFront);
+  preferences.putUShort("SafeDistBack", minSafeDistanceBack);
+}
+
+/**
+ * Main save settings function - coordinates all saves
+ * REMOVED: applySettings() - tidak perlu lagi karena langsung edit variabel asli
+ */
 void saveSettings() {
   Serial.println("\n=== SAVING SETTINGS ===");
   
@@ -91,143 +485,31 @@ void saveSettings() {
   Serial.print("NVS Free Entries: ");
   Serial.println(freeEntries);
   
-  delay(50);
+  delay(NVS_WRITE_DELAY);
   
-  // Save PID values
-  preferences.putDouble("kpLinefollower", tempKp);
-  preferences.putDouble("kiLinefollower", tempKi);
-  preferences.putDouble("kdLinefollower", tempKd);
+  // Save all settings in logical groups
+  savePidSettings();
+  saveMotorSettings();
+  savePeripheralSettings();
   
-
-  
-  // Save Forward PID WithMassa values
-  preferences.putDouble("kpFwdMassa", tempKpForwardWithMassa);
-  preferences.putDouble("kiFwdMassa", tempKiForwardWithMassa);
-  preferences.putDouble("kdFwdMassa", tempKdForwardWithMassa);
-  
-  // Save Forward PID Default values
-  Serial.print("Saving kpFwdDefault: ");
-  Serial.println(tempKpForwardDefault, 2);
-  
-  // CRITICAL FIX: Remove old key first to avoid corruption
-  preferences.remove("kpFwdDefault");
-  delay(10);
-  
-  size_t bytesWritten = preferences.putDouble("kpFwdDefault", tempKpForwardDefault);
-  Serial.print("Bytes written: ");
-  Serial.println(bytesWritten);
-  if (bytesWritten == 0) {
-    logError(ERROR_INVALID_CONFIGURATION, "Failed to write kpFwdDefault");
-  }
-  
-  Serial.print("Saving kiFwdDefault: ");
-  Serial.println(tempKiForwardDefault, 2);
-  preferences.remove("kiFwdDefault");
-  delay(10);
-  preferences.putDouble("kiFwdDefault", tempKiForwardDefault);
-  
-  Serial.print("Saving kdFwdDefault: ");
-  Serial.println(tempKdForwardDefault, 2);
-  preferences.remove("kdFwdDefault");
-  delay(10);
-  preferences.putDouble("kdFwdDefault", tempKdForwardDefault);
-  
-  // Save Backward PID WithMassa values
-  preferences.putDouble("kpBwdMassa", tempKpBackwardWithMassa);
-  preferences.putDouble("kiBwdMassa", tempKiBackwardWithMassa);
-  preferences.putDouble("kdBwdMassa", tempKdBackwardWithMassa);
-  
-  // Save Backward PID Default values
-  preferences.putDouble("kpBwdDefault", tempKpBackwardDefault);
-  preferences.putDouble("kiBwdDefault", tempKiBackwardDefault);
-  preferences.putDouble("kdBwdDefault", tempKdBackwardDefault);
-
-  // Save Motor values
-  preferences.putInt("baseSpeed", tempBaseSpeed);
-
-  // Save Motor invert values
-  preferences.putBool("invertY", tempInvertY);
-  preferences.putBool("invertX", tempInvertX);
-  preferences.putBool("invertKanan", tempInvertKanan);
-  preferences.putBool("invertKiri", tempInvertKiri);
-  preferences.putBool("invertHook", tempInvertHook);
-
-  // Save Music mapping values
-  preferences.putInt("musicOn", tempMusicOnPin);
-  preferences.putInt("musicObstacle", tempMusicObstaclePin);
-  preferences.putInt("musicStation", tempMusicStationPin);
-  preferences.putInt("musicOutOfLine", tempMusicOutOfLinePin);
-  preferences.putInt("musicWarning", tempMusicWarningPin);
-  
-  // Save Ultrasonic settings
-  preferences.putUShort("SafeDistFront", tempMinSafeDistanceFront);
-  preferences.putUShort("SafeDistBack", tempMinSafeDistanceBack);
-
-  // Save Motor Control settings
-  preferences.putInt("maxMotorRpm", tempMaxMotorRpm);
-  preferences.putDouble("motorPidKp", tempMotorPidKp);
-  preferences.putDouble("motorPidKi", tempMotorPidKi);
-  preferences.putDouble("motorPidKd", tempMotorPidKd);
-  
-  // Save individual motor PID settings
-  preferences.putDouble("motorKpR", tempMotorPidKpRight);
-  preferences.putDouble("motorKiR", tempMotorPidKiRight);
-  preferences.putDouble("motorKdR", tempMotorPidKdRight);
-  preferences.putDouble("motorKpL", tempMotorPidKpLeft);
-  preferences.putDouble("motorKiL", tempMotorPidKiLeft);
-  preferences.putDouble("motorKdL", tempMotorPidKdLeft);
-
-  // VERIFY: Read back to confirm save
+  // Verify critical settings
   double verifyKp = preferences.getDouble("kpFwdDefault", -1.0);
-  Serial.print("VERIFY after save - kpFwdDefault: ");
+  Serial.print("VERIFY - kpFwdDefault: ");
   Serial.println(verifyKp, 2);
   
-  if (abs(verifyKp - tempKpForwardDefault) > 0.01) {
-    String msg = "Value mismatch - Expected: " + String(tempKpForwardDefault, 2) + ", Got: " + String(verifyKp, 2);
+  if (abs(verifyKp - kpForwardDefault) > 0.01) {
+    String msg = "Value mismatch - Expected: " + String(kpForwardDefault, 2) + 
+                 ", Got: " + String(verifyKp, 2);
     logError(ERROR_INVALID_CONFIGURATION, msg);
   }
-
-
-  // Apply Motor values
-  baseSpeed = tempBaseSpeed;
-
-  // Apply Motor invert values
-  invertMotorY = tempInvertY;
-  invertMotorX = tempInvertX;
-  invertMotorKanan = tempInvertKanan;
-  invertMotorKiri = tempInvertKiri;
-  invertHook = tempInvertHook;
-
-  // Apply Music mapping values
-  musicOnPin = tempMusicOnPin;
-  musicObstaclePin = tempMusicObstaclePin;
-  musicStationPin = tempMusicStationPin;
-  musicOutOfLinePin = tempMusicOutOfLinePin;
   
-  // Apply Ultrasonic settings
-  minSafeDistanceFront = tempMinSafeDistanceFront;
-  minSafeDistanceBack = tempMinSafeDistanceBack;
-
-  // Apply Motor Control settings
-  maxMotorRpm = tempMaxMotorRpm;
-  motorPidKp = tempMotorPidKp;
-  motorPidKi = tempMotorPidKi;
-  motorPidKd = tempMotorPidKd;
-  
-  // Apply individual motor PID settings
-  motorPidKpRight = tempMotorPidKpRight;
-  motorPidKiRight = tempMotorPidKiRight;
-  motorPidKdRight = tempMotorPidKdRight;
-  motorPidKpLeft = tempMotorPidKpLeft;
-  motorPidKiLeft = tempMotorPidKiLeft;
-  motorPidKdLeft = tempMotorPidKdLeft;
-
-  // End preferences session
   preferences.end();
-  
   Serial.println("=== SETTINGS SAVED SUCCESSFULLY ===\n");
 }
 
+// ===================================================================
+// DISPLAY FUNCTIONS
+// ===================================================================
 
 
 void displayMainMenu() {
@@ -315,170 +597,28 @@ void displayMainMenu() {
 void handleMenu() {
   unsigned long currentMillis = millis();
 
-  // If in AGV mode, only check for B button to exit
-  if (isAgvMode) {
-    if (STOP()) {
-      isAgvMode = false;
-      currentMenu = MENU_MAIN;
-      agvMode(AGV_STATE_STOP);
-      resetDisplayFlags(); // Reset semua flag display
-      newRfidScanned = false; // Reset flag RFID saat keluar dari AGV mode
-      menuNeedsRefresh = true;
-    }
-    return;
-  }
+  // Check AGV mode exit - early return pattern
+  if (handleAgvModeExit()) return;
 
   switch (currentMenu) {
     case MENU_MAIN:
       displayMainMenu();
       rpmMotor(0, 0);
-      Serial.println("STOP"); // Use PWM stop command
+      Serial.println("STOP");
       stopMusic();
       digitalWrite(lampPin, HIGH);
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        if (UP()) {
-          selectedItem = (selectedItem - 1 + maxItems) % maxItems;
-          lastButtonPress = currentMillis;
-        } else if (DOWN()) {
-          selectedItem = (selectedItem + 1) % maxItems;
-          lastButtonPress = currentMillis;
-        } else if (STOP()) {
-          currentMenu = MENU_MAIN;
-          selectedItem = 0;
-          menuNeedsRefresh = true;  
-        } else if (START()) {
-          // Map selectedItem to corresponding menu constants
-          switch (selectedItem) {
-            case 0:  // AGV Mode
-              isAgvMode = true;
-              newRfidScanned = false; // Reset flag RFID saat masuk ke AGV mode
-              lcd.clear(); // Membersihkan tampilan saat masuk ke mode AGV
-              menuStartIndex = 0;  // Reset scroll position
-              menuNeedsRefresh = true;
-              break;
-              
-            case 1:  // Reset AGV State
-              lcd.clear();
-              currentMenu = MENU_RESET_AGV_STATE; // 25
-              menuNeedsRefresh = true;
-              break;
-              
-            case 2:  // Motor Test
-              lcd.clear();
-              selectedItem = 0;  // Reset selection for submenu
-              currentMenu = MENU_MOTOR_TEST; // 2 - Go to submenu
-              menuNeedsRefresh = true;
-              break;
-              
-            case 3:  // PID Settings
-              lcd.clear();
-              initMenuTempVariables();  // Initialize temporary variables from global values
-              currentMenu = MENU_PID_SETTINGS; // 3
-              menuNeedsRefresh = true;
-              break;
-              
-            case 4:  // Target Settings
-              lcd.clear();
-              currentMenu = MENU_TARGET_SETTINGS; // 4
-              menuNeedsRefresh = true;
-              break;
-              
-            case 5:  // Reset Settings
-              lcd.clear();
-              currentMenu = MENU_RESET; // 5
-              menuNeedsRefresh = true;
-              break;
-              
-            case 6:  // RFID Settings
-              lcd.clear();
-              currentMenu = MENU_RFID_SETTINGS; // 6
-              menuNeedsRefresh = true;
-              break;
-              
-            case 7:  // Motor Settings - Updated to show sub menu
-              lcd.clear();
-              currentMenu = MENU_MOTOR_SETTINGS; // 18
-              selectedItem = 0;  // Reset selection for submenu
-              menuNeedsRefresh = true;
-              break;
-              
-            case 8:  // Motor Invert
-              lcd.clear();
-              currentMenu = MENU_MOTOR_INVERT; // 19
-              menuNeedsRefresh = true;
-              break;
-              
-            case 9:  // Music Settings
-              lcd.clear();
-              currentMenu = MENU_MUSIC_SETTINGS; // 20
-              menuNeedsRefresh = true;
-              break;
-              
-            case 10:  // Music Test
-              lcd.clear();
-              currentMenu = MENU_MUSIC_TEST; // 21
-              menuNeedsRefresh = true;
-              break;
-              
-            case 11:  // Hook Test
-              lcd.clear();
-              currentMenu = MENU_HOOK_TEST; // 22
-              menuNeedsRefresh = true;
-              break;
-              
-            case 12:  // Magnet Check
-              lcd.clear();
-              currentMenu = MENU_MAGNET_CHECK; // 23
-              menuNeedsRefresh = true;
-              break;
-              
-            case 13:  // Ultrasonic Check
-              lcd.clear();
-              currentMenu = MENU_ULTRASONIC_CHECK; // 24
-              menuNeedsRefresh = true;
-              break;
-              
-            case 14:  // Ultrasonic Settings
-              lcd.clear();
-              initMenuTempVariables();  // Initialize temporary variables
-              tempMinSafeDistanceFront = minSafeDistanceFront;  // Initialize temp variables
-              tempMinSafeDistanceBack = minSafeDistanceBack;
-              selectedItem = 0;  // Reset selection
-              currentMenu = MENU_ULTRASONIC_SETTINGS; // 30
-              menuNeedsRefresh = true;
-              break;
-              
-            case 15:  // WiFi Settings
-              lcd.clear();
-              currentMenu = MENU_WIFI_SETTINGS; // 14
-              menuNeedsRefresh = true;
-              break;
-              
-            case 16:  // Tuning RPM
-              lcd.clear();
-              currentMenu = MENU_RPM_TUNING; // 55
-              selectedTuningItem = 0; // Reset to first item
-              menuNeedsRefresh = true;
-              break;
-              
-            default:
-              // Fallback (should not happen with 17 items)
-              currentMenu = MENU_MAIN;
-              menuNeedsRefresh = true;
-              break;
-          }
-          lastButtonPress = currentMillis;
-        }
+      
+      // Handle navigation (UP/DOWN/STOP)
+      if (!handleMainMenuNavigation(currentMillis, lastButtonPress)) {
+        // Handle selection (START) hanya jika tidak ada navigasi
+        handleMainMenuSelection(currentMillis, lastButtonPress);
       }
       break;
     case MENU_MOTOR_TEST:
       displayMotorTest();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleMotorTest();
-        if (UP() || DOWN() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleMotorTest();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_MOTOR_TEST_PWM:
@@ -494,32 +634,23 @@ void handleMenu() {
 
     case MENU_PID_SETTINGS:
       displayPidSubmenu();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handlePidSubmenu();
-        if (UP() || DOWN() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handlePidSubmenu();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_PID_FORWARD:
       displayPidForwardSubmenu();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handlePidForwardSubmenu();
-        if (UP() || DOWN() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handlePidForwardSubmenu();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_PID_BACKWARD:
       displayPidBackwardSubmenu();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handlePidBackwardSubmenu();
-        if (UP() || DOWN() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handlePidBackwardSubmenu();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_PID_FORWARD_WITHMASSA:
@@ -544,485 +675,272 @@ void handleMenu() {
 
     case MENU_TARGET_SETTINGS:
       displayTargetSettings();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleTargetSettings();
-        if (LEFT() || RIGHT() || UP() || DOWN() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleTargetSettings();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_RFID_SETTINGS:
       displayRfidSettings();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleRfidSettings();
-        if (LEFT() || RIGHT() || UP() || DOWN() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleRfidSettings();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_MOTOR_SETTINGS:
       displayMotorSettings();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleMotorSettings();
-        if (LEFT() || RIGHT() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleMotorSettings();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_SPEED_SETTING:
       displaySpeedSetting();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleSpeedSetting();
-        if (LEFT() || RIGHT() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleSpeedSetting();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_PID_RPM_SETTING:
       displayPidRpmSetting();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handlePidRpmSetting();
-        if (LEFT() || RIGHT() || UP() || DOWN() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handlePidRpmSetting();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_PID_RPM_RIGHT:
       displayPidRpmRight();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handlePidRpmRight();
-        if (LEFT() || RIGHT() || UP() || DOWN() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handlePidRpmRight();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_PID_RPM_LEFT:
       displayPidRpmLeft();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handlePidRpmLeft();
-        if (LEFT() || RIGHT() || UP() || DOWN() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handlePidRpmLeft();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_MOTOR_INVERT:
-      {
-        static bool displayInitialized = false;
-        static int lastSelectedInvertItem = -1;
-        static bool lastInvertValues[5] = {false, false, false, false, false};
-        
-        // Check if display needs refresh
-        bool needsRefresh = !displayInitialized || 
-                           selectedInvertItem != lastSelectedInvertItem ||
-                           tempInvertY != lastInvertValues[0] ||
-                           tempInvertX != lastInvertValues[1] ||
-                           tempInvertKanan != lastInvertValues[2] ||
-                           tempInvertKiri != lastInvertValues[3] ||
-                           tempInvertHook != lastInvertValues[4];
-        
-        if (needsRefresh) {
-          displayMenuHeader("Motor Invert");
-
-          // Calculate what items to show (3 items max, with scrolling)
-          int startIdx = max(0, min(selectedInvertItem - 1, maxInvertItems - 3));
-
-          String invertLabels[5] = { "Y-Axis", "X-Axis", "M-Kanan", "M-Kiri", "Hook" };
-          bool* invertValues[5] = { &tempInvertY, &tempInvertX, &tempInvertKanan, &tempInvertKiri, &tempInvertHook };
-
-          for (int i = 0; i < 3 && (startIdx + i) < maxInvertItems; i++) {
-            int itemIndex = startIdx + i;
-            lcd.setCursor(0, i + 1);
-
-            // Clear line first
-            lcd.print("                    ");
-            lcd.setCursor(0, i + 1);
-
-            // Show cursor for selected item
-            if (itemIndex == selectedInvertItem) {
-              lcd.print("> ");
-            } else {
-              lcd.print("  ");
-            }
-
-            // Show label and value
-            lcd.print(invertLabels[itemIndex]);
-            lcd.print(": ");
-            lcd.print(*invertValues[itemIndex] ? "Yes" : "No");
-
-            // Show controls on the right
-            if (i == 0) {
-              lcd.setCursor(12, i + 1);
-              lcd.print("UP/DN:Nav");
-            } else if (i == 1) {
-              lcd.setCursor(12, i + 1);
-              lcd.print("LF/RT:Set");
-            } else if (i == 2) {
-              lcd.setCursor(12, i + 1);
-              lcd.print("A:OK B:Back");
-            }
-          }
-          
-          // Update tracking variables
-          displayInitialized = true;
-          lastSelectedInvertItem = selectedInvertItem;
-          lastInvertValues[0] = tempInvertY;
-          lastInvertValues[1] = tempInvertX;
-          lastInvertValues[2] = tempInvertKanan;
-          lastInvertValues[3] = tempInvertKiri;
-          lastInvertValues[4] = tempInvertHook;
-        }
-
-        if (currentMillis - lastButtonPress >= buttonDelay) {
-          if (UP()) {
-            selectedInvertItem = (selectedInvertItem - 1 + maxInvertItems) % maxInvertItems;
-            lastButtonPress = currentMillis;
-          } else if (DOWN()) {
-            selectedInvertItem = (selectedInvertItem + 1) % maxInvertItems;
-            lastButtonPress = currentMillis;
-          } else if (LEFT() || RIGHT()) {
-            // Toggle selected item
-            switch (selectedInvertItem) {
-              case 0: tempInvertY = !tempInvertY; break;
-              case 1: tempInvertX = !tempInvertX; break;
-              case 2: tempInvertKanan = !tempInvertKanan; break;
-              case 3: tempInvertKiri = !tempInvertKiri; break;
-              case 4: tempInvertHook = !tempInvertHook; break;
-            }
-            lastButtonPress = currentMillis;
-          } else if (START()) {
-            // Save all settings
-            invertMotorY = tempInvertY;
-            invertMotorX = tempInvertX;
-            invertMotorKanan = tempInvertKanan;
-            invertMotorKiri = tempInvertKiri;
-            invertHook = tempInvertHook;
-            saveSettings();
-            // Reset display cache
-            displayInitialized = false;
-            currentMenu = MENU_MAIN;
-            selectedInvertItem = 0;
-            menuStartIndex = 0;
-            menuNeedsRefresh = true;
-            lastButtonPress = currentMillis;
-          } else if (STOP()) {
-            // Cancel changes
-            tempInvertY = invertMotorY;
-            tempInvertX = invertMotorX;
-            tempInvertKanan = invertMotorKanan;
-            tempInvertKiri = invertMotorKiri;
-            tempInvertHook = invertHook;
-            // Reset display cache
-            displayInitialized = false;
-            currentMenu = MENU_MAIN;
-            selectedInvertItem = 0;
-            menuStartIndex = 0;
-            menuNeedsRefresh = true;
-            lastButtonPress = currentMillis;
-          }
-        }
-      }
+      handleMotorInvertMenu(currentMillis, lastButtonPress);
       break;
 
     case MENU_MUSIC_SETTINGS:
       displayMusicSettings();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleMusicSettings();
-        if (UP() || DOWN() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleMusicSettings();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_MUSIC_TEST:
       displayMusicTest();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleMusicTest();
-        if (UP() || DOWN() || LEFT() || RIGHT() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleMusicTest();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_MUSIC_ON:
-      displayMusicSubmenu("On Music", &tempMusicOnPin);
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleMusicSubmenu(&tempMusicOnPin);
-      }
+      displayMusicSubmenu("On Music", &musicOnPin);
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleMusicSubmenu(&musicOnPin);
       break;
 
     case MENU_MUSIC_OBSTACLE:
-      displayMusicSubmenu("Obstacle Music", &tempMusicObstaclePin);
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleMusicSubmenu(&tempMusicObstaclePin);
-      }
+      displayMusicSubmenu("Obstacle Music", &musicObstaclePin);
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleMusicSubmenu(&musicObstaclePin);
       break;
 
     case MENU_MUSIC_STATION:
-      displayMusicSubmenu("Station Music", &tempMusicStationPin);
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleMusicSubmenu(&tempMusicStationPin);
-      }
+      displayMusicSubmenu("Station Music", &musicStationPin);
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleMusicSubmenu(&musicStationPin);
       break;
 
     case MENU_MUSIC_OUTOFLINE:
-      displayMusicSubmenu("OutOfLine Music", &tempMusicOutOfLinePin);
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleMusicSubmenu(&tempMusicOutOfLinePin);
-      }
+      displayMusicSubmenu("OutOfLine Music", &musicOutOfLinePin);
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleMusicSubmenu(&musicOutOfLinePin);
       break;
 
     case MENU_MUSIC_WARNING:
-      displayMusicSubmenu("Warning Music", &tempMusicWarningPin);
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleMusicSubmenu(&tempMusicWarningPin);
-      }
+      displayMusicSubmenu("Warning Music", &musicWarningPin);
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleMusicSubmenu(&musicWarningPin);
       break;
 
     case MENU_HOOK_TEST:
       displayHookTest();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleHookTest();
-        if (UP() || DOWN() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleHookTest();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_RESET:
       displayResetMenu();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleResetMenu();
-        if (START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleResetMenu();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
       
     case MENU_RESET_AGV_STATE:
       displayResetAgvStateMenu();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleResetAgvStateMenu();
-        if (START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleResetAgvStateMenu();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_MAGNET_CHECK:
       displayMagnetCheck();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleMagnetCheck();
-        if (STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleMagnetCheck();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
  
     case MENU_ULTRASONIC_CHECK:
-    checkObstacles();
+      checkObstacles();
       displayUltrasonicCheck();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleUltrasonicCheck();
-        if (STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleUltrasonicCheck();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_ULTRASONIC_SETTINGS:
       displayUltrasonicSettings();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleUltrasonicSettings();
-        if (UP() || DOWN() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleUltrasonicSettings();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_ULTRASONIC_FRONT:
       displayUltrasonicFrontSettings();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleUltrasonicFrontSettings();
-        if (LEFT() || RIGHT() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleUltrasonicFrontSettings();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_ULTRASONIC_BACK:
       displayUltrasonicBackSettings();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleUltrasonicBackSettings();
-        if (LEFT() || RIGHT() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleUltrasonicBackSettings();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_ULTRASONIC_FRONT_TENGAH:
       displayUltrasonicFrontTengahSettings();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleUltrasonicFrontTengahSettings();
-        if (LEFT() || RIGHT() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleUltrasonicFrontTengahSettings();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_ULTRASONIC_FRONT_SERONG:
       displayUltrasonicFrontSerongSettings();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleUltrasonicFrontSerongSettings();
-        if (LEFT() || RIGHT() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleUltrasonicFrontSerongSettings();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_ULTRASONIC_BACK_TENGAH:
       displayUltrasonicBackTengahSettings();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleUltrasonicBackTengahSettings();
-        if (LEFT() || RIGHT() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleUltrasonicBackTengahSettings();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_ULTRASONIC_BACK_SERONG:
       displayUltrasonicBackSerongSettings();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleUltrasonicBackSerongSettings();
-        if (LEFT() || RIGHT() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleUltrasonicBackSerongSettings();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_WIFI_SETTINGS:
       displayWifiSettings();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleWifiSettings();
-        if (START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleWifiSettings();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_RPM_TUNING:
       displayRpmTuningMenu();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleRpmTuningMenu();
-        if (UP() || DOWN() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleRpmTuningMenu();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_RPM_TUNE_STATUS:
       displayTuningStatus();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        if (STOP()) {
-          currentMenu = MENU_RPM_TUNING;
-          selectedTuningItem = 0;
-          menuNeedsRefresh = true;
-          lastButtonPress = currentMillis;
-        }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      if (STOP()) {
+        currentMenu = MENU_RPM_TUNING;
+        selectedTuningItem = 0;
+        menuNeedsRefresh = true;
+        lastButtonPress = currentMillis;
       }
       break;
 
     case MENU_RPM_TUNE_START:
       displayTuningStartMenu("Both Motors");
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleTuningStartMenu("TUNE");
-        if (UP() || DOWN() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleTuningStartMenu("TUNE");
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_RPM_TUNE_RIGHT:
       displayTuningStartMenu("Right Motor");
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleTuningStartMenu("RIGHT_TUNE");
-        if (UP() || DOWN() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleTuningStartMenu("RIGHT_TUNE");
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_RPM_TUNE_LEFT:
       displayTuningStartMenu("Left Motor");
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleTuningStartMenu("LEFT_TUNE");
-        if (UP() || DOWN() || START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleTuningStartMenu("LEFT_TUNE");
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_RFID_UJUNG:
       displayRfidUjung();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleRfidUjung();
-        if (START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleRfidUjung();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_RFID_WAREHOUSE:
       displayRfidWarehouse();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleRfidWarehouse();
-        if (START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleRfidWarehouse();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
 
     case MENU_AUTO_INPUT_STATION:
       displayAutoInputStation();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleAutoInputStation();
-        if (START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleAutoInputStation();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
       
     case MENU_TERMINAL_DROP:
       displayTerminalDrop();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleTerminalDrop();
-        if (START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleTerminalDrop();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
       
     case MENU_TERMINAL_PICKUP:
       displayTerminalPickup();
-      if (currentMillis - lastButtonPress >= buttonDelay) {
-        handleTerminalPickup();
-        if (START() || STOP()) {
-          lastButtonPress = currentMillis;
-        }
-      }
+      CHECK_BUTTON_TIMING(currentMillis, lastButtonPress);
+      handleTerminalPickup();
+      updateButtonPressIfAnyPressed(currentMillis, lastButtonPress);
       break;
       
   }
 }
 // ====== MOTOR TEST SUBMENU FUNCTIONS ======
 void displayMotorTest() {
-  static int lastSelectedItem = -1;
+  static int lastSelectedItem = -1;  // -1 needs explicit init
   
   if (menuNeedsRefresh || selectedItem != lastSelectedItem) {
     lcd.clear();
@@ -1235,15 +1153,13 @@ void handlePidSubmenu() {
     if (selectedParam == 0) {
       // Forward PID
       lcd.clear();
-      initMenuTempVariables();  // Initialize temporary variables from global values
-      currentMenu = MENU_PID_FORWARD;
+          currentMenu = MENU_PID_FORWARD;
       selectedParam = 0; // Reset for PID parameter selection
       menuNeedsRefresh = true;
     } else if (selectedParam == 1) {
       // Backward PID
       lcd.clear();
-      initMenuTempVariables();  // Initialize temporary variables from global values
-      currentMenu = MENU_PID_BACKWARD;
+          currentMenu = MENU_PID_BACKWARD;
       selectedParam = 0; // Reset for PID parameter selection
       menuNeedsRefresh = true;
     }
@@ -1390,7 +1306,7 @@ void displayPidForwardWithMassaSettings() {
   if (selectedParam == 0) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Kp: ");
-  lcd.print(tempKpForwardWithMassa);
+  lcd.print(kpForwardWithMassa);
   lcd.print("       ");
 
   // Display Ki
@@ -1398,7 +1314,7 @@ void displayPidForwardWithMassaSettings() {
   if (selectedParam == 1) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Ki: ");
-  lcd.print(tempKiForwardWithMassa);
+  lcd.print(kiForwardWithMassa);
   lcd.print("       ");
 
   // Display Kd
@@ -1406,7 +1322,7 @@ void displayPidForwardWithMassaSettings() {
   if (selectedParam == 2) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Kd: ");
-  lcd.print(tempKdForwardWithMassa);
+  lcd.print(kdForwardWithMassa);
   lcd.print("       ");
 
   // Show controls
@@ -1415,84 +1331,25 @@ void displayPidForwardWithMassaSettings() {
 }
 
 void handlePidForwardWithMassaSettings() {
-  static unsigned long lastRightPress = 0;
-  static unsigned long lastLeftPress = 0;
-  static unsigned long rightHoldStart = 0;
-  static unsigned long leftHoldStart = 0;
-  static bool rightHolding = false;
-  static bool leftHolding = false;
-  unsigned long currentMillis = millis();
-
+  // Handle UP/DOWN navigation
   if (UP()) {
     selectedParam = (selectedParam - 1 + 3) % 3;
   } else if (DOWN()) {
     selectedParam = (selectedParam + 1) % 3;
   }
 
-  // Check RIGHT button
-  if (digitalRead(rightPin) == HIGH) {
-    if (!rightHolding) {
-      // Button just pressed
-      rightHoldStart = currentMillis;
-      rightHolding = true;
-      
-      // Single click - increment by 0.1
-      pidIncrement = 0.1f;
-      switch (selectedParam) {
-        case 0: tempKpForwardWithMassa += pidIncrement; break;
-        case 1: tempKiForwardWithMassa += pidIncrement; break;
-        case 2: tempKdForwardWithMassa += pidIncrement; break;
-      }
-      lastRightPress = currentMillis;
-    } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
-      // Button is being held - increment by 1.0 every 100ms
-      if (currentMillis - lastRightPress >= 100) {
-        pidIncrement = 1.0f;
-        switch (selectedParam) {
-          case 0: tempKpForwardWithMassa += pidIncrement; break;
-          case 1: tempKiForwardWithMassa += pidIncrement; break;
-          case 2: tempKdForwardWithMassa += pidIncrement; break;
-        }
-        lastRightPress = currentMillis;
-      }
-    }
-  } else {
-    rightHolding = false;
-  }
+  // Create array of pointers to PID values
+  double* pidValues[3] = {
+    &kpForwardWithMassa,
+    &kiForwardWithMassa,
+    &kdForwardWithMassa
+  };
+  
+  // Use reusable button handler (0.1 increment, 1.0 hold, 100ms interval)
+  handlePidButtonAdjustment(pidValues, selectedParam, 0.1f, 1.0f, 100);
 
-  // Check LEFT button
-  if (digitalRead(leftPin) == HIGH) {
-    if (!leftHolding) {
-      // Button just pressed
-      leftHoldStart = currentMillis;
-      leftHolding = true;
-      
-      // Single click - decrement by 0.1
-      pidIncrement = 0.1f;
-      switch (selectedParam) {
-        case 0: tempKpForwardWithMassa = max(0.0, tempKpForwardWithMassa - pidIncrement); break;
-        case 1: tempKiForwardWithMassa = max(0.0, tempKiForwardWithMassa - pidIncrement); break;
-        case 2: tempKdForwardWithMassa = max(0.0, tempKdForwardWithMassa - pidIncrement); break;
-      }
-      lastLeftPress = currentMillis;
-    } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
-      // Button is being held - decrement by 1.0 every 100ms
-      if (currentMillis - lastLeftPress >= 100) {
-        pidIncrement = 1.0f;
-        switch (selectedParam) {
-          case 0: tempKpForwardWithMassa = max(0.0, tempKpForwardWithMassa - pidIncrement); break;
-          case 1: tempKiForwardWithMassa = max(0.0, tempKiForwardWithMassa - pidIncrement); break;
-          case 2: tempKdForwardWithMassa = max(0.0, tempKdForwardWithMassa - pidIncrement); break;
-        }
-        lastLeftPress = currentMillis;
-      }
-    }
-  } else {
-    leftHolding = false;
-  }
-
+  // Handle back button
   if (STOP()) {
-    // Save settings before going back
     saveSettings();
     currentMenu = MENU_PID_FORWARD;
     selectedParam = 0;
@@ -1515,7 +1372,7 @@ void displayPidForwardDefaultSettings() {
   if (selectedParam == 0) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Kp: ");
-  lcd.print(tempKpForwardDefault);
+  lcd.print(kpForwardDefault);
   lcd.print("       ");
 
   // Display Ki
@@ -1523,7 +1380,7 @@ void displayPidForwardDefaultSettings() {
   if (selectedParam == 1) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Ki: ");
-  lcd.print(tempKiForwardDefault);
+  lcd.print(kiForwardDefault);
   lcd.print("       ");
 
   // Display Kd
@@ -1531,7 +1388,7 @@ void displayPidForwardDefaultSettings() {
   if (selectedParam == 2) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Kd: ");
-  lcd.print(tempKdForwardDefault);
+  lcd.print(kdForwardDefault);
   lcd.print("       ");
 
   // Show controls
@@ -1540,85 +1397,27 @@ void displayPidForwardDefaultSettings() {
 }
 
 void handlePidForwardDefaultSettings() {
-  static unsigned long lastRightPress = 0;
-  static unsigned long lastLeftPress = 0;
-  static unsigned long rightHoldStart = 0;
-  static unsigned long leftHoldStart = 0;
-  static bool rightHolding = false;
-  static bool leftHolding = false;
-  unsigned long currentMillis = millis();
-
+  // Handle UP/DOWN navigation
   if (UP()) {
     selectedParam = (selectedParam - 1 + 3) % 3;
   } else if (DOWN()) {
     selectedParam = (selectedParam + 1) % 3;
   }
 
-  // Check RIGHT button
-  if (digitalRead(rightPin) == HIGH) {
-    if (!rightHolding) {
-      // Button just pressed
-      rightHoldStart = currentMillis;
-      rightHolding = true;
-      // Single click - increment by 0.01
-      pidIncrement = 0.01f;
-      switch (selectedParam) {
-        case 0: tempKpForwardDefault += pidIncrement; break;
-        case 1: tempKiForwardDefault += pidIncrement; break;
-        case 2: tempKdForwardDefault += pidIncrement; break;
-      }
-      lastRightPress = currentMillis;
-    } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
-      // Button is being held - increment by 1.0 every 100ms
-      if (currentMillis - lastRightPress >= 500) {
-        pidIncrement = 0.1f;
-        switch (selectedParam) {
-          case 0: tempKpForwardDefault += pidIncrement; break;
-          case 1: tempKiForwardDefault += pidIncrement; break;
-          case 2: tempKdForwardDefault += pidIncrement; break;
-        }
-        lastRightPress = currentMillis;
-      }
-    }
-  } else {
-    rightHolding = false;
-  }
+  // Create array of pointers to PID values
+  double* pidValues[3] = {
+    &kpForwardDefault,
+    &kiForwardDefault,
+    &kdForwardDefault
+  };
+  
+  // Use reusable button handler (0.01 increment, 0.1 hold, 500ms interval)
+  handlePidButtonAdjustment(pidValues, selectedParam, 0.01f, 0.1f, 500);
 
-  // Check LEFT button
-  if (digitalRead(leftPin) == HIGH) {
-    if (!leftHolding) {
-      // Button just pressed
-      leftHoldStart = currentMillis;
-      leftHolding = true;
-      
-      // Single click - decrement by 0.1
-      pidIncrement = 0.01f;
-      switch (selectedParam) {
-        case 0: tempKpForwardDefault = max(0.0, tempKpForwardDefault - pidIncrement); break;
-        case 1: tempKiForwardDefault = max(0.0, tempKiForwardDefault - pidIncrement); break;
-        case 2: tempKdForwardDefault = max(0.0, tempKdForwardDefault - pidIncrement); break;
-      }
-      lastLeftPress = currentMillis;
-    } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
-      // Button is being held - decrement by 0.1 every 100ms
-      if (currentMillis - lastLeftPress >= 500) {
-        pidIncrement = 0.1f;
-        switch (selectedParam) {
-          case 0: tempKpForwardDefault = max(0.0, tempKpForwardDefault - pidIncrement); break;
-          case 1: tempKiForwardDefault = max(0.0, tempKiForwardDefault - pidIncrement); break;
-          case 2: tempKdForwardDefault = max(0.0, tempKdForwardDefault - pidIncrement); break;
-        }
-        lastLeftPress = currentMillis;
-      }
-    }
-  } else {
-    leftHolding = false;
-  }
-
+  // Handle back button
   if (STOP()) {
-    // Save settings before going back
     saveSettings();
-    delay(200);
+    delay(BUTTON_DEBOUNCE_DELAY);
     currentMenu = MENU_PID_FORWARD;
     selectedParam = 0;
     menuNeedsRefresh = true;
@@ -1640,7 +1439,7 @@ void displayPidBackwardWithMassaSettings() {
   if (selectedParam == 0) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Kp: ");
-  lcd.print(tempKpBackwardWithMassa);
+  lcd.print(kpBackwardWithMassa);
   lcd.print("       ");
 
   // Display Ki
@@ -1648,7 +1447,7 @@ void displayPidBackwardWithMassaSettings() {
   if (selectedParam == 1) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Ki: ");
-  lcd.print(tempKiBackwardWithMassa);
+  lcd.print(kiBackwardWithMassa);
   lcd.print("       ");
 
   // Display Kd
@@ -1656,7 +1455,7 @@ void displayPidBackwardWithMassaSettings() {
   if (selectedParam == 2) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Kd: ");
-  lcd.print(tempKdBackwardWithMassa);
+  lcd.print(kdBackwardWithMassa);
   lcd.print("       ");
 
   // Show controls
@@ -1665,84 +1464,25 @@ void displayPidBackwardWithMassaSettings() {
 }
 
 void handlePidBackwardWithMassaSettings() {
-  static unsigned long lastRightPress = 0;
-  static unsigned long lastLeftPress = 0;
-  static unsigned long rightHoldStart = 0;
-  static unsigned long leftHoldStart = 0;
-  static bool rightHolding = false;
-  static bool leftHolding = false;
-  unsigned long currentMillis = millis();
-
+  // Handle UP/DOWN navigation
   if (UP()) {
     selectedParam = (selectedParam - 1 + 3) % 3;
   } else if (DOWN()) {
     selectedParam = (selectedParam + 1) % 3;
   }
 
-  // Check RIGHT button
-  if (digitalRead(rightPin) == HIGH) {
-    if (!rightHolding) {
-      // Button just pressed
-      rightHoldStart = currentMillis;
-      rightHolding = true;
-      
-      // Single click - increment by 0.1
-      pidIncrement = 0.1f;
-      switch (selectedParam) {
-        case 0: tempKpBackwardWithMassa += pidIncrement; break;
-        case 1: tempKiBackwardWithMassa += pidIncrement; break;
-        case 2: tempKdBackwardWithMassa += pidIncrement; break;
-      }
-      lastRightPress = currentMillis;
-    } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
-      // Button is being held - increment by 1.0 every 100ms
-      if (currentMillis - lastRightPress >= 100) {
-        pidIncrement = 1.0f;
-        switch (selectedParam) {
-          case 0: tempKpBackwardWithMassa += pidIncrement; break;
-          case 1: tempKiBackwardWithMassa += pidIncrement; break;
-          case 2: tempKdBackwardWithMassa += pidIncrement; break;
-        }
-        lastRightPress = currentMillis;
-      }
-    }
-  } else {
-    rightHolding = false;
-  }
+  // Create array of pointers to PID values
+  double* pidValues[3] = {
+    &kpBackwardWithMassa,
+    &kiBackwardWithMassa,
+    &kdBackwardWithMassa
+  };
+  
+  // Use reusable button handler (0.1 increment, 1.0 hold, 100ms interval)
+  handlePidButtonAdjustment(pidValues, selectedParam, 0.1f, 1.0f, 100);
 
-  // Check LEFT button
-  if (digitalRead(leftPin) == HIGH) {
-    if (!leftHolding) {
-      // Button just pressed
-      leftHoldStart = currentMillis;
-      leftHolding = true;
-      
-      // Single click - decrement by 0.1
-      pidIncrement = 0.1f;
-      switch (selectedParam) {
-        case 0: tempKpBackwardWithMassa = max(0.0, tempKpBackwardWithMassa - pidIncrement); break;
-        case 1: tempKiBackwardWithMassa = max(0.0, tempKiBackwardWithMassa - pidIncrement); break;
-        case 2: tempKdBackwardWithMassa = max(0.0, tempKdBackwardWithMassa - pidIncrement); break;
-      }
-      lastLeftPress = currentMillis;
-    } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
-      // Button is being held - decrement by 1.0 every 100ms
-      if (currentMillis - lastLeftPress >= 100) {
-        pidIncrement = 1.0f;
-        switch (selectedParam) {
-          case 0: tempKpBackwardWithMassa = max(0.0, tempKpBackwardWithMassa - pidIncrement); break;
-          case 1: tempKiBackwardWithMassa = max(0.0, tempKiBackwardWithMassa - pidIncrement); break;
-          case 2: tempKdBackwardWithMassa = max(0.0, tempKdBackwardWithMassa - pidIncrement); break;
-        }
-        lastLeftPress = currentMillis;
-      }
-    }
-  } else {
-    leftHolding = false;
-  }
-
+  // Handle back button
   if (STOP()) {
-    // Save settings before going back
     saveSettings();
     currentMenu = MENU_PID_BACKWARD;
     selectedParam = 0;
@@ -1765,7 +1505,7 @@ void displayPidBackwardDefaultSettings() {
   if (selectedParam == 0) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Kp: ");
-  lcd.print(tempKpBackwardDefault);
+  lcd.print(kpBackwardDefault);
   lcd.print("       ");
 
   // Display Ki
@@ -1773,7 +1513,7 @@ void displayPidBackwardDefaultSettings() {
   if (selectedParam == 1) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Ki: ");
-  lcd.print(tempKiBackwardDefault);
+  lcd.print(kiBackwardDefault);
   lcd.print("       ");
 
   // Display Kd
@@ -1781,7 +1521,7 @@ void displayPidBackwardDefaultSettings() {
   if (selectedParam == 2) lcd.print("> ");
   else lcd.print("  ");
   lcd.print("Kd: ");
-  lcd.print(tempKdBackwardDefault);
+  lcd.print(kdBackwardDefault);
   lcd.print("       ");
 
   // Show controls
@@ -1790,84 +1530,25 @@ void displayPidBackwardDefaultSettings() {
 }
 
 void handlePidBackwardDefaultSettings() {
-  static unsigned long lastRightPress = 0;
-  static unsigned long lastLeftPress = 0;
-  static unsigned long rightHoldStart = 0;
-  static unsigned long leftHoldStart = 0;
-  static bool rightHolding = false;
-  static bool leftHolding = false;
-  unsigned long currentMillis = millis();
-
+  // Handle UP/DOWN navigation
   if (UP()) {
     selectedParam = (selectedParam - 1 + 3) % 3;
   } else if (DOWN()) {
     selectedParam = (selectedParam + 1) % 3;
   }
 
-  // Check RIGHT button
-  if (digitalRead(rightPin) == HIGH) {
-    if (!rightHolding) {
-      // Button just pressed
-      rightHoldStart = currentMillis;
-      rightHolding = true;
-      
-      // Single click - increment by 0.01
-      pidIncrement = 0.01f;
-      switch (selectedParam) {
-        case 0: tempKpBackwardDefault += pidIncrement; break;
-        case 1: tempKiBackwardDefault += pidIncrement; break;
-        case 2: tempKdBackwardDefault += pidIncrement; break;
-      }
-      lastRightPress = currentMillis;
-    } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
-      // Button is being held - increment by 0.1 every 500ms
-      if (currentMillis - lastRightPress >= 500) {
-        pidIncrement = 0.1f;
-        switch (selectedParam) {
-          case 0: tempKpBackwardDefault += pidIncrement; break;
-          case 1: tempKiBackwardDefault += pidIncrement; break;
-          case 2: tempKdBackwardDefault += pidIncrement; break;
-        }
-        lastRightPress = currentMillis;
-      }
-    }
-  } else {
-    rightHolding = false;
-  }
+  // Create array of pointers to PID values
+  double* pidValues[3] = {
+    &kpBackwardDefault,
+    &kiBackwardDefault,
+    &kdBackwardDefault
+  };
+  
+  // Use reusable button handler (0.01 increment, 0.1 hold, 500ms interval)
+  handlePidButtonAdjustment(pidValues, selectedParam, 0.01f, 0.1f, 500);
 
-  // Check LEFT button
-  if (digitalRead(leftPin) == HIGH) {
-    if (!leftHolding) {
-      // Button just pressed
-      leftHoldStart = currentMillis;
-      leftHolding = true;
-      
-      // Single click - decrement by 0.01
-      pidIncrement = 0.01f;
-      switch (selectedParam) {
-        case 0: tempKpBackwardDefault = max(0.0, tempKpBackwardDefault - pidIncrement); break;
-        case 1: tempKiBackwardDefault = max(0.0, tempKiBackwardDefault - pidIncrement); break;
-        case 2: tempKdBackwardDefault = max(0.0, tempKdBackwardDefault - pidIncrement); break;
-      }
-      lastLeftPress = currentMillis;
-    } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
-      // Button is being held - decrement by 0.1 every 500ms
-      if (currentMillis - lastLeftPress >= 500) {
-        pidIncrement = 0.1f;
-        switch (selectedParam) {
-          case 0: tempKpBackwardDefault = max(0.0, tempKpBackwardDefault - pidIncrement); break;
-          case 1: tempKiBackwardDefault = max(0.0, tempKiBackwardDefault - pidIncrement); break;
-          case 2: tempKdBackwardDefault = max(0.0, tempKdBackwardDefault - pidIncrement); break;
-        }
-        lastLeftPress = currentMillis;
-      }
-    }
-  } else {
-    leftHolding = false;
-  }
-
+  // Handle back button
   if (STOP()) {
-    // Save settings before going back
     saveSettings();
     currentMenu = MENU_PID_BACKWARD;
     selectedParam = 0;
@@ -1926,10 +1607,10 @@ void displayTargetSettings() {
 }
 
 void displayRfidSettings() {
-  static int lastRemainingTime = -1; // Declare as static to retain value across calls
-  static int lastSelectedRfidItem = -1;
-  static int lastSelectedStationId = -1;
-  static bool lastMenuDrawn = false;
+  static int lastRemainingTime = -1;  // -1 needs explicit init
+  static int lastSelectedRfidItem = -1;  // -1 needs explicit init
+  static int lastSelectedStationId = -1;  // -1 needs explicit init
+  static bool lastMenuDrawn;  // Auto-initializes to false
   
   // Check if we need to refresh the display
   bool needsRefresh = menuNeedsRefresh || lastSelectedRfidItem != selectedRfidItem || lastSelectedStationId != selectedStationId || !lastMenuDrawn;
@@ -2064,12 +1745,13 @@ void displayResetAgvStateMenu() {
 }
 
 void handlePidSettings() {
-  static unsigned long lastRightPress = 0;
-  static unsigned long lastLeftPress = 0;
-  static unsigned long rightHoldStart = 0;
-  static unsigned long leftHoldStart = 0;
-  static bool rightHolding = false;
-  static bool leftHolding = false;
+  // Static variables auto-initialize to 0/false
+  static unsigned long lastRightPress;
+  static unsigned long lastLeftPress;
+  static unsigned long rightHoldStart;
+  static unsigned long leftHoldStart;
+  static bool rightHolding;
+  static bool leftHolding;
   unsigned long currentMillis = millis();
 
   if (UP()) {
@@ -2088,19 +1770,19 @@ void handlePidSettings() {
       // Single click - increment by 0.1
       pidIncrement = 0.1f;
       switch (selectedParam) {
-        case 0: tempKp += pidIncrement; break;
-        case 1: tempKi += pidIncrement; break;
-        case 2: tempKd += pidIncrement; break;
+        case 0: kp += pidIncrement; break;
+        case 1: ki += pidIncrement; break;
+        case 2: kd += pidIncrement; break;
       }
       lastRightPress = currentMillis;
     } else if (currentMillis - rightHoldStart > ACCELERATION_INTERVAL) {
       // Button is being held - increment by 1.0 every 100ms
-      if (currentMillis - lastRightPress >= 100) {
+      if (currentMillis - lastRightPress >= BUTTON_HOLD_INTERVAL) {
         pidIncrement = 1.0f;
         switch (selectedParam) {
-          case 0: tempKp += pidIncrement; break;
-          case 1: tempKi += pidIncrement; break;
-          case 2: tempKd += pidIncrement; break;
+          case 0: kp += pidIncrement; break;
+          case 1: ki += pidIncrement; break;
+          case 2: kd += pidIncrement; break;
         }
         lastRightPress = currentMillis;
       }
@@ -2119,19 +1801,19 @@ void handlePidSettings() {
       // Single click - decrement by 0.1
       pidIncrement = 0.1f;
       switch (selectedParam) {
-        case 0: tempKp = max(0.0f, (float)(tempKp - pidIncrement)); break;
-        case 1: tempKi = max(0.0f, (float)(tempKi - pidIncrement)); break;
-        case 2: tempKd = max(0.0f, (float)(tempKd - pidIncrement)); break;
+        case 0: kp = max(0.0f, (float)(kp - pidIncrement)); break;
+        case 1: ki = max(0.0f, (float)(ki - pidIncrement)); break;
+        case 2: kd = max(0.0f, (float)(kd - pidIncrement)); break;
       }
       lastLeftPress = currentMillis;
     } else if (currentMillis - leftHoldStart > ACCELERATION_INTERVAL) {
       // Button is being held - decrement by 1.0 every 100ms
-      if (currentMillis - lastLeftPress >= 100) {
+      if (currentMillis - lastLeftPress >= BUTTON_HOLD_INTERVAL) {
         pidIncrement = 1.0f;
         switch (selectedParam) {
-          case 0: tempKp = max(0.0f, (float)(tempKp - pidIncrement)); break;
-          case 1: tempKi = max(0.0f, (float)(tempKi - pidIncrement)); break;
-          case 2: tempKd = max(0.0f, (float)(tempKd - pidIncrement)); break;
+          case 0: kp = max(0.0f, (float)(kp - pidIncrement)); break;
+          case 1: ki = max(0.0f, (float)(ki - pidIncrement)); break;
+          case 2: kd = max(0.0f, (float)(kd - pidIncrement)); break;
         }
         lastLeftPress = currentMillis;
       }
@@ -2197,177 +1879,194 @@ void handleTargetSettings() {
   }
 }
 
+// ===================================================================
+// RFID SETTINGS HANDLERS - Fix #6: Split long functions
+// ===================================================================
+
+/**
+ * Handle RFID scanning process
+ */
+bool handleRfidScanning(unsigned long currentMillis) {
+  if (!isWaitingForRfid) return false;
+  
+  // Check if new RFID was scanned
+  if (newRfidScanned) {
+    if (addRfidStation(selectedStationId, String(lastScannedRfidOptimized))) {
+      lcd.clear();
+      lcd.setCursor(0, 1);
+      lcd.print("Station ");
+      lcd.print(selectedStationId);
+      lcd.print(" saved!");
+      lcd.setCursor(0, 2);
+      lcd.print("RFID: ");
+      char rfidDisplay[9];
+      strncpy(rfidDisplay, lastScannedRfidOptimized, 8);
+      rfidDisplay[8] = '\0';
+      lcd.print(rfidDisplay);
+      lcd.print("...");
+      delay(MESSAGE_DISPLAY_DURATION);
+    } else {
+      lcd.clear();
+      lcd.setCursor(0, 1);
+      lcd.print("Error saving!");
+      delay(MESSAGE_DISPLAY_DURATION);
+    }
+    
+    isWaitingForRfid = false;
+    newRfidScanned = false;
+    selectedRfidItem = 1;
+  }
+  
+  // Check timeout or cancel
+  if ((currentMillis - rfidScanTimeout > RFID_SCAN_TIMEOUT) || STOP()) {
+    isWaitingForRfid = false;
+    newRfidScanned = false;
+  }
+  
+  return true;
+}
+
+/**
+ * Display all RFID stations
+ */
+void displayAllRfidStations() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("RFID Stations:");
+  
+  int displayRow = 1;
+  bool hasData = false;
+  for (int i = 0; i < rfidStationCount && displayRow < 4; i++) {
+    if (rfidStations[i].isActive) {
+      lcd.setCursor(0, displayRow);
+      lcd.print("S");
+      lcd.print(rfidStations[i].stationId);
+      lcd.print(":");
+      String shortRfid = rfidStations[i].rfidId.substring(0, 8);
+      lcd.print(shortRfid);
+      displayRow++;
+      hasData = true;
+    }
+  }
+  
+  if (!hasData) {
+    lcd.setCursor(0, 1);
+    lcd.print("No stations set");
+  }
+  
+  if (hasData && rfidStationCount > 3) {
+    lcd.setCursor(13, 3);
+    lcd.print("...");
+  }
+  
+  // Wait for button press
+  while (START() == 0 && STOP() == 0) delay(1);
+  delay(BUTTON_DEBOUNCE_DELAY);
+  menuNeedsRefresh = true;
+}
+
+/**
+ * Delete RFID station with confirmation
+ */
+void handleDeleteRfidStation() {
+  if (deleteRfidStation(selectedStationId)) {
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print("Station ");
+    lcd.print(selectedStationId);
+    lcd.print(" deleted!");
+    delay(1500);
+  } else {
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print("Station not found!");
+    delay(1500);
+  }
+}
+
+/**
+ * Clear all RFID stations with confirmation
+ */
+void handleClearAllRfid() {
+  lcd.clear();
+  lcd.setCursor(0, 1);
+  lcd.print("Clear all RFID?");
+  lcd.setCursor(0, 2);
+  lcd.print("A: Yes  B: No");
+  
+  // Wait for confirmation
+  while (true) {
+    if (START()) {
+      clearAllRfidStations();
+      lcd.clear();
+      lcd.setCursor(0, 1);
+      lcd.print("All stations");
+      lcd.setCursor(0, 2);
+      lcd.print("cleared!");
+      delay(1500);
+      break;
+    } else if (STOP()) {
+      break;
+    }
+    delay(NVS_WRITE_DELAY);
+  }
+}
+
+/**
+ * Main RFID settings handler
+ */
 void handleRfidSettings() {
   unsigned long currentMillis = millis();
-
-  if (isWaitingForRfid) {
-    // Check if new RFID was scanned
-    if (newRfidScanned) {
-      // RFID card detected, save it
-      if (addRfidStation(selectedStationId, String(lastScannedRfidOptimized))) {
-        lcd.clear();
-        lcd.setCursor(0, 1);
-        lcd.print("Station ");
-        lcd.print(selectedStationId);
-        lcd.print(" saved!");
-        lcd.setCursor(0, 2);
-        lcd.print("RFID: ");
-        // Display first 8 characters of RFID (optimized)
-        char rfidDisplay[9];  // 8 chars + null terminator
-        strncpy(rfidDisplay, lastScannedRfidOptimized, 8);
-        rfidDisplay[8] = '\0';
-        lcd.print(rfidDisplay);
-        lcd.print("...");
-        delay(2000);  // Use safe delay with watchdog reset
-      } else {
-        lcd.clear();
-        lcd.setCursor(0, 1);
-        lcd.print("Error saving!");
-        delay(2000);  // Use safe delay with watchdog reset
-      }
-
-      // Reset scanning state
-      isWaitingForRfid = false;
-      newRfidScanned = false;
-      selectedRfidItem = 1;  // Stay on scan option for next scan
-    }
-
-    // Check for timeout or cancel
-    if ((currentMillis - rfidScanTimeout > RFID_SCAN_TIMEOUT) || STOP()) {
-      isWaitingForRfid = false;
-      newRfidScanned = false;
-    }
-
-    return;
-  }
-
+  
+  // Handle scanning process
+  if (handleRfidScanning(currentMillis)) return;
+  
+  // Navigation
   if (UP()) {
     selectedRfidItem = (selectedRfidItem - 1 + 10) % 10;
   } else if (DOWN()) {
     selectedRfidItem = (selectedRfidItem + 1) % 10;
-  } else if (RIGHT()) {
-    if (selectedRfidItem == 0) {
-      // Change station ID
-      selectedStationId = (selectedStationId % MAX_RFID_STATIONS) + 1;
-      menuNeedsRefresh = true;  // Refresh tampilan setelah perubahan
-    }
-  } else if (LEFT()) {
-    if (selectedRfidItem == 0) {
-      // Change station ID
-      selectedStationId = selectedStationId == 1 ? MAX_RFID_STATIONS : selectedStationId - 1;
-      menuNeedsRefresh = true;  // Refresh tampilan setelah perubahan
-    }
+  } else if (RIGHT() && selectedRfidItem == 0) {
+    selectedStationId = (selectedStationId % MAX_RFID_STATIONS) + 1;
+    menuNeedsRefresh = true;
+  } else if (LEFT() && selectedRfidItem == 0) {
+    selectedStationId = selectedStationId == 1 ? MAX_RFID_STATIONS : selectedStationId - 1;
+    menuNeedsRefresh = true;
   } else if (START()) {
     switch (selectedRfidItem) {
       case 1:  // Scan RFID
         isWaitingForRfid = true;
         rfidScanTimeout = currentMillis;
-        newRfidScanned = false;  // Reset flag
+        newRfidScanned = false;
         break;
-
+        
       case 2:  // Auto Input Station
         currentMenu = MENU_AUTO_INPUT_STATION;
         menuNeedsRefresh = true;
         break;
-
+        
       case 3:  // View All
-        {
-          lcd.clear();
-          lcd.setCursor(0, 0);
-          lcd.print("RFID Stations:");
-
-          int displayRow = 1;
-          bool hasData = false;
-          for (int i = 0; i < rfidStationCount && displayRow < 4; i++) {
-            if (rfidStations[i].isActive) {
-              lcd.setCursor(0, displayRow);
-              lcd.print("S");
-              lcd.print(rfidStations[i].stationId);
-              lcd.print(":");
-              String shortRfid = rfidStations[i].rfidId.substring(0, 8);
-              lcd.print(shortRfid);
-              displayRow++;
-              hasData = true;
-            }
-          }
-
-          if (!hasData) {
-            lcd.setCursor(0, 1);
-            lcd.print("No stations set");
-          }
-
-          if (hasData && rfidStationCount > 3) {
-            lcd.setCursor(13, 3);
-            lcd.print("...");
-          }
-
-          // Wait for any button press
-          while (true) {
-            if (START() || STOP()) {
-              delay(200);
-              break;
-            }
-            delay(1);
-          }
-          menuNeedsRefresh = true;  // Refresh menu after exiting view all
-        }
+        displayAllRfidStations();
         break;
-
+        
       case 4:  // Delete Station
-        {
-          if (deleteRfidStation(selectedStationId)) {
-            lcd.clear();
-            lcd.setCursor(0, 1);
-            lcd.print("Station ");
-            lcd.print(selectedStationId);
-            lcd.print(" deleted!");
-            delay(1500);
-          } else {
-            lcd.clear();
-            lcd.setCursor(0, 1);
-            lcd.print("Station not found!");
-            delay(1500);
-          }
-        }
+        handleDeleteRfidStation();
         break;
-
+        
       case 5:  // Clear All
-        {
-          lcd.clear();
-          lcd.setCursor(0, 1);
-          lcd.print("Clear all RFID?");
-          lcd.setCursor(0, 2);
-          lcd.print("A: Yes  B: No");
-
-          // Wait for confirmation
-          while (true) {
-            if (START()) {
-              clearAllRfidStations();
-              lcd.clear();
-              lcd.setCursor(0, 1);
-              lcd.print("All stations");
-              lcd.setCursor(0, 2);
-              lcd.print("cleared!");
-              delay(1500);
-              break;
-            } else if (STOP()) {
-              break;
-            }
-            delay(50);
-          }
-        }
+        handleClearAllRfid();
         break;
-
+        
       case 6:  // RFID Ujung
         currentMenu = MENU_RFID_UJUNG;
         menuNeedsRefresh = true;
         break;
-
+        
       case 7:  // RFID Warehouse
         currentMenu = MENU_RFID_WAREHOUSE;
         menuNeedsRefresh = true;
         break;
-
+        
       case 8:  // Terminal Drop
         currentMenu = MENU_TERMINAL_DROP;
         menuNeedsRefresh = true;
@@ -2420,29 +2119,29 @@ void handleMotorSettings() {
 void handleResetMenu() {
   if (START()) {
     // Reset PID values to defaults
-    tempKp = 70.0;
-    tempKi = 0.0;
-    tempKd = 0.0;
+    kp = 70.0;
+    ki = 0.0;
+    kd = 0.0;
     
     // Reset Forward PID WithMassa values to defaults
-    tempKpForwardWithMassa = 70.0;
-    tempKiForwardWithMassa = 0.0;
-    tempKdForwardWithMassa = 0.0;
+    kpForwardWithMassa = 70.0;
+    kiForwardWithMassa = 0.0;
+    kdForwardWithMassa = 0.0;
     
     // Reset Forward PID Default values to defaults
-    tempKpForwardDefault = 70.0;
-    tempKiForwardDefault = 0.0;
-    tempKdForwardDefault = 0.0;
+    kpForwardDefault = 70.0;
+    kiForwardDefault = 0.0;
+    kdForwardDefault = 0.0;
     
     // Reset Backward PID WithMassa values to defaults
-    tempKpBackwardWithMassa = 70.0;
-    tempKiBackwardWithMassa = 0.0;
-    tempKdBackwardWithMassa = 0.0;
+    kpBackwardWithMassa = 70.0;
+    kiBackwardWithMassa = 0.0;
+    kdBackwardWithMassa = 0.0;
     
     // Reset Backward PID Default values to defaults
-    tempKpBackwardDefault = 70.0;
-    tempKiBackwardDefault = 0.0;
-    tempKdBackwardDefault = 0.0;
+    kpBackwardDefault = 70.0;
+    kiBackwardDefault = 0.0;
+    kdBackwardDefault = 0.0;
     
     // Debug: Print reset values
     // Serial.println() - removed for production
@@ -2452,24 +2151,24 @@ void handleResetMenu() {
     // Serial.println() - removed for production
 
     // Reset Motor values to defaults
-    tempBaseSpeed = 1000;
+    baseSpeed = 1000;
 
     // Reset Motor invert values to defaults
-    tempInvertY = false;
-    tempInvertX = false;
-    tempInvertKanan = false;
-    tempInvertKiri = false;
-    tempInvertHook = false;
+    invertMotorY = false;
+    invertMotorX = false;
+    invertMotorKanan = false;
+    invertMotorKiri = false;
+    invertHook = false;
 
     // Reset Music mapping values to defaults
-    tempMusicOnPin = 0;        // pinMusic1
-    tempMusicObstaclePin = 1;  // pinMusic2
-    tempMusicStationPin = 2;   // pinMusic3
-    tempMusicOutOfLinePin = 3; // pinMusic4
+    musicOnPin = 0;        // pinMusic1
+    musicObstaclePin = 1;  // pinMusic2
+    musicStationPin = 2;   // pinMusic3
+    musicOutOfLinePin = 3; // pinMusic4
     
     // Reset Ultrasonic settings to defaults
-    tempMinSafeDistanceFront = 30;
-    tempMinSafeDistanceBack = 20;  // Default safe distance
+    minSafeDistanceFront = 30;
+    minSafeDistanceBack = 20;  // Default safe distance
 
     // Clear all preferences first before saving
     preferences.begin("agv-settings", false);
@@ -2515,7 +2214,7 @@ void handleResetAgvStateMenu() {
     lcd.print("AGV state has been");
     lcd.setCursor(0, 2);
     lcd.print("reset to STOP");
-    delay(2000); // Show message for 2 seconds
+    delay(MESSAGE_DISPLAY_DURATION); // Show message for 2 seconds
     
     // Return to main menu
     currentMenu = MENU_MAIN;
@@ -2532,10 +2231,10 @@ void handleResetAgvStateMenu() {
 
 
 void displayMusicTest() {
-  static bool displayInitialized = false;
-  static int lastSelectedMusicItem = -1;
-  static int musicTestMenuStartIndex = 0;
-  static int lastMusicTestMenuStartIndex = -1;
+  static bool displayInitialized;  // Auto-initializes to false
+  static int lastSelectedMusicItem = -1;  // -1 needs explicit init
+  static int musicTestMenuStartIndex;  // Auto-initializes to 0
+  static int lastMusicTestMenuStartIndex = -1;  // -1 needs explicit init
   
   // Music mode labels (5 main categories)
   String musicModes[5] = { "On", "Obstacle", "Station", "OutOfLine", "Warning" };
@@ -2589,7 +2288,7 @@ void displayMusicTest() {
 }
 
 void handleMusicTest() {
-  static bool displayInitialized = false;
+  static bool displayInitialized;  // Auto-initializes to false
   
   if (UP()) {
     selectedMusicItem = (selectedMusicItem - 1 + maxMusicItems) % maxMusicItems;
@@ -2679,8 +2378,7 @@ void displayMagnetCheck() {
 }
 
 void displayUltrasonicCheck() {
-  static unsigned long lastDisplayUpdate = 0;
-  const unsigned long DISPLAY_UPDATE_INTERVAL = 200; // 200ms interval for display update
+  static unsigned long lastDisplayUpdate;  // Auto-initializes to 0
   
   unsigned long currentTime = millis();
   
@@ -2778,10 +2476,8 @@ void handleMagnetCheck() {
 }
 
 void handleUltrasonicCheck() {
-  static unsigned long lastSwitchTime = 0;
-  static unsigned long lastSensorRead = 0;
-  const unsigned long SWITCH_DEBOUNCE = 200; // 200ms debounce for switching
-  const unsigned long SENSOR_READ_INTERVAL = 100; // 100ms interval for sensor reading
+  static unsigned long lastSwitchTime;  // Auto-initializes to 0
+  static unsigned long lastSensorRead;  // Auto-initializes to 0
   
   unsigned long currentTime = millis();
   
@@ -2959,7 +2655,7 @@ void handleRfidUjung() {
       lcd.print("Delete data first   ");
       lcd.setCursor(0, 3);
       lcd.print("STOP:Back           ");
-      delay(2000);
+      delay(MESSAGE_DISPLAY_DURATION);
       displayRfidUjung();
       return;
     }
@@ -2996,7 +2692,7 @@ void handleRfidUjung() {
           lcd.print("RFID Already Exists!");
           lcd.setCursor(0, 2);
           lcd.print("                    ");
-          delay(2000);
+          delay(MESSAGE_DISPLAY_DURATION);
           displayRfidUjung();
           return;
         }
@@ -3018,24 +2714,24 @@ void handleRfidUjung() {
         lcd.setCursor(0, 2);
         lcd.print(rfidData.substring(0, 16));
         lcd.print("    ");
-        delay(2000);
+        delay(MESSAGE_DISPLAY_DURATION);
         
         displayRfidUjung();
         return;
       }
-      delay(100);
+      delay(OPERATION_DELAY);
     }
     
     lcd.setCursor(0, 1);
     lcd.print("Scan Timeout!       ");
-    delay(2000);
+    delay(MESSAGE_DISPLAY_DURATION);
     displayRfidUjung();
     
   } else if (LEFT()) { // View data
     if (rfidUjungCount == 0) {
       lcd.setCursor(0, 1);
       lcd.print("No Data Available   ");
-      delay(2000);
+      delay(MESSAGE_DISPLAY_DURATION);
       displayRfidUjung();
       return;
     }
@@ -3061,15 +2757,15 @@ void handleRfidUjung() {
       
       if (UP() && viewIndex > 0) {
         viewIndex--;
-        delay(200);
+        delay(BUTTON_DEBOUNCE_DELAY);
       } else if (DOWN() && viewIndex < rfidUjungCount - 1) {
         viewIndex++;
-        delay(200);
+        delay(BUTTON_DEBOUNCE_DELAY);
       } else if (STOP()) {
         displayRfidUjung();
         return;
       }
-      delay(50);
+      delay(NVS_WRITE_DELAY);
     }
     
   } else if (RIGHT()) { // Delete menu
@@ -3145,21 +2841,21 @@ void handleRfidUjung() {
             
             lcd.setCursor(0, 1);
             lcd.print("All Data Deleted!   ");
-            delay(2000);
+            delay(MESSAGE_DISPLAY_DURATION);
             displayRfidUjung();
             return;
           } else if (LEFT() || STOP()) {
             displayRfidUjung();
             return;
           }
-          delay(50);
+          delay(NVS_WRITE_DELAY);
         }
         
       } else if (STOP()) {
         displayRfidUjung();
         return;
       }
-      delay(50);
+      delay(NVS_WRITE_DELAY);
     }
     
   } else if (STOP()) {
@@ -3258,24 +2954,24 @@ void handleRfidWarehouse() {
         lcd.setCursor(0, 2);
         lcd.print(rfidData.substring(0, 16));
         lcd.print("    ");
-        delay(2000);
+        delay(MESSAGE_DISPLAY_DURATION);
         
         displayRfidWarehouse();
         return;
       }
-      delay(100);
+      delay(OPERATION_DELAY);
     }
     
     lcd.setCursor(0, 1);
     lcd.print("Scan Timeout!       ");
-    delay(2000);
+    delay(MESSAGE_DISPLAY_DURATION);
     displayRfidWarehouse();
     
   } else if (LEFT()) { // View data
     if (rfidWarehouseCount == 0) {
       lcd.setCursor(0, 1);
       lcd.print("No Data Available   ");
-      delay(2000);
+      delay(MESSAGE_DISPLAY_DURATION);
       displayRfidWarehouse();
       return;
     }
@@ -3300,15 +2996,15 @@ void handleRfidWarehouse() {
       
       if (UP() && viewIndex > 0) {
         viewIndex--;
-        delay(200);
+        delay(BUTTON_DEBOUNCE_DELAY);
       } else if (DOWN() && viewIndex < rfidWarehouseCount - 1) {
         viewIndex++;
-        delay(200);
+        delay(BUTTON_DEBOUNCE_DELAY);
       } else if (STOP()) {
         displayRfidWarehouse();
         return;
       }
-      delay(50);
+      delay(NVS_WRITE_DELAY);
     }
     
   } else if (RIGHT()) { // Delete all
@@ -3328,14 +3024,14 @@ void handleRfidWarehouse() {
         
         lcd.setCursor(0, 1);
         lcd.print("All Data Deleted!   ");
-        delay(2000);
+        delay(MESSAGE_DISPLAY_DURATION);
         displayRfidWarehouse();
         return;
       } else if (LEFT() || STOP()) {
         displayRfidWarehouse();
         return;
       }
-      delay(50);
+      delay(NVS_WRITE_DELAY);
     }
     
   } else if (STOP()) {
@@ -3433,33 +3129,33 @@ void handleAutoInputStation() {
           lcd.print(" ");
           lcd.print(rfidData.substring(0, 8));
           lcd.print("    ");
-          delay(2000);
+          delay(MESSAGE_DISPLAY_DURATION);
         } else if (findRfidStationByRfidId(rfidData) != -1) {
           lcd.setCursor(0, 1);
           lcd.print("Station Exists!     ");
-          delay(2000);
+          delay(MESSAGE_DISPLAY_DURATION);
         } else {
           lcd.setCursor(0, 1);
           lcd.print("Storage Full!       ");
-          delay(2000);
+          delay(MESSAGE_DISPLAY_DURATION);
         }
         
         displayAutoInputStation();
         return;
       }
-      delay(100);
+      delay(OPERATION_DELAY);
     }
     
     lcd.setCursor(0, 1);
     lcd.print("Scan Timeout!       ");
-    delay(2000);
+    delay(MESSAGE_DISPLAY_DURATION);
     displayAutoInputStation();
     
   } else if (LEFT()) { // View data
     if (rfidStationCount == 0) {
       lcd.setCursor(0, 1);
       lcd.print("No Data Available   ");
-      delay(2000);
+      delay(MESSAGE_DISPLAY_DURATION);
       displayAutoInputStation();
       return;
     }
@@ -3486,15 +3182,15 @@ void handleAutoInputStation() {
       
       if (UP() && viewIndex > 0) {
         viewIndex--;
-        delay(200);
+        delay(BUTTON_DEBOUNCE_DELAY);
       } else if (DOWN() && viewIndex < rfidStationCount - 1) {
         viewIndex++;
-        delay(200);
+        delay(BUTTON_DEBOUNCE_DELAY);
       } else if (STOP()) {
         displayAutoInputStation();
         return;
       }
-      delay(50);
+      delay(NVS_WRITE_DELAY);
     }
     
   } else if (RIGHT()) { // Delete all
@@ -3509,14 +3205,14 @@ void handleAutoInputStation() {
         clearAllRfidStations(); // Use existing function
         lcd.setCursor(0, 1);
         lcd.print("All Data Deleted!   ");
-        delay(2000);
+        delay(MESSAGE_DISPLAY_DURATION);
         displayAutoInputStation();
         return;
       } else if (LEFT() || STOP()) {
         displayAutoInputStation();
         return;
       }
-      delay(50);
+      delay(NVS_WRITE_DELAY);
     }
     
   } else if (STOP()) {
@@ -3577,7 +3273,7 @@ void handleTerminalDrop() {
         lcd.print("Terminal Drop RFID");
         lcd.setCursor(0, 2);
         lcd.print("saved successfully!");
-        delay(2000);
+        delay(MESSAGE_DISPLAY_DURATION);
         
         newRfidScanned = false;
         displayTerminalDrop();
@@ -3586,7 +3282,7 @@ void handleTerminalDrop() {
         displayTerminalDrop();
         return;
       }
-      delay(50);
+      delay(NVS_WRITE_DELAY);
     }
     
   } else if (STOP()) {
@@ -3638,7 +3334,7 @@ void handleTerminalPickup() {
         lcd.print("Terminal Pickup RFID");
         lcd.setCursor(0, 2);
         lcd.print("saved successfully!");
-        delay(2000);
+        delay(MESSAGE_DISPLAY_DURATION);
         
         newRfidScanned = false;
         displayTerminalPickup();
@@ -3647,7 +3343,7 @@ void handleTerminalPickup() {
         displayTerminalPickup();
         return;
       }
-      delay(100);
+      delay(OPERATION_DELAY);
     }
     
     // Timeout
@@ -3851,8 +3547,8 @@ void handleUltrasonicBackSettings() {
 }
 
 void displayMusicSubmenu(const char* title, int* currentPin) {
-  static bool displayInitialized = false;
-  static int lastSelectedMusicPin = -1;
+  static bool displayInitialized;  // Auto-initializes to false
+  static int lastSelectedMusicPin = -1;  // -1 needs explicit init
   
   // Check if display needs refresh
   bool needsRefresh = !displayInitialized || 
@@ -3930,11 +3626,11 @@ void handleMusicSubmenu(int* targetPin) {
       *targetPin = selectedMusicPin;
       
       // Apply all changes and save
-      musicOnPin = tempMusicOnPin;
-      musicObstaclePin = tempMusicObstaclePin;
-      musicStationPin = tempMusicStationPin;
-      musicOutOfLinePin = tempMusicOutOfLinePin;
-      musicWarningPin = tempMusicWarningPin;
+      musicOnPin = musicOnPin;
+      musicObstaclePin = musicObstaclePin;
+      musicStationPin = musicStationPin;
+      musicOutOfLinePin = musicOutOfLinePin;
+      musicWarningPin = musicWarningPin;
       saveSettings();
       
       // Back to music settings
@@ -3951,10 +3647,10 @@ void handleMusicSubmenu(int* targetPin) {
 }
 
 void displayMusicSettings() {
-  static bool displayInitialized = false;
-  static int lastSelectedMusicItem = -1;
-  static int musicMenuStartIndex = 0;
-  static int lastMusicMenuStartIndex = -1;
+  static bool displayInitialized;  // Auto-initializes to false
+  static int lastSelectedMusicItem = -1;  // -1 needs explicit init
+  static int musicMenuStartIndex;  // Auto-initializes to 0
+  static int lastMusicMenuStartIndex = -1;  // -1 needs explicit init
   
   // Music mode labels (5 main categories)
   String musicModes[5] = { "On", "Obstacle", "Station", "OutOfLine", "Warning" };
@@ -4008,7 +3704,7 @@ void displayMusicSettings() {
 }
 
 void handleMusicSettings() {
-  static bool displayInitialized = false;
+  static bool displayInitialized;  // Auto-initializes to false
   
   if (UP()) {
     selectedMusicItem = (selectedMusicItem - 1 + maxMusicItems) % maxMusicItems;
@@ -4020,23 +3716,23 @@ void handleMusicSettings() {
     // Enter submenu based on selected item
     switch (selectedMusicItem) {
       case 0: 
-        selectedMusicPin = tempMusicOnPin;
+        selectedMusicPin = musicOnPin;
         currentMenu = MENU_MUSIC_ON; 
         break;
       case 1: 
-        selectedMusicPin = tempMusicObstaclePin;
+        selectedMusicPin = musicObstaclePin;
         currentMenu = MENU_MUSIC_OBSTACLE; 
         break;
       case 2: 
-        selectedMusicPin = tempMusicStationPin;
+        selectedMusicPin = musicStationPin;
         currentMenu = MENU_MUSIC_STATION; 
         break;
       case 3: 
-        selectedMusicPin = tempMusicOutOfLinePin;
+        selectedMusicPin = musicOutOfLinePin;
         currentMenu = MENU_MUSIC_OUTOFLINE; 
         break;
       case 4: 
-        selectedMusicPin = tempMusicWarningPin;
+        selectedMusicPin = musicWarningPin;
         currentMenu = MENU_MUSIC_WARNING; 
         break;
     }
@@ -4057,9 +3753,9 @@ void handleMusicSettings() {
 // =============================================
 
 void displaySpeedSetting() {
-  static int lastTempMaxMotorRpm = -1;
+  static int lastMaxMotorRpm = -1;
   
-  if (menuNeedsRefresh || tempMaxMotorRpm != lastTempMaxMotorRpm) {
+  if (menuNeedsRefresh || maxMotorRpm != lastMaxMotorRpm) {
     lcd.clear();
     displayMenuHeader("Speed Setting:");
     
@@ -4068,7 +3764,7 @@ void displaySpeedSetting() {
     
     lcd.setCursor(0, 2);
     lcd.print("> ");
-    lcd.print(tempMaxMotorRpm);
+    lcd.print(maxMotorRpm);
     lcd.print(" RPM");
     
     // Show range
@@ -4076,20 +3772,20 @@ void displaySpeedSetting() {
     lcd.print("Range: 10-90 RPM");
     
     menuNeedsRefresh = false;
-    lastTempMaxMotorRpm = tempMaxMotorRpm;
+    lastMaxMotorRpm = maxMotorRpm;
   }
 }
 
 void handleSpeedSetting() {
   if (LEFT()) {
-    tempMaxMotorRpm = max(10, tempMaxMotorRpm - 5);
+    maxMotorRpm = max(10, maxMotorRpm - 5);
     menuNeedsRefresh = true;
   } else if (RIGHT()) {
-    tempMaxMotorRpm = min(90, tempMaxMotorRpm + 5);
+    maxMotorRpm = min(90, maxMotorRpm + 5);
     menuNeedsRefresh = true;
   } else if (STOP()) {
     // Save speed setting and send to motor controller
-    maxMotorRpm = tempMaxMotorRpm;
+    maxMotorRpm = maxMotorRpm;
     
     // Save to preferences
     preferences.begin("agv-settings", false);
@@ -4176,7 +3872,7 @@ void displayUltrasonicFrontTengahSettings() {
   lcd.print("Min Safe Distance:");
   
   lcd.setCursor(0, 2);
-  lcd.print(String(tempMinSafeDistanceFront) + " cm");
+  lcd.print(String(minSafeDistanceFront) + " cm");
   
   lcd.setCursor(0, 3);
   lcd.print("L/R:Adj A:Save B:Back");
@@ -4185,21 +3881,21 @@ void displayUltrasonicFrontTengahSettings() {
 void handleUltrasonicFrontTengahSettings() {
   if (LEFT()) {
     // Decrease by 1 cm
-    if (tempMinSafeDistanceFront > 5) {  // Minimum 5 cm
-      tempMinSafeDistanceFront--;
+    if (minSafeDistanceFront > 5) {  // Minimum 5 cm
+      minSafeDistanceFront--;
     }
   } else if (RIGHT()) {
     // Increase by 1 cm
-    if (tempMinSafeDistanceFront < 100) {  // Maximum 100 cm
-      tempMinSafeDistanceFront++;
+    if (minSafeDistanceFront < 100) {  // Maximum 100 cm
+      minSafeDistanceFront++;
     }
   } else if (START()) {
     // Save settings
-    minSafeDistanceFront = tempMinSafeDistanceFront;
+    minSafeDistanceFront = minSafeDistanceFront;
     
     // Save to preferences
     preferences.begin("agv-settings", false);
-    preferences.putUShort("SafeDistFront", tempMinSafeDistanceFront);
+    preferences.putUShort("SafeDistFront", minSafeDistanceFront);
     preferences.end();
     
     // Show confirmation
@@ -4207,15 +3903,15 @@ void handleUltrasonicFrontTengahSettings() {
     lcd.setCursor(0, 1);
     lcd.print("Front Tengah saved!");
     lcd.setCursor(0, 2);
-    lcd.print("Min distance: " + String(tempMinSafeDistanceFront) + "cm");
-    delay(2000);
+    lcd.print("Min distance: " + String(minSafeDistanceFront) + "cm");
+    delay(MESSAGE_DISPLAY_DURATION);
     
     currentMenu = MENU_ULTRASONIC_FRONT;
     selectedItem = 0;
     menuNeedsRefresh = true;
   } else if (STOP()) {
     // Cancel changes
-    tempMinSafeDistanceFront = minSafeDistanceFront;
+    minSafeDistanceFront = minSafeDistanceFront;
     currentMenu = MENU_ULTRASONIC_FRONT;
     selectedItem = 0;
     menuNeedsRefresh = true;
@@ -4238,7 +3934,7 @@ void displayUltrasonicFrontSerongSettings() {
   lcd.print("Min Safe Distance:");
   
   lcd.setCursor(0, 2);
-  lcd.print(String(tempMinSafeDistanceFrontSerong) + " cm");
+  lcd.print(String(minSafeDistanceFrontSerong) + " cm");
   
   lcd.setCursor(0, 3);
   lcd.print("L/R:Adj A:Save B:Back");
@@ -4247,21 +3943,21 @@ void displayUltrasonicFrontSerongSettings() {
 void handleUltrasonicFrontSerongSettings() {
   if (LEFT()) {
     // Decrease by 1 cm
-    if (tempMinSafeDistanceFrontSerong > 5) {  // Minimum 5 cm
-      tempMinSafeDistanceFrontSerong--;
+    if (minSafeDistanceFrontSerong > 5) {  // Minimum 5 cm
+      minSafeDistanceFrontSerong--;
     }
   } else if (RIGHT()) {
     // Increase by 1 cm
-    if (tempMinSafeDistanceFrontSerong < 100) {  // Maximum 100 cm
-      tempMinSafeDistanceFrontSerong++;
+    if (minSafeDistanceFrontSerong < 100) {  // Maximum 100 cm
+      minSafeDistanceFrontSerong++;
     }
   } else if (START()) {
     // Save settings
-    minSafeDistanceFrontSerong = tempMinSafeDistanceFrontSerong;
+    minSafeDistanceFrontSerong = minSafeDistanceFrontSerong;
     
     // Save to preferences
     preferences.begin("agv-settings", false);
-    preferences.putUShort("SafeDistFrontS", tempMinSafeDistanceFrontSerong);
+    preferences.putUShort("SafeDistFrontS", minSafeDistanceFrontSerong);
     preferences.end();
     
     // Show confirmation
@@ -4269,15 +3965,15 @@ void handleUltrasonicFrontSerongSettings() {
     lcd.setCursor(0, 1);
     lcd.print("Front Serong saved!");
     lcd.setCursor(0, 2);
-    lcd.print("Min distance: " + String(tempMinSafeDistanceFrontSerong) + "cm");
-    delay(2000);
+    lcd.print("Min distance: " + String(minSafeDistanceFrontSerong) + "cm");
+    delay(MESSAGE_DISPLAY_DURATION);
     
     currentMenu = MENU_ULTRASONIC_FRONT;
     selectedItem = 1;
     menuNeedsRefresh = true;
   } else if (STOP()) {
     // Cancel changes
-    tempMinSafeDistanceFrontSerong = minSafeDistanceFrontSerong;
+    minSafeDistanceFrontSerong = minSafeDistanceFrontSerong;
     currentMenu = MENU_ULTRASONIC_FRONT;
     selectedItem = 1;
     menuNeedsRefresh = true;
@@ -4300,7 +3996,7 @@ void displayUltrasonicBackTengahSettings() {
   lcd.print("Min Safe Distance:");
   
   lcd.setCursor(0, 2);
-  lcd.print(String(tempMinSafeDistanceBack) + " cm");
+  lcd.print(String(minSafeDistanceBack) + " cm");
   
   lcd.setCursor(0, 3);
   lcd.print("L/R:Adj A:Save B:Back");
@@ -4309,21 +4005,21 @@ void displayUltrasonicBackTengahSettings() {
 void handleUltrasonicBackTengahSettings() {
   if (LEFT()) {
     // Decrease by 1 cm
-    if (tempMinSafeDistanceBack > 5) {  // Minimum 5 cm
-      tempMinSafeDistanceBack--;
+    if (minSafeDistanceBack > 5) {  // Minimum 5 cm
+      minSafeDistanceBack--;
     }
   } else if (RIGHT()) {
     // Increase by 1 cm
-    if (tempMinSafeDistanceBack < 100) {  // Maximum 100 cm
-      tempMinSafeDistanceBack++;
+    if (minSafeDistanceBack < 100) {  // Maximum 100 cm
+      minSafeDistanceBack++;
     }
   } else if (START()) {
     // Save settings
-    minSafeDistanceBack = tempMinSafeDistanceBack;
+    minSafeDistanceBack = minSafeDistanceBack;
     
     // Save to preferences
     preferences.begin("agv-settings", false);
-    preferences.putUShort("SafeDistBack", tempMinSafeDistanceBack);
+    preferences.putUShort("SafeDistBack", minSafeDistanceBack);
     preferences.end();
     
     // Show confirmation
@@ -4331,15 +4027,15 @@ void handleUltrasonicBackTengahSettings() {
     lcd.setCursor(0, 1);
     lcd.print("Back Tengah saved!");
     lcd.setCursor(0, 2);
-    lcd.print("Min distance: " + String(tempMinSafeDistanceBack) + "cm");
-    delay(2000);
+    lcd.print("Min distance: " + String(minSafeDistanceBack) + "cm");
+    delay(MESSAGE_DISPLAY_DURATION);
     
     currentMenu = MENU_ULTRASONIC_BACK;
     selectedItem = 0;
     menuNeedsRefresh = true;
   } else if (STOP()) {
     // Cancel changes
-    tempMinSafeDistanceBack = minSafeDistanceBack;
+    minSafeDistanceBack = minSafeDistanceBack;
     currentMenu = MENU_ULTRASONIC_BACK;
     selectedItem = 0;
     menuNeedsRefresh = true;
@@ -4362,7 +4058,7 @@ void displayUltrasonicBackSerongSettings() {
   lcd.print("Min Safe Distance:");
   
   lcd.setCursor(0, 2);
-  lcd.print(String(tempMinSafeDistanceBackSerong) + " cm");
+  lcd.print(String(minSafeDistanceBackSerong) + " cm");
   
   lcd.setCursor(0, 3);
   lcd.print("L/R:Adj A:Save B:Back");
@@ -4371,21 +4067,21 @@ void displayUltrasonicBackSerongSettings() {
 void handleUltrasonicBackSerongSettings() {
   if (LEFT()) {
     // Decrease by 1 cm
-    if (tempMinSafeDistanceBackSerong > 5) {  // Minimum 5 cm
-      tempMinSafeDistanceBackSerong--;
+    if (minSafeDistanceBackSerong > 5) {  // Minimum 5 cm
+      minSafeDistanceBackSerong--;
     }
   } else if (RIGHT()) {
     // Increase by 1 cm
-    if (tempMinSafeDistanceBackSerong < 100) {  // Maximum 100 cm
-      tempMinSafeDistanceBackSerong++;
+    if (minSafeDistanceBackSerong < 100) {  // Maximum 100 cm
+      minSafeDistanceBackSerong++;
     }
   } else if (START()) {
     // Save settings
-    minSafeDistanceBackSerong = tempMinSafeDistanceBackSerong;
+    minSafeDistanceBackSerong = minSafeDistanceBackSerong;
     
     // Save to preferences
     preferences.begin("agv-settings", false);
-    preferences.putUShort("SafeDistBackS", tempMinSafeDistanceBackSerong);
+    preferences.putUShort("SafeDistBackS", minSafeDistanceBackSerong);
     preferences.end();
     
     // Show confirmation
@@ -4393,15 +4089,15 @@ void handleUltrasonicBackSerongSettings() {
     lcd.setCursor(0, 1);
     lcd.print("Back Serong saved!");
     lcd.setCursor(0, 2);
-    lcd.print("Min distance: " + String(tempMinSafeDistanceBackSerong) + "cm");
-    delay(2000);
+    lcd.print("Min distance: " + String(minSafeDistanceBackSerong) + "cm");
+    delay(MESSAGE_DISPLAY_DURATION);
     
     currentMenu = MENU_ULTRASONIC_BACK;
     selectedItem = 1;
     menuNeedsRefresh = true;
   } else if (STOP()) {
     // Cancel changes
-    tempMinSafeDistanceBackSerong = minSafeDistanceBackSerong;
+    minSafeDistanceBackSerong = minSafeDistanceBackSerong;
     currentMenu = MENU_ULTRASONIC_BACK;
     selectedItem = 1;
     menuNeedsRefresh = true;
@@ -4646,14 +4342,14 @@ void displayPidRpmRight() {
   static double lastValues[3] = {-1, -1, -1};
   
   if (menuNeedsRefresh || selectedItem != lastSelectedParam ||
-      tempMotorPidKpRight != lastValues[0] || tempMotorPidKiRight != lastValues[1] || 
-      tempMotorPidKdRight != lastValues[2]) {
+      motorPidKpRight != lastValues[0] || motorPidKiRight != lastValues[1] || 
+      motorPidKdRight != lastValues[2]) {
     
     lcd.clear();
     displayMenuHeader("PID Right Motor:");
     
     String params[3] = {"Kp:", "Ki:", "Kd:"};
-    double values[3] = {tempMotorPidKpRight, tempMotorPidKiRight, tempMotorPidKdRight};
+    double values[3] = {motorPidKpRight, motorPidKiRight, motorPidKdRight};
     
     for (int i = 0; i < 3; i++) {
       lcd.setCursor(0, i + 1);
@@ -4668,57 +4364,54 @@ void displayPidRpmRight() {
     
     menuNeedsRefresh = false;
     lastSelectedParam = selectedItem;
-    lastValues[0] = tempMotorPidKpRight;
-    lastValues[1] = tempMotorPidKiRight;
-    lastValues[2] = tempMotorPidKdRight;
+    lastValues[0] = motorPidKpRight;
+    lastValues[1] = motorPidKiRight;
+    lastValues[2] = motorPidKdRight;
   }
 }
 
 void handlePidRpmRight() {
+  // Handle UP/DOWN navigation
   if (UP()) {
     selectedItem = (selectedItem - 1 + 3) % 3;
     menuNeedsRefresh = true;
   } else if (DOWN()) {
     selectedItem = (selectedItem + 1) % 3;
     menuNeedsRefresh = true;
-  } else if (LEFT()) {
-    // Decrease selected parameter
-    switch (selectedItem) {
-      case 0:  // Kp
-        tempMotorPidKpRight = max(0.0, tempMotorPidKpRight - 0.1);
-        break;
-      case 1:  // Ki
-        tempMotorPidKiRight = max(0.0, tempMotorPidKiRight - 0.01);
-        break;
-      case 2:  // Kd
-        tempMotorPidKdRight = max(0.0, tempMotorPidKdRight - 0.01);
-        break;
-    }
-    menuNeedsRefresh = true;
-  } else if (RIGHT()) {
-    // Increase selected parameter
-    switch (selectedItem) {
-      case 0:  // Kp
-        tempMotorPidKpRight = min(200.0, tempMotorPidKpRight + 0.1);
-        break;
-      case 1:  // Ki
-        tempMotorPidKiRight = min(200.0, tempMotorPidKiRight + 0.01);
-        break;
-      case 2:  // Kd
-        tempMotorPidKdRight = min(200.0, tempMotorPidKdRight + 0.01); 
-        break;
-    }
-    menuNeedsRefresh = true;
-  } else if (START() || STOP()) {
-    // Save PID settings and send to motor controller
-    motorPidKpRight = tempMotorPidKpRight;
-    motorPidKiRight = tempMotorPidKiRight;
-    motorPidKdRight = tempMotorPidKdRight;
+  }
 
-    // Send PID values for right motor
+  // Create array of pointers to PID values
+  double* pidValues[3] = {
+    &motorPidKpRight,
+    &motorPidKiRight,
+    &motorPidKdRight
+  };
+  
+  // Use reusable button handler with different increments per parameter
+  if (selectedItem == 0) {
+    // Kp: larger increment (0.1)
+    handlePidButtonAdjustment(pidValues, selectedItem, 0.1f, 0.5f, 100);
+  } else {
+    // Ki, Kd: smaller increment (0.01)
+    handlePidButtonAdjustment(pidValues, selectedItem, 0.01f, 0.1f, 100);
+  }
+  
+  // Check if values changed for refresh
+  static double lastKp = -1, lastKi = -1, lastKd = -1;
+  if (motorPidKpRight != lastKp || motorPidKiRight != lastKi || motorPidKdRight != lastKd) {
+    menuNeedsRefresh = true;
+    lastKp = motorPidKpRight;
+    lastKi = motorPidKiRight;
+    lastKd = motorPidKdRight;
+  }
+
+  // Handle save and back
+  if (START() || STOP()) {
+    motorPidKpRight = motorPidKpRight;
+    motorPidKiRight = motorPidKiRight;
+    motorPidKdRight = motorPidKdRight;
     sendPidValuesRight(motorPidKpRight, motorPidKiRight, motorPidKdRight);
     
-    // Show confirmation
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("PID Right Sent!");
@@ -4728,12 +4421,11 @@ void handlePidRpmRight() {
     lcd.print("Ki:" + String(motorPidKiRight, 3));
     lcd.setCursor(0, 3);
     lcd.print("Kd:" + String(motorPidKdRight, 3));
-    delay(1000);
+    delay(SHORT_DISPLAY_DURATION);
     
-    // Back to PID RPM Setting menu
     lcd.clear();
     currentMenu = MENU_PID_RPM_SETTING;
-    selectedItem = 0;  // Return to Right Motor item
+    selectedItem = 0;
     menuStartIndex = 0;
     menuNeedsRefresh = true;
   }
@@ -4745,14 +4437,14 @@ void displayPidRpmLeft() {
   static double lastValues[3] = {-1, -1, -1};
   
   if (menuNeedsRefresh || selectedItem != lastSelectedParam ||
-      tempMotorPidKpLeft != lastValues[0] || tempMotorPidKiLeft != lastValues[1] || 
-      tempMotorPidKdLeft != lastValues[2]) {
+      motorPidKpLeft != lastValues[0] || motorPidKiLeft != lastValues[1] || 
+      motorPidKdLeft != lastValues[2]) {
     
     lcd.clear();
     displayMenuHeader("PID Left Motor:");
     
     String params[3] = {"Kp:", "Ki:", "Kd:"};
-    double values[3] = {tempMotorPidKpLeft, tempMotorPidKiLeft, tempMotorPidKdLeft};
+    double values[3] = {motorPidKpLeft, motorPidKiLeft, motorPidKdLeft};
     
     for (int i = 0; i < 3; i++) {
       lcd.setCursor(0, i + 1);
@@ -4767,9 +4459,9 @@ void displayPidRpmLeft() {
     
     menuNeedsRefresh = false;
     lastSelectedParam = selectedItem;
-    lastValues[0] = tempMotorPidKpLeft;
-    lastValues[1] = tempMotorPidKiLeft;
-    lastValues[2] = tempMotorPidKdLeft;
+    lastValues[0] = motorPidKpLeft;
+    lastValues[1] = motorPidKiLeft;
+    lastValues[2] = motorPidKdLeft;
   }
 }
 
@@ -4784,13 +4476,13 @@ void handlePidRpmLeft() {
     // Decrease selected parameter
     switch (selectedItem) {
       case 0:  // Kp
-        tempMotorPidKpLeft = max(0.0, tempMotorPidKpLeft - 0.1);
+        motorPidKpLeft = max(0.0, motorPidKpLeft - 0.1);
         break;
       case 1:  // Ki
-        tempMotorPidKiLeft = max(0.0, tempMotorPidKiLeft - 0.01);
+        motorPidKiLeft = max(0.0, motorPidKiLeft - 0.01);
         break;
       case 2:  // Kd
-        tempMotorPidKdLeft = max(0.0, tempMotorPidKdLeft - 0.01);
+        motorPidKdLeft = max(0.0, motorPidKdLeft - 0.01);
         break;
     }
     menuNeedsRefresh = true;
@@ -4798,26 +4490,50 @@ void handlePidRpmLeft() {
     // Increase selected parameter
     switch (selectedItem) {
       case 0:  // Kp
-        tempMotorPidKpLeft = min(200.0, tempMotorPidKpLeft + 0.1);
+        motorPidKpLeft = min(200.0, motorPidKpLeft + 0.1);
         break;
       case 1:  // Ki
-        tempMotorPidKiLeft = min(200.0, tempMotorPidKiLeft + 0.01);
+        motorPidKiLeft = min(200.0, motorPidKiLeft + 0.01);
         break;
       case 2:  // Kd
-        tempMotorPidKdLeft = min(200.0, tempMotorPidKdLeft + 0.01); 
+        motorPidKdLeft = min(200.0, motorPidKdLeft + 0.01); 
         break;
     }
     menuNeedsRefresh = true;
-  } else if (START() || STOP()) {
-    // Save PID settings and send to motor controller
-    motorPidKpLeft = tempMotorPidKpLeft;
-    motorPidKiLeft = tempMotorPidKiLeft;
-    motorPidKdLeft = tempMotorPidKdLeft;
+  }
 
-    // Send PID values for left motor
+  // Create array of pointers to PID values
+  double* pidValues[3] = {
+    &motorPidKpLeft,
+    &motorPidKiLeft,
+    &motorPidKdLeft
+  };
+  
+  // Use reusable button handler with different increments per parameter
+  if (selectedItem == 0) {
+    // Kp: larger increment (0.1)
+    handlePidButtonAdjustment(pidValues, selectedItem, 0.1f, 0.5f, 100);
+  } else {
+    // Ki, Kd: smaller increment (0.01)
+    handlePidButtonAdjustment(pidValues, selectedItem, 0.01f, 0.1f, 100);
+  }
+  
+  // Check if values changed for refresh
+  static double lastKp = -1, lastKi = -1, lastKd = -1;
+  if (motorPidKpLeft != lastKp || motorPidKiLeft != lastKi || motorPidKdLeft != lastKd) {
+    menuNeedsRefresh = true;
+    lastKp = motorPidKpLeft;
+    lastKi = motorPidKiLeft;
+    lastKd = motorPidKdLeft;
+  }
+
+  // Handle save and back
+  if (START() || STOP()) {
+    motorPidKpLeft = motorPidKpLeft;
+    motorPidKiLeft = motorPidKiLeft;
+    motorPidKdLeft = motorPidKdLeft;
     sendPidValuesLeft(motorPidKpLeft, motorPidKiLeft, motorPidKdLeft);
     
-    // Show confirmation
     lcd.clear();
     lcd.setCursor(0, 1);
     lcd.print("Left PID saved:");
@@ -4825,11 +4541,10 @@ void handlePidRpmLeft() {
     lcd.print("Kp=" + String(motorPidKpLeft, 2) + " Ki=" + String(motorPidKiLeft, 3));
     lcd.setCursor(0, 3);
     lcd.print("Kd=" + String(motorPidKdLeft, 3));
-    delay(2000);
+    delay(MESSAGE_DISPLAY_DURATION);
     
-    // Return to parent menu
     currentMenu = MENU_PID_RPM_SETTING;
-    selectedItem = 1; // Keep "Left Motor" selected
+    selectedItem = 1;
     menuNeedsRefresh = true;
   }
 }
@@ -4898,7 +4613,7 @@ void handleTuningStartMenu(String command) {
         lcd.setCursor(0, 2);
         lcd.print("Mohon tunggu...");
         
-        delay(2000);  // Use safe delay with watchdog reset
+        delay(MESSAGE_DISPLAY_DURATION);  // Show message for 2 seconds
         
         menuNeedsRefresh = true;
         break;
@@ -4911,7 +4626,7 @@ void handleTuningStartMenu(String command) {
         lcd.setCursor(0, 2);
         lcd.print("tuning...");
         
-        delay(2000);  // Use safe delay with watchdog reset
+        delay(MESSAGE_DISPLAY_DURATION);  // Show message for 2 seconds
         
         menuNeedsRefresh = true;
         break;

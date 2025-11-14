@@ -256,107 +256,77 @@ void setupMenu() {
   Serial.println("\n=== LOADING SETTINGS ===");
   
   // Load PID settings with proper default values
-  tempKp = preferences.getDouble("kpLinefollower", 70.0);
-  tempKi = preferences.getDouble("kiLinefollower", 0.0);
-  tempKd = preferences.getDouble("kdLinefollower", 0.0);
+  kp = preferences.getDouble("kpLinefollower", 70.0);
+  ki = preferences.getDouble("kiLinefollower", 0.0);
+  kd = preferences.getDouble("kdLinefollower", 0.0);
   
 
   
   // Load Forward PID WithMassa settings with proper default values
-  tempKpForwardWithMassa = preferences.getDouble("kpFwdMassa", 70.0);
-  tempKiForwardWithMassa = preferences.getDouble("kiFwdMassa", 0.0);
-  tempKdForwardWithMassa = preferences.getDouble("kdFwdMassa", 0.0);
+  kpForwardWithMassa = preferences.getDouble("kpFwdMassa", 70.0);
+  kiForwardWithMassa = preferences.getDouble("kiFwdMassa", 0.0);
+  kdForwardWithMassa = preferences.getDouble("kdFwdMassa", 0.0);
   
   // Load Forward PID Default settings with proper default values
-  tempKpForwardDefault = preferences.getDouble("kpFwdDefault", 70.0);
+  kpForwardDefault = preferences.getDouble("kpFwdDefault", 70.0);
   Serial.print("Loaded kpFwdDefault: ");
-  Serial.println(tempKpForwardDefault, 2);
+  Serial.println(kpForwardDefault, 2);
   
-  tempKiForwardDefault = preferences.getDouble("kiFwdDefault", 0.0);
+  kiForwardDefault = preferences.getDouble("kiFwdDefault", 0.0);
   Serial.print("Loaded kiFwdDefault: ");
-  Serial.println(tempKiForwardDefault, 2);
+  Serial.println(kiForwardDefault, 2);
   
-  tempKdForwardDefault = preferences.getDouble("kdFwdDefault", 0.0);
+  kdForwardDefault = preferences.getDouble("kdFwdDefault", 0.0);
   Serial.print("Loaded kdFwdDefault: ");
-  Serial.println(tempKdForwardDefault, 2);
+  Serial.println(kdForwardDefault, 2);
   
   // Load Backward PID WithMassa settings with proper default values
-  tempKpBackwardWithMassa = preferences.getDouble("kpBwdMassa", 70.0);
-  tempKiBackwardWithMassa = preferences.getDouble("kiBwdMassa", 0.0);
-  tempKdBackwardWithMassa = preferences.getDouble("kdBwdMassa", 0.0);
+  kpBackwardWithMassa = preferences.getDouble("kpBwdMassa", 70.0);
+  kiBackwardWithMassa = preferences.getDouble("kiBwdMassa", 0.0);
+  kdBackwardWithMassa = preferences.getDouble("kdBwdMassa", 0.0);
   
   // Load Backward PID Default settings with proper default values
-  tempKpBackwardDefault = preferences.getDouble("kpBwdDefault", 70.0);
-  tempKiBackwardDefault = preferences.getDouble("kiBwdDefault", 0.0);
-  tempKdBackwardDefault = preferences.getDouble("kdBwdDefault", 0.0);
+  kpBackwardDefault = preferences.getDouble("kpBwdDefault", 70.0);
+  kiBackwardDefault = preferences.getDouble("kiBwdDefault", 0.0);
+  kdBackwardDefault = preferences.getDouble("kdBwdDefault", 0.0);
 
   // Load Motor settings
-  tempBaseSpeed = preferences.getInt("baseSpeed", 1000);
+  baseSpeed = preferences.getInt("baseSpeed", 1000);
 
   // Load Motor invert settings
-  tempInvertY = preferences.getBool("invertY", false);
-  tempInvertX = preferences.getBool("invertX", false);
-  tempInvertKanan = preferences.getBool("invertKanan", false);
-  tempInvertKiri = preferences.getBool("invertKiri", false);
-  tempInvertHook = preferences.getBool("invertHook", false);
+  invertMotorY = preferences.getBool("invertY", false);
+  invertMotorX = preferences.getBool("invertX", false);
+  invertMotorKanan = preferences.getBool("invertKanan", false);
+  invertMotorKiri = preferences.getBool("invertKiri", false);
+  invertHook = preferences.getBool("invertHook", false);
 
   // Load Music mapping settings
-  tempMusicOnPin = preferences.getInt("musicOn", 0);
-  tempMusicObstaclePin = preferences.getInt("musicObstacle", 1);
-  tempMusicStationPin = preferences.getInt("musicStation", 2);
-  tempMusicOutOfLinePin = preferences.getInt("musicOutOfLine", 3);
-  tempMusicWarningPin = preferences.getInt("musicWarning", 4);
+  musicOnPin = preferences.getInt("musicOn", 0);
+  musicObstaclePin = preferences.getInt("musicObstacle", 1);
+  musicStationPin = preferences.getInt("musicStation", 2);
+  musicOutOfLinePin = preferences.getInt("musicOutOfLine", 3);
+  musicWarningPin = preferences.getInt("musicWarning", 4);
   
   // Load Ultrasonic settings
-  tempMinSafeDistanceFront = preferences.getUShort("SafeDistFront", 30);
-  tempMinSafeDistanceBack = preferences.getUShort("SafeDistBack", 20);
-  tempMinSafeDistanceFrontSerong = preferences.getUShort("SafeDistFrontS", 25);
-  tempMinSafeDistanceBackSerong = preferences.getUShort("SafeDistBackS", 15);
+  minSafeDistanceFront = preferences.getUShort("SafeDistFront", 30);
+  minSafeDistanceBack = preferences.getUShort("SafeDistBack", 20);
+  minSafeDistanceFrontSerong = preferences.getUShort("SafeDistFrontS", 25);
+  minSafeDistanceBackSerong = preferences.getUShort("SafeDistBackS", 15);
 
   // Load Motor Control settings
-  tempMaxMotorRpm = preferences.getInt("maxMotorRpm", 90);
+  maxMotorRpm = preferences.getInt("maxMotorRpm", 90);
   // PID parameters are managed by motor controller, set defaults
-  tempMotorPidKp = 1.0;   // Default value, not loaded from preferences
-  tempMotorPidKi = 0.15;  // Default value, not loaded from preferences  
-  tempMotorPidKd = 0.0;   // Default value, not loaded from preferences
-        
-  // Apply Motor values
-  baseSpeed = tempBaseSpeed;
-
-  // Apply Motor invert values
-  invertMotorY = tempInvertY;
-  invertMotorX = tempInvertX;
-  invertMotorKanan = tempInvertKanan;
-  invertMotorKiri = tempInvertKiri;
-  invertHook = tempInvertHook;
-
-  // Apply Music mapping values
-  musicOnPin = tempMusicOnPin;
-  musicObstaclePin = tempMusicObstaclePin;
-  musicStationPin = tempMusicStationPin;
-  musicOutOfLinePin = tempMusicOutOfLinePin;
-  musicWarningPin = tempMusicWarningPin;
-  
-  // Apply Ultrasonic settings
-  minSafeDistanceFront = tempMinSafeDistanceFront;
-  minSafeDistanceBack = tempMinSafeDistanceBack;
-  minSafeDistanceFrontSerong = tempMinSafeDistanceFrontSerong;
-  minSafeDistanceBackSerong = tempMinSafeDistanceBackSerong;
-
-  // Apply Motor Control settings
-  maxMotorRpm = tempMaxMotorRpm;
-  // PID parameters are managed by motor controller
-  motorPidKp = tempMotorPidKp;     // Default values only
-  motorPidKi = tempMotorPidKi;     // Default values only
-  motorPidKd = tempMotorPidKd;     // Default values only
+  motorPidKp = 1.0;   // Default value, not loaded from preferences
+  motorPidKi = 0.15;  // Default value, not loaded from preferences  
+  motorPidKd = 0.0;   // Default value, not loaded from preferences
   
   // Initialize individual motor PID values to same defaults
-  motorPidKpRight = tempMotorPidKp;
-  motorPidKiRight = tempMotorPidKi; 
-  motorPidKdRight = tempMotorPidKd;
-  motorPidKpLeft = tempMotorPidKp;
-  motorPidKiLeft = tempMotorPidKi;
-  motorPidKdLeft = tempMotorPidKd;
+  motorPidKpRight = motorPidKp;
+  motorPidKiRight = motorPidKi; 
+  motorPidKdRight = motorPidKd;
+  motorPidKpLeft = motorPidKp;
+  motorPidKiLeft = motorPidKi;
+  motorPidKdLeft = motorPidKd;
 
   preferences.end();
   

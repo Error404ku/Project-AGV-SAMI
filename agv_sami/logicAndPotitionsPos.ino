@@ -1,17 +1,3 @@
-extern int totalSensorAktif;  // counter sensor aktif
-// ===================================================================
-// RFID TERMINAL VARIABLES SUDAH DIPINDAHKAN KE config.h
-// ===================================================================
-
-
-
-
-/***********************************************************
- *  WAREHOUSE & UJUNG RFID FUNCTIONS                     *
- ***********************************************************/
-
-
-
 void loadWarehouseUjungRfid() {
   preferences.begin("warehouse-ujung", false);
   warehouseRfidId = preferences.getString("warehouseRfid", "");

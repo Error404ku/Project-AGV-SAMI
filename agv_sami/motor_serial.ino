@@ -174,9 +174,9 @@ void processMotorControllerMessage(String message) {
       motorPidKpRight = kp;
       motorPidKiRight = ki;
       motorPidKdRight = kd;
-      tempMotorPidKpRight = kp;  // Update temp variables for menu display
-      tempMotorPidKiRight = ki;
-      tempMotorPidKdRight = kd;
+      motorPidKpRight = kp;  // Update motor PID variables from slave
+      motorPidKiRight = ki;
+      motorPidKdRight = kd;
     }
   } else if (message.startsWith("PIDRIGHT_VALUES:")) {
     // Handle startup PID values from motor controller slave
@@ -194,9 +194,9 @@ void processMotorControllerMessage(String message) {
       motorPidKpRight = kp;
       motorPidKiRight = ki;
       motorPidKdRight = kd;
-      tempMotorPidKpRight = kp;  // Update temp variables for menu display
-      tempMotorPidKiRight = ki;
-      tempMotorPidKdRight = kd;
+      motorPidKpRight = kp;  // Update motor PID variables from slave
+      motorPidKiRight = ki;
+      motorPidKdRight = kd;
       
       // Mark that we received right motor PID data
       pidDataReceivedRight = true;
@@ -217,9 +217,9 @@ void processMotorControllerMessage(String message) {
       motorPidKpLeft = kp;
       motorPidKiLeft = ki;
       motorPidKdLeft = kd;
-      tempMotorPidKpLeft = kp;  // Update temp variables for menu display
-      tempMotorPidKiLeft = ki;
-      tempMotorPidKdLeft = kd;
+      motorPidKpLeft = kp;  // Update motor PID variables from slave
+      motorPidKiLeft = ki;
+      motorPidKdLeft = kd;
     }
   } else if (message.startsWith("PIDLEFT_VALUES:")) {
     // Handle startup PID values from motor controller slave
@@ -237,9 +237,9 @@ void processMotorControllerMessage(String message) {
       motorPidKpLeft = kp;
       motorPidKiLeft = ki;
       motorPidKdLeft = kd;
-      tempMotorPidKpLeft = kp;  // Update temp variables for menu display
-      tempMotorPidKiLeft = ki;
-      tempMotorPidKdLeft = kd;
+      motorPidKpLeft = kp;  // Update motor PID variables from slave
+      motorPidKiLeft = ki;
+      motorPidKdLeft = kd;
       
       // Mark that we received left motor PID data
       pidDataReceivedLeft = true;
@@ -333,9 +333,9 @@ bool checkSystemReadyStatus() {
       motorPidKpRight = 1.0;
       motorPidKiRight = 0.15;
       motorPidKdRight = 0.0;
-      tempMotorPidKpRight = 1.0;
-      tempMotorPidKiRight = 0.15;
-      tempMotorPidKdRight = 0.0;
+      motorPidKpRight = 1.0;
+      motorPidKiRight = 0.15;
+      motorPidKdRight = 0.0;
       Serial.println("Using default Right Motor PID values");
     }
     
@@ -344,9 +344,9 @@ bool checkSystemReadyStatus() {
       motorPidKpLeft = 1.0;
       motorPidKiLeft = 0.15;
       motorPidKdLeft = 0.0;
-      tempMotorPidKpLeft = 1.0;
-      tempMotorPidKiLeft = 0.15;
-      tempMotorPidKdLeft = 0.0;
+      motorPidKpLeft = 1.0;
+      motorPidKiLeft = 0.15;
+      motorPidKdLeft = 0.0;
       Serial.println("Using default Left Motor PID values");
     }
     
@@ -354,9 +354,9 @@ bool checkSystemReadyStatus() {
     motorPidKp = 1.0;
     motorPidKi = 0.15;
     motorPidKd = 0.0;
-    tempMotorPidKp = 1.0;
-    tempMotorPidKi = 0.15;
-    tempMotorPidKd = 0.0;
+    motorPidKp = 1.0;
+    motorPidKi = 0.15;
+    motorPidKd = 0.0;
     
     systemReadyToRun = true; // Allow system to proceed with defaults
     return true;
@@ -389,4 +389,6 @@ bool checkSystemReadyStatus() {
 void requestRpmDataFromSlave() {
   Serial.println("RPMSHOW");
 }
+
+
 
