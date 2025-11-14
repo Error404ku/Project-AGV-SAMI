@@ -32,31 +32,71 @@ void displayPrint() {
   }
 }
 
-void scrollText(int row, String message, int delayTime) {
+void scrollText(int row, const char* message, int delayTime) {
   static unsigned long lastScrollTime = 0;
   static int scrollPos = 0;
-  // Inisialisasi ulang posisi scroll dan waktu jika pesan berubah atau fungsi dipanggil pertama kali
-  static String currentMessage = "";
-  if (message != currentMessage) {
-    currentMessage = message;
+  static char currentMessage[64] = "";
+  
+  // Check if message changed
+  if (strcmp(currentMessage, message) != 0) {
+    strncpy(currentMessage, message, sizeof(currentMessage) - 1);
+    currentMessage[sizeof(currentMessage) - 1] = '\0';
     scrollPos = 0;
     lastScrollTime = millis();
   }
 
-  // Tambahkan spasi di awal dan akhir pesan untuk efek scrolling yang mulus
-  String paddedMessage = message;
-  for (int i = 0; i < 16; i++) {
-    paddedMessage = " " + paddedMessage;
+  int msgLen = strlen(currentMessage);
+  
+  // If message fits on screen, just display with padding
+  if (msgLen <= 16) {
+    if (millis() - lastScrollTime > delayTime) {
+      lastScrollTime = millis();
+      lcd.setCursor(0, row);
+      char displayBuffer[17];
+      snprintf(displayBuffer, sizeof(displayBuffer), "%-16s", currentMessage);
+      lcd.print(displayBuffer);
+    }
+    return;
   }
-  paddedMessage = paddedMessage + " ";
 
-  // Lakukan scrolling jika waktu yang ditentukan telah berlalu
+  // Add padding for scroll effect
+  char paddedMessage[128];
+  int paddedLen = 0;
+  
+  // Add 16 spaces at start
+  for (int i = 0; i < 16 && paddedLen < 127; i++) {
+    paddedMessage[paddedLen++] = ' ';
+  }
+  
+  // Add message
+  for (int i = 0; i < msgLen && paddedLen < 127; i++) {
+    paddedMessage[paddedLen++] = currentMessage[i];
+  }
+  
+  // Add space at end
+  if (paddedLen < 127) {
+    paddedMessage[paddedLen++] = ' ';
+  }
+  paddedMessage[paddedLen] = '\0';
+
+  // Scroll logic
   if (millis() - lastScrollTime > delayTime) {
     lastScrollTime = millis();
     lcd.setCursor(0, row);
-    lcd.print(paddedMessage.substring(scrollPos, scrollPos + 16));
+    
+    char displayBuffer[17];
+    int copyLen = (scrollPos + 16 <= paddedLen) ? 16 : paddedLen - scrollPos;
+    memcpy(displayBuffer, paddedMessage + scrollPos, copyLen);
+    
+    // Pad with spaces if needed
+    for (int i = copyLen; i < 16; i++) {
+      displayBuffer[i] = ' ';
+    }
+    displayBuffer[16] = '\0';
+    
+    lcd.print(displayBuffer);
     scrollPos++;
-    if (scrollPos > paddedMessage.length() - 16) {
+    if (scrollPos > paddedLen - 16) {
       scrollPos = 0;
     }
   }
@@ -129,6 +169,15 @@ void modeDisplayStation() {
 }
 
 void displaySensorData() {
+  // Rate limiting - update LCD max 10 Hz (every 100ms)
+  static unsigned long lastDisplayUpdate = 0;
+  unsigned long currentTime = millis();
+  
+  if (currentTime - lastDisplayUpdate < 100) {
+    return;  // Skip update if less than 100ms since last update
+  }
+  lastDisplayUpdate = currentTime;
+  
   // Display sensor data on LCD (16 sensors in 2 rows)
   lcd.setCursor(0, 1);
   lcd.print("Sensor Magnet ");

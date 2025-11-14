@@ -1,12 +1,17 @@
 void setupMotor() {
   // Inisialisasi Serial0 untuk komunikasi dengan ESP32 kedua
   Serial.begin(921600);
+  
+  // Small delay untuk stabilisasi serial
+  delay(100);
+  
+  // Flush serial buffer
+  while (Serial.available()) {
+    Serial.read();
+  }
 
   // Request PID data dari motor controller saat startup
   requestPidDataFromSlave();
-
-  // Test komunikasi - use RPM command for stopping
-  sendRPM(0, 0);  // Stop semua motor saat startup dengan RPM command
 
   // Wait for PID data from motor controller before proceeding
   lcd.clear();
@@ -15,13 +20,34 @@ void setupMotor() {
   lcd.setCursor(0, 1);
   lcd.print("Data from Slave");
   
-  // Loop until PID data is received or timeout
+  // Loop dengan timeout protection
+  unsigned long startWait = millis();
+  const unsigned long maxWaitTime = 5000; // 5 detik timeout
+  
   while (!checkSystemReadyStatus()) {
     // Handle incoming serial data while waiting
     handleMotorControllerSerial();
-    delay(50); // Small delay to prevent watchdog issues
-    // esp_task_wdt_reset(); // Reset watchdog
+    
+    // Check timeout
+    if (millis() - startWait > maxWaitTime) {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("PID Timeout!");
+      lcd.setCursor(0, 1);
+      lcd.print("Using defaults");
+      delay(1500);
+      
+      // Force system ready dengan default values
+      systemReadyToRun = true;
+      break;
+    }
+    
+    delay(50); // Small delay to prevent tight loop
   }
+  
+  // Test komunikasi - use RPM command for stopping
+  sendRPM(0, 0);  // Stop semua motor saat startup dengan RPM command
+  delay(50);
 
 }
 
@@ -118,8 +144,6 @@ void setupUltrasonikWithParams(int slaveId) {
 }
 
 void setupRS485(int baudrate) {
-  // Serial debug removed for production
-  // Serial debug removed for production
 
   // Initialize Serial1 for RS485 communication (Magnet sensors)
   Serial1.begin(baudrate, SERIAL_8N1, RS485_RX, RS485_TX);
@@ -134,14 +158,6 @@ void setupRS485(int baudrate) {
 
   // Wait for Serial1 to be ready
   delay(100);
-
-  if (Serial1) {
-    // Serial debug removed for production
-  } else {
-    // Serial debug removed for production
-  }
-
-  // Serial debug removed for production
 }
 
 void setupRS485_Serial2(int baudrate) {

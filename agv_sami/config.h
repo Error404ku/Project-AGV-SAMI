@@ -349,7 +349,8 @@ ModbusMaster ultrasonicNode;
 // ===================================================================
 // Communication
 int BAUDRATE = 115200;
-String motorControllerBuffer = "";
+char motorControllerBuffer[256] = "";
+int motorControllerBufferIndex = 0;
 bool motorControllerStringComplete = false;
 
 // AGV State

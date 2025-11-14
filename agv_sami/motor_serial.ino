@@ -7,11 +7,12 @@ void sendRPM(int rpmKiri, int rpmKanan) {
   rpmKiri = constrain(rpmKiri, -90, 90);
   rpmKanan = constrain(rpmKanan, -90, 90);
   
-  String perintah = "RPM" + String(rpmKanan) + "," + String(rpmKiri);
-  Serial.println(perintah);
+  char buffer[32];
+  snprintf(buffer, sizeof(buffer), "RPM%d,%d", rpmKanan, rpmKiri);
+  Serial.println(buffer);
   
   // Debug output untuk monitoring
-  // Serial.printf("[MASTER] Sending RPM command: %s\n", perintah.c_str());
+  // Serial.printf("[MASTER] Sending RPM command: %s\n", buffer);
 }
 
 // =============== ESSENTIAL LEGACY PWM SUPPORT ===============
@@ -21,8 +22,9 @@ void sendMotorCommand(int speedKiri, int speedKanan) {
   speedKiri = constrain(speedKiri, -4095, 4095);
   speedKanan = constrain(speedKanan, -4095, 4095);
   
-  String perintah = "L" + String(speedKiri) + "R" + String(speedKanan);
-  Serial.println(perintah);
+  char buffer[32];
+  snprintf(buffer, sizeof(buffer), "L%dR%d", speedKiri, speedKanan);
+  Serial.println(buffer);
 }
 
 // Essential stop function for error handling
@@ -37,16 +39,18 @@ void handleMotorControllerSerial() {
     char inChar = (char)Serial.read();
     
     if (inChar == '\n') {
+      motorControllerBuffer[motorControllerBufferIndex] = '\0'; // Null terminate
       motorControllerStringComplete = true;
-    } else {
-      motorControllerBuffer += inChar;
+    } else if (motorControllerBufferIndex < 255) {
+      motorControllerBuffer[motorControllerBufferIndex++] = inChar;
     }
   }
   
   // Process complete message
   if (motorControllerStringComplete) {
     processMotorControllerMessage(motorControllerBuffer);
-    motorControllerBuffer = "";
+    motorControllerBufferIndex = 0; // Reset index
+    motorControllerBuffer[0] = '\0'; // Clear buffer
     motorControllerStringComplete = false;
   }
 }
@@ -64,13 +68,15 @@ void sendPidValues(double kp, double ki, double kd) {
   kd = constrain(kd, 0, 50);
   
   // Format pesan PID dengan presisi yang tepat
-  String pidCommand = "PID" + String(kp, 3) + "," + String(ki, 3) + "," + String(kd, 3);
+  char buffer[64];
+  snprintf(buffer, sizeof(buffer), "PID%.3f,%.3f,%.3f", kp, ki, kd);
   
   // Kirim perintah PID
-  Serial.println(pidCommand);
+  Serial.println(buffer);
   
   // Tampilkan informasi di Serial Monitor
-  Serial.println("Sending PID command: " + pidCommand);
+  Serial.print("Sending PID command: ");
+  Serial.println(buffer);
   
   // Simpan juga secara lokal sebagai cadangan
   motorPidKp = kp;
@@ -94,10 +100,11 @@ void sendPidValuesRight(double kp, double ki, double kd) {
   kd = constrain(kd, 0, 200);
   
   // Format pesan PID untuk motor kanan
-  String pidCommand = "PIDRIGHT" + String(kp, 3) + "," + String(ki, 3) + "," + String(kd, 3);
+  char buffer[64];
+  snprintf(buffer, sizeof(buffer), "PIDRIGHT%.3f,%.3f,%.3f", kp, ki, kd);
   
   // Kirim perintah PID
-  Serial.println(pidCommand);
+  Serial.println(buffer);
   
   // Simpan juga secara lokal sebagai cadangan
   motorPidKpRight = kp;
@@ -121,10 +128,11 @@ void sendPidValuesLeft(double kp, double ki, double kd) {
   kd = constrain(kd, 0, 200);
   
   // Format pesan PID untuk motor kiri
-  String pidCommand = "PIDLEFT" + String(kp, 3) + "," + String(ki, 3) + "," + String(kd, 3);
+  char buffer[64];
+  snprintf(buffer, sizeof(buffer), "PIDLEFT%.3f,%.3f,%.3f", kp, ki, kd);
   
   // Kirim perintah PID
-  Serial.println(pidCommand);
+  Serial.println(buffer);
   
   // Simpan juga secara lokal sebagai cadangan
   motorPidKpLeft = kp;
@@ -370,16 +378,17 @@ bool checkSystemReadyStatus() {
     
     // Update display dengan status PID yang sudah diterima
     lcd.setCursor(0, 1);
-    String status = "";
-    if (pidDataReceivedRight) status += "R✓ ";
-    else status += "R✗ ";
-    if (pidDataReceivedLeft) status += "L✓";
-    else status += "L✗";
-    status += " Waiting...";
-    lcd.print(status + "          "); // Padding untuk clear line
+    char status[32];
+    snprintf(status, sizeof(status), "%s %s Waiting", 
+             pidDataReceivedRight ? "R✓" : "R✗",
+             pidDataReceivedLeft ? "L✓" : "L✗");
+    lcd.print(status);
+    lcd.print("    "); // Clear remaining chars
     
-    Serial.println("PID Status - Right: " + String(pidDataReceivedRight ? "OK" : "WAIT") + 
-                   " Left: " + String(pidDataReceivedLeft ? "OK" : "WAIT"));
+    Serial.print("PID Status - Right: ");
+    Serial.print(pidDataReceivedRight ? "OK" : "WAIT");
+    Serial.print(" Left: ");
+    Serial.println(pidDataReceivedLeft ? "OK" : "WAIT");
   }
   
   return false;

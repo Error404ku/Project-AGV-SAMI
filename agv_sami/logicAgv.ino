@@ -226,12 +226,12 @@ void agvMoveForward() {
   checkObstacles();
   modeDisplayMoveForward();
   // Check RFID detected for mode switching (must be done before getStationFromLastRfid)
-  String currentRfid = String(lastScannedRfidOptimized);
+  const char* currentRfid = lastScannedRfidOptimized;
   unsigned long currentTime = millis();
   
   // Detect End RFID with 2-second Debounce
-  if (currentRfid.length() > 0) {
-    if (isRfidMatch(currentRfid, ujungRfidId)) {
+  if (strlen(currentRfid) > 0) {
+    if (strcmp(currentRfid, ujungRfidId.c_str()) == 0) {
       // Check if 2 seconds have passed since last detection (debounce protection)
       if (currentTime - lastUjungDetectionTime >= UJUNG_IGNORE_DURATION) {
         lastUjungDetectionTime = currentTime;  // Update timer
@@ -251,9 +251,9 @@ void agvMoveForward() {
     }
   }
     
-  if (currentRfid.length() > 0 && newRfidScanned) {
+  if (strlen(currentRfid) > 0 && newRfidScanned) {
     // Check Terminal Pickup RFID and Current State isn't Terminal Pickup
-    if (isRfidMatch(currentRfid, terminalPickUpRfidId) && currentRFID != AGV_STATE_TERMINAL_PICKUP) {
+    if (strcmp(currentRfid, terminalPickUpRfidId.c_str()) == 0 && currentRFID != AGV_STATE_TERMINAL_PICKUP) {
       stopMusic();
       newRfidScanned = false; // Reset flag
       isHookUp = false;
@@ -264,7 +264,7 @@ void agvMoveForward() {
       agvMode(AGV_STATE_TERMINAL_PICKUP);
       return;
     // Check Warehouse RFID and Current State isn't Warehouse
-    } else if (isRfidMatch(currentRfid, warehouseRfidId) && currentRFID != AGV_STATE_WAREHOUSE) {
+    } else if (strcmp(currentRfid, warehouseRfidId.c_str()) == 0 && currentRFID != AGV_STATE_WAREHOUSE) {
       stopMusic();
       newRfidScanned = false; // Reset flag
       exceptErrorPosition = true;
@@ -274,14 +274,14 @@ void agvMoveForward() {
       agvMode(AGV_STATE_WAREHOUSE);
       return;
     // Check Terminal Drop RFID and Current State isn't Terminal Drop
-    } else  if (isRfidMatch(currentRfid, terminalDropRfidId) && currentRFID != AGV_STATE_TERMINAL_DROP) {
+    } else  if (strcmp(currentRfid, terminalDropRfidId.c_str()) == 0 && currentRFID != AGV_STATE_TERMINAL_DROP) {
       newRfidScanned = false; // Reset flag
       currentRFID = AGV_STATE_TERMINAL_DROP;
       needsSoftStart = true;
       agvMode(AGV_STATE_TERMINAL_DROP);
       return;
     // Check RFID for station with exceptErrorPosition handling
-    } else if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, getRfidForStation(1))) {
+    } else if (strlen(currentRfid) > 0 && newRfidScanned && strcmp(currentRfid, getRfidForStation(1).c_str()) == 0) {
       newRfidScanned = false; // Reset flag
       if (currentRFID == AGV_STATE_WAREHOUSE){ // If coming from warehouse, clear error position
         exceptErrorPosition = false;
@@ -326,8 +326,19 @@ void agvMoveForward() {
 }
 
 // Helper function to check RFID match
-bool isRfidMatch(const String& currentRfid, const String& targetRfid) {
-  return targetRfid.length() > 0 && currentRfid.equals(targetRfid);
+bool isRfidMatch(const char* currentRfid, const char* targetRfid) {
+  // Null pointer check
+  if (targetRfid == nullptr || currentRfid == nullptr) {
+    return false;
+  }
+  
+  // Check if target is not empty
+  if (targetRfid[0] == '\0') {
+    return false;
+  }
+  
+  // Direct strcmp - faster than String.equals()
+  return strcmp(currentRfid, targetRfid) == 0;
 }
 
 // Function to load all AGV states from Preferences
@@ -336,7 +347,7 @@ void loadAllAGVStatesFromPreferences() {
 
   // Load current state
   String currentStateString = preferences.getString("current_state", "NULL");
-  currentStateAgv = stringToAgvState(currentStateString);
+  currentStateAgv = stringToAgvState(currentStateString.c_str());
 
   preferences.end();
   
@@ -348,7 +359,7 @@ void loadAllAGVStatesFromPreferences() {
 }
 
 // Function to convert AgvState to string
-String agvStateToString(AgvState state) {
+const char* agvStateToString(AgvState state) {
   switch (state) {
     case AGV_STATE_MOVE_FORWARD:
       return "MOVE_FORWARD";
@@ -375,7 +386,7 @@ void saveCurrentStateAGVToPreferences(AgvState currentState) {
   currentStateAgv = currentState;
 
   // Convert state to string
-  String stateString = agvStateToString(currentState);
+  const char* stateString = agvStateToString(currentState);
 
   // Save to Preferences
   preferences.begin("agv-state", false);
@@ -385,20 +396,20 @@ void saveCurrentStateAGVToPreferences(AgvState currentState) {
 
 // Function to convert string to AgvState
 // This function converts a string representation of the AGV state back to the AgvState enum.
-AgvState stringToAgvState(String stateString) {
-  if (stateString == "MOVE_FORWARD") {
+AgvState stringToAgvState(const char* stateString) {
+  if (strcmp(stateString, "MOVE_FORWARD") == 0) {
     return AGV_STATE_MOVE_FORWARD;
-  } else if (stateString == "TERMINAL_PICKUP") {
+  } else if (strcmp(stateString, "TERMINAL_PICKUP") == 0) {
     return AGV_STATE_TERMINAL_PICKUP;
-  } else if (stateString == "TERMINAL_DROP") {
+  } else if (strcmp(stateString, "TERMINAL_DROP") == 0) {
     return AGV_STATE_TERMINAL_DROP;
-  } else if (stateString == "WAREHOUSE") {
+  } else if (strcmp(stateString, "WAREHOUSE") == 0) {
     return AGV_STATE_WAREHOUSE;
-  } else if (stateString == "STATION") {
+  } else if (strcmp(stateString, "STATION") == 0) {
     return AGV_STATE_STATION;
-  } else if (stateString == "STOP") {
+  } else if (strcmp(stateString, "STOP") == 0) {
     return AGV_STATE_STOP;
-  } else if (stateString == "NULL") {
+  } else if (strcmp(stateString, "NULL") == 0) {
     return AGV_STATE_NULL;
   } else {
     return AGV_STATE_NULL;  // Default state
