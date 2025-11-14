@@ -137,6 +137,8 @@ unsigned long lastLeftPress = 0;
 unsigned long lastRightPress = 0;
 unsigned long lastStartPress = 0;
 unsigned long lastStopPress = 0;
+unsigned long stopButtonPressStartTime = 0;  // Track when STOP button was first pressed
+bool stopButtonWasPressed = false;           // Track if STOP is currently being held
 
 // --- PID CONTROLLER VARIABLES ---
 float pidError = 0;
@@ -215,6 +217,7 @@ int currentMenu = 0;           // MENU_MAIN
 // --- KONSTANTA MENU ---
 const int MAX_MANUAL_TARGETS = 10;  // Maximum number of manual targets allowed
 const unsigned long debounceDelay = 300;  // 200ms debounce
+const unsigned long longPressDelay = 1500; // 1.5 seconds for long press (AGV mode exit)
 const unsigned long RFID_SCAN_TIMEOUT = 10000;  // 10 seconds timeout
 const unsigned long X_HOLD_DURATION = 3000;  // 3 seconds hold
 const float MAX_INCREMENT = 10.0f;
@@ -299,6 +302,7 @@ const unsigned long RPM_REQUEST_INTERVAL = 100;  // Request RPM every 100ms (10x
 int testMotorSpeed = 1000;       // Default PWM speed for motor testing (safe speed)
 
 // Target settings
+bool trigger = false;
 bool useAutoTarget = false;         // New variable to track target source
 int manualTargetCount = 2;          // Default to 2 targets for manual mode
 
@@ -779,7 +783,7 @@ void agvTerminalPickup();
 void agvTerminalDrop();
 void agvStop();
 void moveStateAGV(AgvState lastState);
-String agvStateToString(AgvState state);
+const char* agvStateToString(AgvState state);  // ✅ OPTIMIZED: Return const char* instead of String
 AgvState stringToAgvState(String stateString);
 void saveCurrentStateAGVToPreferences(AgvState currentState);
 // AgvState loadCurrentStateAGVFromPreferences();

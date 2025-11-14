@@ -53,39 +53,26 @@ void loop() {
   static unsigned long stopMessageStartTime = 0;
   static bool lastStopState = false;
   static bool exitRequested = false; // Flag to track exit request
+  static bool systemInitialized = false; // Track if system has completed initialization
   const unsigned long doubleClickInterval = 2000; // 2 seconds
   const unsigned long messageDisplayTime = 2000; // 2 seconds to show message
   const unsigned long exitMessageTime = 1500; // 1.5 seconds for exit message
   
-  // Only proceed with normal operations if system is ready
-  if (!systemReadyToRun) {
+  // Only proceed with normal operations if system is ready (but once ready, stay ready)
+  // This prevents AGV from exiting mode when motor is physically held/stalled
+  if (!systemReadyToRun && !systemInitialized) {
     // Keep trying to get PID data if not received yet
     handleMotorControllerSerial();
     if (!checkSystemReadyStatus()) {
       delay(100);
       return; // Don't proceed with normal loop until ready
+    } else {
+      systemInitialized = true; // Mark system as initialized, never reset this
     }
   }
   
   // Handle incoming serial data from motor controller
   handleMotorControllerSerial();
-  
-  // Monitor system health (setiap 5 detik) - debug disabled
-  static unsigned long lastSystemCheck = 0;
-  if (millis() - lastSystemCheck > 5000) {
-    size_t freeHeap = ESP.getFreeHeap();
-    if (freeHeap < 15000) { // Less than 15KB free
-      // Low memory warning disabled for production
-      // Stop semua motor untuk menghemat resources
-      rpmMotor(0, 0);  // Use RPM stop command
-      hook(STOP_HOOK);
-      if (freeHeap < 8000) {
-        // Critical memory restart disabled for production
-        ESP.restart();
-      }
-    }
-    lastSystemCheck = millis();
-  }
   
   server.handleClient();
   loopWifi();  // Handle WiFi connection monitoring

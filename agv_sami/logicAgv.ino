@@ -45,7 +45,7 @@ void resetWarehouseState() {
 
 // Fungsi ini menangani logika AGV saat berada di gudang.
 void agvWarehouse() {
-  static bool trigger = false;
+  
   static bool showingErrorMessage = false;
   static unsigned long errorMessageStartTime = 0;
   static bool needsDisplayRefresh = false;
@@ -241,13 +241,14 @@ void agvMoveForward() {
   checkObstacles();
   modeDisplayMoveForward();
   moveStateAGV(AGV_STATE_MOVE_FORWARD);
-  // Cek RFID yang terdeteksi untuk mode switching (harus dilakukan sebelum getStationFromLastRfid)
-  String currentRfid = String(lastScannedRfidOptimized);
+  
+  // ✅ OPTIMIZED: Direct char array access - zero heap allocation
+  const char* currentRfid = lastScannedRfidOptimized;
   unsigned long currentTime = millis();
   
   // ✅ Deteksi Ujung RFID dengan Debounce 2 detik
-  if (currentRfid.length() > 0) {
-    if (isRfidMatch(currentRfid, ujungRfidId)) {
+  if (strlen(currentRfid) > 0 && ujungRfidId.length() > 0) {
+    if (strcmp(currentRfid, ujungRfidId.c_str()) == 0) {
       // Cek apakah sudah lewat 5 detik sejak deteksi terakhir (debounce protection)
       if (currentTime - lastUjungDetectionTime >= UJUNG_IGNORE_DURATION) {
         lastUjungDetectionTime = currentTime;  // Update timer
@@ -267,8 +268,24 @@ void agvMoveForward() {
     }
   }
     
-  if (currentRfid.length() > 0 && newRfidScanned) {
-    if (isRfidMatch(currentRfid, terminalPickUpRfidId) && currentRFID != AGV_STATE_TERMINAL_PICKUP) {
+  // ✅ OPTIMIZED: Cache getRfidForStation(1) result - avoid multiple calls
+  static char cachedStation1Rfid[32] = "";
+  static unsigned long lastStationRfidUpdate = 0;
+  
+  // Update cache every 5 seconds or if empty
+  if (millis() - lastStationRfidUpdate > 5000 || cachedStation1Rfid[0] == '\0') {
+    String tempRfid = getRfidForStation(1);
+    if (tempRfid.length() > 0) {
+      strncpy(cachedStation1Rfid, tempRfid.c_str(), sizeof(cachedStation1Rfid) - 1);
+      cachedStation1Rfid[sizeof(cachedStation1Rfid) - 1] = '\0';
+    } else {
+      cachedStation1Rfid[0] = '\0';
+    }
+    lastStationRfidUpdate = millis();
+  }
+  
+  if (strlen(currentRfid) > 0 && newRfidScanned) {
+    if (terminalPickUpRfidId.length() > 0 && strcmp(currentRfid, terminalPickUpRfidId.c_str()) == 0 && currentRFID != AGV_STATE_TERMINAL_PICKUP) {
       stopMusic();
       newRfidScanned = false; // Reset flag
       isHookUp = false;
@@ -280,7 +297,7 @@ void agvMoveForward() {
       pidSpeed = maxMotorRpm / 2;  // 🔧 FIX #2: 50% initial speed (was 25%, was baseSpeed)
       agvMode(AGV_STATE_TERMINAL_PICKUP);
       return;
-    } else if (isRfidMatch(currentRfid, warehouseRfidId) && currentRFID != AGV_STATE_WAREHOUSE) {
+    } else if (warehouseRfidId.length() > 0 && strcmp(currentRfid, warehouseRfidId.c_str()) == 0 && currentRFID != AGV_STATE_WAREHOUSE) {
       stopMusic();
       newRfidScanned = false; // Reset flag
       exceptErrorPosition = true;
@@ -291,18 +308,18 @@ void agvMoveForward() {
       softStartActive = true;
       pidSpeed = maxMotorRpm / 2;  // 🔧 FIX #2: 50% initial speed (was 25%, was baseSpeed)
       return;
-    } else if (isRfidMatch(currentRfid, getRfidForStation(1)) && exceptErrorPosition != false) {
+    } else if (cachedStation1Rfid[0] != '\0' && strcmp(currentRfid, cachedStation1Rfid) == 0 && exceptErrorPosition != false) {
       // newRfidScanned = false; // Reset flag
       exceptErrorPosition = false;
       saveExceptErrorFlag();
       return;
-    }else  if (isRfidMatch(currentRfid, terminalDropRfidId) && currentRFID != AGV_STATE_TERMINAL_DROP) {
+    } else if (terminalDropRfidId.length() > 0 && strcmp(currentRfid, terminalDropRfidId.c_str()) == 0 && currentRFID != AGV_STATE_TERMINAL_DROP) {
       newRfidScanned = false; // Reset flag
       currentRFID = AGV_STATE_TERMINAL_DROP;
       agvMode(AGV_STATE_TERMINAL_DROP);
       return;
     }
-  } else if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, getRfidForStation(1))) {
+  } else if (strlen(currentRfid) > 0 && newRfidScanned && cachedStation1Rfid[0] != '\0' && strcmp(currentRfid, cachedStation1Rfid) == 0) {
     newRfidScanned = false; // Reset flag
     if (currentRFID = AGV_STATE_WAREHOUSE){
       exceptErrorPosition = false;
@@ -350,16 +367,32 @@ void agvMoveBackward() {
   modeDisplayMoveBackward();
   checkObstacles();
   moveStateAGV(AGV_STATE_MOVE_BACKWARD);
-  // AGV bergerak mundur otomatis tanpa perlu menekan START
-  // Logika pergerakan mundur:
-  // Cek apakah RFID warehouse terdeteksi untuk mengabaikan error saat mundur
-  String currentRfid = String(lastScannedRfidOptimized);
-  if (currentRfid.length() > 0 && isRfidMatch(currentRfid, terminalDropRfidId)) {
+  
+  // ✅ OPTIMIZED: Direct char array access - zero heap allocation
+  const char* currentRfid = lastScannedRfidOptimized;
+  
+  // ✅ OPTIMIZED: Reuse cached station RFID from agvMoveForward
+  static char cachedStation1Rfid[32] = "";
+  static unsigned long lastStationRfidUpdate = 0;
+  
+  // Update cache if needed (shared with agvMoveForward)
+  if (millis() - lastStationRfidUpdate > 5000 || cachedStation1Rfid[0] == '\0') {
+    String tempRfid = getRfidForStation(1);
+    if (tempRfid.length() > 0) {
+      strncpy(cachedStation1Rfid, tempRfid.c_str(), sizeof(cachedStation1Rfid) - 1);
+      cachedStation1Rfid[sizeof(cachedStation1Rfid) - 1] = '\0';
+    } else {
+      cachedStation1Rfid[0] = '\0';
+    }
+    lastStationRfidUpdate = millis();
+  }
+  
+  if (strlen(currentRfid) > 0 && terminalDropRfidId.length() > 0 && strcmp(currentRfid, terminalDropRfidId.c_str()) == 0) {
       newRfidScanned = false; // Reset flag
       currentRFID = AGV_STATE_TERMINAL_DROP;
       agvMode(AGV_STATE_TERMINAL_DROP);
       return;
-  } else if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, getRfidForStation(1)) && exceptErrorPosition != true) {
+  } else if (strlen(currentRfid) > 0 && newRfidScanned && cachedStation1Rfid[0] != '\0' && strcmp(currentRfid, cachedStation1Rfid) == 0 && exceptErrorPosition != true) {
     newRfidScanned = false; // Reset flag
     exceptErrorPosition = true;
     saveExceptErrorFlag();
@@ -418,8 +451,8 @@ void moveStateAGV(AgvState lastState) {
 
 // Fungsi untuk menyimpan moveStateAGV ke Preferences
 void savemoveStateAGVToPreferences(AgvState lastState) {
-  // Konversi state ke string
-  String stateString = agvStateToString(lastState);
+  // ✅ OPTIMIZED: Direct const char* - no String allocation
+  const char* stateString = agvStateToString(lastState);
 
   // Simpan ke Preferences
   preferences.begin("agv-state", false);
@@ -450,7 +483,8 @@ void loadAllAGVStatesFromPreferences() {
   }
 }
 
-String agvStateToString(AgvState state) {
+// ✅ OPTIMIZED: Return const char* instead of String - zero heap
+const char* agvStateToString(AgvState state) {
   switch (state) {
     case AGV_STATE_MOVE_FORWARD:
       return "MOVE_FORWARD";
@@ -478,8 +512,8 @@ String agvStateToString(AgvState state) {
 void saveCurrentStateAGVToPreferences(AgvState currentState) {
   currentStateAgv = currentState;
 
-  // Konversi state ke string
-  String stateString = agvStateToString(currentState);
+  // ✅ OPTIMIZED: Direct const char* - no String allocation
+  const char* stateString = agvStateToString(currentState);
 
   // Simpan ke Preferences
   preferences.begin("agv-state", false);
