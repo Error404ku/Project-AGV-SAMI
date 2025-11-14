@@ -539,7 +539,6 @@ void handleMenu() {
       break;
 
     case MENU_MOTOR_TEST_RPM:
-      requestRpmDataFromSlave();
       displayMotorTestRPM();
       handleMotorTestRPM();
       break;
@@ -1191,27 +1190,34 @@ void handleMotorTestPWM() {
 }
 
 void displayMotorTestRPM() {
-  displayMenuHeader("Motor Test (RPM)");
-
-  lcd.setCursor(0, 1);
-  lcd.print("UP:Maju DOWN:Mundur");
-  lcd.setCursor(0, 2);
-  lcd.print("LF:Kiri RT:Kanan");
-  lcd.setCursor(0, 3);
-  lcd.print("R: ");
-  lcd.print(currentRpmKanan);
-  lcd.print(", L: ");
-  lcd.print(currentRpmKiri);
+  static int lastRpmKanan = -9999;
+  static int lastRpmKiri = -9999;
+  
+  // Update LCD only if RPM values changed
+  if (lastRpmKanan != currentRpmKanan || lastRpmKiri != currentRpmKiri) {
+    displayMenuHeader("Motor Test (RPM)");
+    
+    lcd.setCursor(0, 1);
+    lcd.print("UP:Maju DOWN:Mundur");
+    lcd.setCursor(0, 2);
+    lcd.print("LF:Kiri RT:Kanan");
+    lcd.setCursor(0, 3);
+    lcd.print("R: ");
+    lcd.print(currentRpmKanan);
+    lcd.print(", L: ");
+    lcd.print(currentRpmKiri);
+    lcd.print("      "); // Clear remaining chars
+    
+    lastRpmKanan = currentRpmKanan;
+    lastRpmKiri = currentRpmKiri;
+  }
 }
 
 void handleMotorTestRPM() {
-  // Request RPM data from slave periodically
-  unsigned long currentTime = millis();
-  if (currentTime - lastRpmRequestTime >= RPM_REQUEST_INTERVAL) {
+
     requestRpmDataFromSlave();  // Request current RPM values
-    lastRpmRequestTime = currentTime;
-  }
-  
+
+
   if (UP()) {
     motorTestState = 1;  // Set to forward
   } else if (DOWN()) {

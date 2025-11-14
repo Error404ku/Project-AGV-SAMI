@@ -258,17 +258,17 @@ int hitungErrorPosisi(uint16_t bitmask) {
   // Logika baru: cek dua-duanya lalu ambil dominasi
   int errorKiri = 0, errorKanan = 0;
   if (currentMagnetSlaveId == SLAVEID_MAGNET_DEPAN) {
-    if (segmenTerendah < 6) {
+    if (segmenTerendah < 7) {
       switch (segmenTerendah) {
         case 6: errorKiri = -1; break;   // Koreksi ringan
-        case 5: errorKiri = -2; break;   // Koreksi ringan
-        case 4: errorKiri = -3; break;  // Koreksi sedang
-        case 3: errorKiri = -4; break;  // Koreksi kuat
-        case 2: errorKiri = -5; break;  // Koreksi sangat kuat
+        case 5: errorKiri = -2; break;  // Koreksi sedang
+        case 4: errorKiri = -3; break;  // Koreksi kuat
+        case 3: errorKiri = -4; break;  // Koreksi sangat kuat
+        case 2: errorKiri = -5; break;  // Koreksi maksimal
         case 1: errorKiri = -6; break;  // Koreksi maksimal
       }
     }
-    if (segmenTertinggi > 11) {
+    if (segmenTertinggi > 10) {
       switch (segmenTertinggi) {
         case 11: errorKanan = 1; break;   // Koreksi ringan
         case 12: errorKanan = 2; break;   // Koreksi ringan
