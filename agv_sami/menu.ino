@@ -367,15 +367,30 @@ void displayMainMenu() {
 void handleMenu() {
   unsigned long currentMillis = millis();
 
-  // If in AGV mode, only check for B button to exit
+  // If in AGV mode, only check for STOP button long press to exit
   if (isAgvMode) {
-    if (STOP()) {
-      isAgvMode = false;
-      currentMenu = MENU_MAIN;
-      agvMode(AGV_STATE_STOP);
-      resetDisplayFlags(); // Reset semua flag display
-      newRfidScanned = false; // Reset flag RFID saat keluar dari AGV mode
-      menuNeedsRefresh = true;
+    // Check if STOP button is currently pressed
+    if (digitalRead(stopPin) == HIGH) {
+      if (!stopButtonWasPressed) {
+        // Button just pressed, record the time
+        stopButtonPressStartTime = currentMillis;
+        stopButtonWasPressed = true;
+      } else {
+        // Button is being held, check if long press duration reached
+        if (currentMillis - stopButtonPressStartTime >= longPressDelay) {
+          // Long press confirmed - exit AGV mode
+          isAgvMode = false;
+          currentMenu = MENU_MAIN;
+          agvMode(AGV_STATE_STOP);
+          resetDisplayFlags(); // Reset semua flag display
+          newRfidScanned = false; // Reset flag RFID saat keluar dari AGV mode
+          menuNeedsRefresh = true;
+          stopButtonWasPressed = false; // Reset tracking
+        }
+      }
+    } else {
+      // Button released before long press duration
+      stopButtonWasPressed = false;
     }
     return;
   }

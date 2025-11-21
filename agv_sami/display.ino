@@ -18,11 +18,13 @@ void displayPrint() {
   // Hanya update display jika state berubah atau belum diinisialisasi
   if (!displayInitialized || currentStateAgv != lastDisplayedState) {
     lcd.setCursor(0, 0);
-    lcd.print("AGV Mode:           ");  // Tambah spasi untuk clear sisa karakter
+    lcd.print("AGV Mode:           ");
     lcd.setCursor(0, 1);
-    String stateString = agvStateToString(currentStateAgv);
-    stateString += "                ";  // Tambah spasi untuk clear sisa karakter
+    
+    // ✅ OPTIMIZED: Direct const char* - already optimized, no need .c_str()
+    const char* stateString = agvStateToString(currentStateAgv);
     lcd.print(stateString);
+    lcd.print("                ");  // Clear remaining chars
 
     // Update state tracking
     lastDisplayedState = currentStateAgv;
@@ -36,40 +38,53 @@ void displayPrint() {
 }
 
 struct ScrollState {
-  String currentMessage;
-  String paddedMessage;
+  char currentMessage[64];  // ✅ Fixed buffer instead of String
+  char paddedMessage[96];   // ✅ Fixed buffer for padded text
   int scrollPos = 0;
   unsigned long lastScrollTime = 0;
 };
 ScrollState scrollLine0;
 ScrollState scrollLine1;
 
-void scrollText(int row, String message, int delayTime) {
-  unsigned long lastScrollTime = 0;
-  int scrollPos = 0;
-  // Inisialisasi ulang posisi scroll dan waktu jika pesan berubah atau fungsi dipanggil pertama kali
-  static String currentMessage = "";
-  if (message != currentMessage) {
-    currentMessage = message;
-    scrollPos = 0;
-    lastScrollTime = millis();
+// ✅ OPTIMIZED: Zero heap allocation scrolling
+void scrollText(int row, const char* message, int delayTime) {
+  ScrollState* state = (row == 0) ? &scrollLine0 : &scrollLine1;
+  
+  // Check if message changed
+  if (strcmp(state->currentMessage, message) != 0) {
+    strncpy(state->currentMessage, message, sizeof(state->currentMessage) - 1);
+    state->currentMessage[sizeof(state->currentMessage) - 1] = '\0';
+    
+    // Build padded message with fixed buffer - NO HEAP
+    int msgLen = strlen(message);
+    int padLen = 16;
+    
+    // Add leading spaces
+    memset(state->paddedMessage, ' ', padLen);
+    // Copy message
+    strncpy(state->paddedMessage + padLen, message, sizeof(state->paddedMessage) - padLen - 2);
+    // Add trailing space
+    state->paddedMessage[padLen + msgLen] = ' ';
+    state->paddedMessage[padLen + msgLen + 1] = '\0';
+    
+    state->scrollPos = 0;
+    state->lastScrollTime = millis();
   }
 
-  // Tambahkan spasi di awal dan akhir pesan untuk efek scrolling yang mulus
-  String paddedMessage = message;
-  for (int i = 0; i < 16; i++) {
-    paddedMessage = " " + paddedMessage;
-  }
-  paddedMessage = paddedMessage + " ";
-
-  // Lakukan scrolling jika waktu yang ditentukan telah berlalu
-  if (millis() - lastScrollTime > delayTime) {
-    lastScrollTime = millis();
+  // Scroll if delay elapsed
+  if (millis() - state->lastScrollTime > delayTime) {
+    state->lastScrollTime = millis();
     lcd.setCursor(0, row);
-    lcd.print(paddedMessage.substring(scrollPos, scrollPos + 16));
-    scrollPos++;
-    if (scrollPos > paddedMessage.length() - 16) {
-      scrollPos = 0;
+    
+    // ✅ Direct print without substring - NO HEAP
+    int totalLen = strlen(state->paddedMessage);
+    for (int i = 0; i < 16 && (state->scrollPos + i) < totalLen; i++) {
+      lcd.write(state->paddedMessage[state->scrollPos + i]);
+    }
+    
+    state->scrollPos++;
+    if (state->scrollPos > totalLen - 16) {
+      state->scrollPos = 0;
     }
   }
 }

@@ -20,8 +20,9 @@ void sendRPM(int rpmKiri, int rpmKanan) {
   rpmKiri = constrain(rpmKiri, -90, 90);
   rpmKanan = constrain(rpmKanan, -90, 90);
   
-  String perintah = "RPM" + String(rpmKanan) + "," + String(rpmKiri);
-  Serial.println(perintah);
+  char buffer[32];
+  snprintf(buffer, sizeof(buffer), "RPM%d,%d", rpmKanan, rpmKiri);
+  Serial.println(buffer);
   
   // Debug output untuk monitoring
   // Serial.printf("[MASTER] Sending RPM command: %s\n", perintah.c_str());
@@ -300,10 +301,20 @@ void processMotorControllerMessage(String message) {
 
 // Fungsi untuk meminta data PID dari motor controller slave
 void requestPidDataFromSlave() {
+  // Don't reset systemReadyToRun if system is already running (after initial startup)
+  // This prevents AGV mode from exiting when motor is physically held
+  static bool firstRequest = true;
+  
   pidDataReceived = false;
   pidDataReceivedRight = false;
   pidDataReceivedLeft = false;
-  systemReadyToRun = false;
+  
+  // Only reset systemReadyToRun on first request (during startup)
+  if (firstRequest) {
+    systemReadyToRun = false;
+    firstRequest = false;
+  }
+  
   pidRequestStartTime = millis();
   
   // Display status di LCD
