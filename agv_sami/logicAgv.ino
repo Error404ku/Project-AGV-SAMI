@@ -302,16 +302,16 @@ void agvMoveForward() {
       agvMode(AGV_STATE_TERMINAL_DROP);
       return;
     }
-  } else if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, getRfidForStation(1))) {
-    newRfidScanned = false; // Reset flag
-    if (currentRFID = AGV_STATE_WAREHOUSE){
-      exceptErrorPosition = false;
-    } else {
-      exceptErrorPosition = true;
-    }
-    currentRFID = AGV_STATE_NULL;
-    saveExceptErrorFlag();
-  }
+  } // else if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, getRfidForStation(1))) {
+  //   newRfidScanned = false; // Reset flag
+  //   if (currentRFID = AGV_STATE_WAREHOUSE){
+  //     exceptErrorPosition = false;
+  //   } else {
+  //     exceptErrorPosition = true;
+  //   }
+  //   currentRFID = AGV_STATE_NULL;
+  //   saveExceptErrorFlag();
+  // }
 
   // Cek apakah ada RFID yang terbaca untuk stasiun
   int currentStation = getStationFromLastRfid();
@@ -335,11 +335,11 @@ void agvMoveForward() {
     if (exceptErrorPosition && totalSensorAktif > 7) {
       pidLinefollower(0, PID_MODE_MAJU);
     } else {
-      if (targetStationsList.size() != 0 || currentRFID == AGV_STATE_TERMINAL_PICKUP) {
+      // if (targetStationsList.size() != 0 || currentRFID == AGV_STATE_TERMINAL_PICKUP) {
+      //   pidLinefollower(errorValue, PID_MODE_MAJU);  // Error dari sensor magnet
+      // } else {
         pidLinefollower(errorValue, PID_MODE_MAJU);  // Error dari sensor magnet
-      } else {
-        pidLinefollower(errorValue, PID_MODE_MAJU);  // Error dari sensor magnet
-      }
+      // }
     }
   }
 }
