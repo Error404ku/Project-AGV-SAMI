@@ -47,47 +47,47 @@ ScrollState scrollLine0;
 ScrollState scrollLine1;
 
 // ✅ OPTIMIZED: Zero heap allocation scrolling
-void scrollText(int row, const char* message, int delayTime) {
-  ScrollState* state = (row == 0) ? &scrollLine0 : &scrollLine1;
+// void scrollText(int row, const char* message, int delayTime) {
+//   ScrollState* state = (row == 0) ? &scrollLine0 : &scrollLine1;
   
-  // Check if message changed
-  if (strcmp(state->currentMessage, message) != 0) {
-    strncpy(state->currentMessage, message, sizeof(state->currentMessage) - 1);
-    state->currentMessage[sizeof(state->currentMessage) - 1] = '\0';
+//   // Check if message changed
+//   if (strcmp(state->currentMessage, message) != 0) {
+//     strncpy(state->currentMessage, message, sizeof(state->currentMessage) - 1);
+//     state->currentMessage[sizeof(state->currentMessage) - 1] = '\0';
     
-    // Build padded message with fixed buffer - NO HEAP
-    int msgLen = strlen(message);
-    int padLen = 16;
+//     // Build padded message with fixed buffer - NO HEAP
+//     int msgLen = strlen(message);
+//     int padLen = 16;
     
-    // Add leading spaces
-    memset(state->paddedMessage, ' ', padLen);
-    // Copy message
-    strncpy(state->paddedMessage + padLen, message, sizeof(state->paddedMessage) - padLen - 2);
-    // Add trailing space
-    state->paddedMessage[padLen + msgLen] = ' ';
-    state->paddedMessage[padLen + msgLen + 1] = '\0';
+//     // Add leading spaces
+//     memset(state->paddedMessage, ' ', padLen);
+//     // Copy message
+//     strncpy(state->paddedMessage + padLen, message, sizeof(state->paddedMessage) - padLen - 2);
+//     // Add trailing space
+//     state->paddedMessage[padLen + msgLen] = ' ';
+//     state->paddedMessage[padLen + msgLen + 1] = '\0';
     
-    state->scrollPos = 0;
-    state->lastScrollTime = millis();
-  }
+//     state->scrollPos = 0;
+//     state->lastScrollTime = millis();
+//   }
 
-  // Scroll if delay elapsed
-  if (millis() - state->lastScrollTime > delayTime) {
-    state->lastScrollTime = millis();
-    lcd.setCursor(0, row);
+//   // Scroll if delay elapsed
+//   if (millis() - state->lastScrollTime > delayTime) {
+//     state->lastScrollTime = millis();
+//     lcd.setCursor(0, row);
     
-    // ✅ Direct print without substring - NO HEAP
-    int totalLen = strlen(state->paddedMessage);
-    for (int i = 0; i < 16 && (state->scrollPos + i) < totalLen; i++) {
-      lcd.write(state->paddedMessage[state->scrollPos + i]);
-    }
+//     // ✅ Direct print without substring - NO HEAP
+//     int totalLen = strlen(state->paddedMessage);
+//     for (int i = 0; i < 16 && (state->scrollPos + i) < totalLen; i++) {
+//       lcd.write(state->paddedMessage[state->scrollPos + i]);
+//     }
     
-    state->scrollPos++;
-    if (state->scrollPos > totalLen - 16) {
-      state->scrollPos = 0;
-    }
-  }
-}
+//     state->scrollPos++;
+//     if (state->scrollPos > totalLen - 16) {
+//       state->scrollPos = 0;
+//     }
+//   }
+// }
 
 void modeDisplayWarehouse() {
   static bool displayInitialized = false;
@@ -103,16 +103,16 @@ void modeDisplayWarehouse() {
     lcd.print("Mode: Warehouse     ");  // Tambah spasi untuk clear sisa karakter
     displayInitialized = true;
   }
-  scrollText(1, "Tekan Start untuk jalan", 500);
+  // scrollText(1, "Tekan Start untuk jalan", 500);
 }
 
 void modeDisplayMoveForward() {
-  scrollText(0, "Mode : Move Forward", 500);
+  // scrollText(0, "Mode : Move Forward", 500);
   displaySensorData();
 }
 
 void modeDisplayMoveBackward() {
-  scrollText(0, "Mode : Move Backward", 500);
+  // scrollText(0, "Mode : Move Backward", 500);
   displaySensorData();
 }
 
@@ -155,14 +155,14 @@ void modeDisplayTerminalPickup(bool hookIsUp) {
 
 void modeDisplayTerminalDrop() {
   lcd.setCursor(0, 0);
-  scrollText(0, "Mode: Terminal Drop", 500);
-  scrollText(1, "Tekan Start untuk jalan", 500);
+  // scrollText(0, "Mode: Terminal Drop", 500);
+  // scrollText(1, "Tekan Start untuk jalan", 500);
 }
 
 void modeDisplayStation() {
   lcd.setCursor(0, 0);
-  scrollText(0, "Mode: Station", 500);
-  scrollText(1, "Tekan Start untuk jalan", 500);
+  // scrollText(0, "Mode: Station", 500);
+  // scrollText(1, "Tekan Start untuk jalan", 500);
 }
 
 void displaySensorData() {
