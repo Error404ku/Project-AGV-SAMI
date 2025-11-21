@@ -319,7 +319,6 @@ void agvMoveForward() {
       agvMode(AGV_STATE_TERMINAL_DROP);
       return;
     }
-<<<<<<< HEAD
   } // else if (currentRfid.length() > 0 && newRfidScanned && isRfidMatch(currentRfid, getRfidForStation(1))) {
   //   newRfidScanned = false; // Reset flag
   //   if (currentRFID = AGV_STATE_WAREHOUSE){
@@ -330,18 +329,6 @@ void agvMoveForward() {
   //   currentRFID = AGV_STATE_NULL;
   //   saveExceptErrorFlag();
   // }
-=======
-  } else if (strlen(currentRfid) > 0 && newRfidScanned && cachedStation1Rfid[0] != '\0' && strcmp(currentRfid, cachedStation1Rfid) == 0) {
-    newRfidScanned = false; // Reset flag
-    if (currentRFID = AGV_STATE_WAREHOUSE){
-      exceptErrorPosition = false;
-    } else {
-      exceptErrorPosition = true;
-    }
-    currentRFID = AGV_STATE_NULL;
-    saveExceptErrorFlag();
-  }
->>>>>>> a445ecfb0a4460eb78a180a0be37ccf43e3ff8dc
 
   // Cek apakah ada RFID yang terbaca untuk stasiun
   int currentStation = getStationFromLastRfid();
